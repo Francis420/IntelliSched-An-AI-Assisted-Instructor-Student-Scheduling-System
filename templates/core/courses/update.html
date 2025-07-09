@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Update Course</h2>
+<form method="post">
+  {% csrf_token %}
+  <label>Course Name:</label><br>
+  <input type="text" name="courseName" value="{{ course.courseName }}"><br><br>
+
+  <label>Acronym:</label><br>
+  <input type="text" name="acronym" value="{{ course.acronym }}"><br><br>
+
+  <label>Department:</label><br>
+  <select name="department">
+    {% for dept in departments %}
+    <option value="{{ dept.departmentId }}" {% if course.department.departmentId == dept.departmentId %}selected{% endif %}>{{ dept.name }}</option>
+    {% endfor %}
+  </select><br><br>
+
+  <button type="submit">Update</button>
+</form>
+<a href="{% url 'courseList' %}">Back</a>
+{% endblock %}

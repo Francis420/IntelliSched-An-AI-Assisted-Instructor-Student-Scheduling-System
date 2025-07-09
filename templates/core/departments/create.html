@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Create Department</h2>
+<form method="post">
+  {% csrf_token %}
+  <label>Name:</label><br>
+  <input type="text" name="name"><br><br>
+
+  <label>College:</label><br>
+  <select name="college">
+    {% for college in colleges %}
+    <option value="{{ college.collegeId }}">{{ college.name }}</option>
+    {% endfor %}
+  </select><br><br>
+
+  <button type="submit">Create</button>
+</form>
+<a href="{% url 'departmentList' %}">Back</a>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Departments</h2>
+<a href="{% url 'departmentCreate' %}">+ Add Department</a>
+<table border="1">
+  <tr>
+    <th>Name</th>
+    <th>College</th>
+    <th>Actions</th>
+  </tr>
+  {% for dept in departments %}
+  <tr>
+    <td>{{ dept.name }}</td>
+    <td>{{ dept.college.name }}</td>
+    <td>
+      <a href="{% url 'departmentUpdate' dept.departmentId %}">Edit</a> |
+      <a href="{% url 'departmentDelete' dept.departmentId %}">Delete</a>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+<a href="{% url 'collegeList' %}">← Back to Colleges</a>
+{% endblock %}
