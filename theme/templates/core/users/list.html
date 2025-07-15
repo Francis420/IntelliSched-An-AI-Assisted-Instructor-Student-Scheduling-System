@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}User Accounts{% endblock %}
+
+{% block content %}
+<div class="p-6">
+    <h1 class="text-2xl font-bold mb-4">User Accounts</h1>
+    <a href="{% url 'userCreate' %}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add User</a>
+
+    <table class="w-full mt-6 border rounded shadow text-left">
+        <thead class="bg-gray-100">
+            <tr>
+                <th class="p-2">Username</th>
+                <th class="p-2">Email</th>
+                <th class="p-2">Full Name</th>
+                <th class="p-2">Roles</th>
+                <th class="p-2">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+                <tr class="border-t">
+                    <td class="p-2">{{ user.username }}</td>
+                    <td class="p-2">{{ user.email }}</td>
+                    <td class="p-2">{{ user.firstName }} {{ user.lastName }}</td>
+                    <td class="p-2">{{ user.roles.all|join:", " }}</td>
+                    <td class="p-2 space-x-2">
+                        <a href="{% url 'userUpdate' user.userId %}" class="text-blue-600 hover:underline">Update</a>
+                        <a href="{% url 'userDelete' user.userId %}" class="text-red-600 hover:underline">Delete</a>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="5" class="p-4 text-center text-gray-500">No users found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

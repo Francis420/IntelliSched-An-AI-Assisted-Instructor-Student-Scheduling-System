@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% block title %}Create Subject{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto p-8 bg-white shadow-md rounded-lg mt-8">
+    <h2 class="text-2xl font-bold mb-6 text-gray-800">Create New Subject</h2>
+
+    {% if messages %}
+        <ul class="mb-4 text-sm text-red-600">
+            {% for message in messages %}
+                <li>{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <form method="POST">
+        {% csrf_token %}
+
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block mb-1 font-semibold">Subject Code</label>
+                <input type="text" name="code" required class="w-full border p-2 rounded" />
+            </div>
+
+            <div>
+                <label class="block mb-1 font-semibold">Subject Name</label>
+                <input type="text" name="name" required class="w-full border p-2 rounded" />
+            </div>
+
+            <div>
+                <label class="block mb-1 font-semibold">Units</label>
+                <input type="number" name="units" required class="w-full border p-2 rounded" />
+            </div>
+
+            <div>
+                <label class="block mb-1 font-semibold">Year Level</label>
+                <select name="yearLevel" required class="w-full border p-2 rounded">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block mb-1 font-semibold">Semester</label>
+                <select name="defaultTerm" required class="w-full border p-2 rounded">
+                    <option value="1st">1st</option>
+                    <option value="2nd">2nd</option>
+                    <option value="Summer">Summer</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block mb-1 font-semibold">Duration (minutes)</label>
+                <input type="number" name="durationMinutes" required class="w-full border p-2 rounded" />
+            </div>
+
+            <div class="col-span-2">
+                <label class="inline-flex items-center">
+                    <input type="checkbox" name="hasLabComponent" class="mr-2" />
+                    Has a Laboratory Schedule
+                </label>
+            </div>
+
+            <div>
+                <label class="block mb-1 font-semibold">Lab Duration (minutes)</label>
+                <input type="number" name="labDurationMinutes" class="w-full border p-2 rounded" />
+            </div>
+
+            <div>
+                <label class="block mb-1 font-semibold">Preferred Delivery Mode</label>
+                <select name="preferredDeliveryMode" required class="w-full border p-2 rounded">
+                    <option value="f2f">F2F</option>
+                    <option value="online">Online</option>
+                    <option value="hybrid">Hybrid</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block mb-1 font-semibold">Lab Delivery Mode</label>
+                <select name="labDeliveryMode" class="w-full border p-2 rounded">
+                    <option value="">None</option>
+                    <option value="f2f">F2F</option>
+                    <option value="online">Online</option>
+                    <option value="hybrid">Hybrid</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block mb-1 font-semibold">Required Room Type</label>
+                <input type="text" name="requiredRoomType" class="w-full border p-2 rounded" />
+            </div>
+
+            <div>
+                <label class="block mb-1 font-semibold">Required Lab Room Type</label>
+                <input type="text" name="requiredLabRoomType" class="w-full border p-2 rounded" />
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <label class="block mb-1 font-semibold">Notes</label>
+            <textarea name="notes" rows="3" class="w-full border p-2 rounded"></textarea>
+        </div>
+
+        <div class="mt-6 flex justify-end">
+            <a href="{% url 'subjectList' %}" class="bg-gray-300 text-gray-800 px-4 py-2 rounded mr-2">Cancel</a>
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Create</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

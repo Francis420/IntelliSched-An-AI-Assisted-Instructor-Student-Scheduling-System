@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block title %}Subjects{% endblock %}
+
+{% block content %}
+<div class="p-6">
+    <h1 class="text-2xl font-bold mb-4">Subjects</h1>
+    <a href="{% url 'subjectCreate' %}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add Subject</a>
+
+    <div class="overflow-x-auto mt-6">
+        <table class="min-w-full border rounded shadow text-left text-sm">
+            <thead class="bg-gray-100 text-xs uppercase tracking-wide">
+                <tr>
+                    <th class="p-2">Code</th>
+                    <th class="p-2">Name</th>
+                    <th class="p-2">Units</th>
+                    <th class="p-2">Term</th>
+                    <th class="p-2">Year</th>
+                    <th class="p-2">Duration</th>
+                    <th class="p-2">Lab?</th>
+                    <th class="p-2">Lab Duration</th>
+                    <th class="p-2">Delivery</th>
+                    <th class="p-2">Lab Delivery</th>
+                    <th class="p-2">Room Type</th>
+                    <th class="p-2">Lab Room Type</th>
+                    <th class="p-2">Active?</th>
+                    <th class="p-2">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for subject in subjects %}
+                    <tr class="border-t">
+                        <td class="p-2">{{ subject.code }}</td>
+                        <td class="p-2">{{ subject.name }}</td>
+                        <td class="p-2">{{ subject.units }}</td>
+                        <td class="p-2">{{ subject.defaultTerm }}</td>
+                        <td class="p-2">{{ subject.yearLevel }}</td>
+                        <td class="p-2">{{ subject.durationMinutes }} mins</td>
+                        <td class="p-2">{{ subject.hasLabComponent|yesno:"Yes,No" }}</td>
+                        <td class="p-2">
+                            {% if subject.labDurationMinutes %}{{ subject.labDurationMinutes }} mins{% else %}-{% endif %}
+                        </td>
+                        <td class="p-2">{{ subject.preferredDeliveryMode }}</td>
+                        <td class="p-2">
+                            {% if subject.labDeliveryMode %}{{ subject.labDeliveryMode }}{% else %}-{% endif %}
+                        </td>
+                        <td class="p-2">{{ subject.requiredRoomType|default:"-" }}</td>
+                        <td class="p-2">{{ subject.requiredLabRoomType|default:"-" }}</td>
+                        <td class="p-2">
+                            <span class="{% if subject.isActive %}text-green-600{% else %}text-red-600{% endif %}">
+                                {{ subject.isActive|yesno:"Yes,No" }}
+                            </span>
+                        </td>
+                        <td class="p-2 space-x-2">
+                            <a href="{% url 'subjectUpdate' subject.code %}" class="text-blue-600 hover:underline">Edit</a>
+                            <a href="{% url 'subjectDelete' subject.code %}" class="text-red-600 hover:underline">Delete</a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="14" class="p-4 text-center text-gray-500">No subjects found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block title %}Edit Subject{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto mt-10 bg-white p-6 shadow rounded">
+    <h2 class="text-xl font-semibold mb-4">Edit Subject: {{ subject.code }}</h2>
+    <form method="post">
+        {% csrf_token %}
+
+        <!-- Subject Code (disabled, not editable) -->
+        <div class="mb-4">
+            <label class="block text-sm font-medium">Subject Code</label>
+            <input type="text" value="{{ subject.code }}" disabled class="w-full mt-1 p-2 border rounded bg-gray-100">
+        </div>
+
+        <div class="mb-4">
+            <label class="block text-sm font-medium">Subject Name</label>
+            <input type="text" name="name" value="{{ subject.name }}" required class="w-full mt-1 p-2 border rounded">
+        </div>
+
+        <div class="mb-4">
+            <label class="block text-sm font-medium">Units</label>
+            <input type="number" name="units" value="{{ subject.units }}" required class="w-full mt-1 p-2 border rounded">
+        </div>
+
+        <div class="mb-4">
+            <label class="block text-sm font-medium">Default Term</label>
+            <select name="defaultTerm" required class="w-full mt-1 p-2 border rounded">
+                <option value="1st" {% if subject.defaultTerm == '1st' %}selected{% endif %}>1st</option>
+                <option value="2nd" {% if subject.defaultTerm == '2nd' %}selected{% endif %}>2nd</option>
+                <option value="Summer" {% if subject.defaultTerm == 'Summer' %}selected{% endif %}>Summer</option>
+            </select>
+        </div>
+
+        <div class="mb-4">
+            <label class="block text-sm font-medium">Year Level</label>
+            <select name="yearLevel" required class="w-full mt-1 p-2 border rounded">
+                <option value="1" {% if subject.yearLevel == '1' %}selected{% endif %}>1</option>
+                <option value="2" {% if subject.yearLevel == '2' %}selected{% endif %}>2</option>
+                <option value="3" {% if subject.yearLevel == '3' %}selected{% endif %}>3</option>
+                <option value="4" {% if subject.yearLevel == '4' %}selected{% endif %}>4</option>
+            </select>
+        </div>
+
+        <div class="mb-4">
+            <label class="block text-sm font-medium">Duration (Minutes)</label>
+            <input type="number" name="durationMinutes" value="{{ subject.durationMinutes }}" required class="w-full mt-1 p-2 border rounded">
+        </div>
+
+        <div class="mb-4">
+            <label class="inline-flex items-center">
+                <input type="checkbox" name="hasLabComponent" {% if subject.hasLabComponent %}checked{% endif %} class="mr-2">
+                Has Lab Component
+            </label>
+        </div>
+
+        <div class="mb-4">
+            <label class="block text-sm font-medium">Lab Duration (Minutes)</label>
+            <input type="number" name="labDurationMinutes" value="{{ subject.labDurationMinutes|default_if_none:'' }}" class="w-full mt-1 p-2 border rounded">
+        </div>
+
+        <div class="mb-4">
+            <label class="block text-sm font-medium">Preferred Delivery Mode</label>
+            <select name="preferredDeliveryMode" class="w-full mt-1 p-2 border rounded">
+                <option value="f2f" {% if subject.preferredDeliveryMode == 'f2f' %}selected{% endif %}>Face-to-Face</option>
+                <option value="online" {% if subject.preferredDeliveryMode == 'online' %}selected{% endif %}>Online</option>
+                <option value="hybrid" {% if subject.preferredDeliveryMode == 'hybrid' %}selected{% endif %}>Hybrid</option>
+            </select>
+        </div>
+
+        <div class="mb-4">
+            <label class="block text-sm font-medium">Lab Delivery Mode</label>
+            <select name="labDeliveryMode" class="w-full mt-1 p-2 border rounded">
+                <option value="">-- None --</option>
+                <option value="f2f" {% if subject.labDeliveryMode == 'f2f' %}selected{% endif %}>Face-to-Face</option>
+                <option value="online" {% if subject.labDeliveryMode == 'online' %}selected{% endif %}>Online</option>
+                <option value="hybrid" {% if subject.labDeliveryMode == 'hybrid' %}selected{% endif %}>Hybrid</option>
+            </select>
+        </div>
+
+        <div class="mb-4">
+            <label class="block text-sm font-medium">Required Room Type</label>
+            <input type="text" name="requiredRoomType" value="{{ subject.requiredRoomType|default_if_none:'' }}" class="w-full mt-1 p-2 border rounded">
+        </div>
+
+        <div class="mb-4">
+            <label class="block text-sm font-medium">Required Lab Room Type</label>
+            <input type="text" name="requiredLabRoomType" value="{{ subject.requiredLabRoomType|default_if_none:'' }}" class="w-full mt-1 p-2 border rounded">
+        </div>
+
+        <div class="mb-4">
+            <label class="block text-sm font-medium">Notes</label>
+            <textarea name="notes" rows="4" class="w-full mt-1 p-2 border rounded">{{ subject.notes }}</textarea>
+        </div>
+
+        <div class="flex items-center justify-between mt-6">
+            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Save</button>
+            <a href="{% url 'subjectList' %}" class="ml-4 text-gray-600 hover:underline">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
