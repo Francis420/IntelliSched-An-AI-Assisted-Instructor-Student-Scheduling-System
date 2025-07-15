@@ -35,7 +35,6 @@ INSTALLED_APPS = [
     'scheduling',
     'adminpanel',
     'authapi',
-    'attendance',
 ]
 
 REST_FRAMEWORK = {

@@ -1,6 +1,5 @@
 from django.db import models
 from core.models import Instructor
-from scheduling.models import Subject, Schedule
 
 
 # ---------- Instructor Experience ----------
@@ -49,8 +48,8 @@ class InstructorAvailability(models.Model):
 class TeachingHistory(models.Model):
     teachingId = models.AutoField(primary_key=True)
     instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE)
-    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
-    schedule = models.ForeignKey(Schedule, on_delete=models.CASCADE)
+    subject = models.ForeignKey("scheduling.Subject", on_delete=models.CASCADE)
+    schedule = models.ForeignKey("scheduling.Schedule", on_delete=models.CASCADE)
     createdAt = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -68,7 +67,7 @@ class InstructorCredentials(models.Model):
 
     credentialId = models.AutoField(primary_key=True)
     instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE)
-    subject = models.ForeignKey(Subject, on_delete=models.SET_NULL, null=True, blank=True)
+    subject = models.ForeignKey("scheduling.Subject", on_delete=models.SET_NULL, null=True, blank=True)
     type = models.CharField(max_length=30, choices=CREDENTIAL_TYPE_CHOICES)
     title = models.CharField(max_length=100)
     description = models.TextField()
@@ -91,10 +90,30 @@ class InstructorSubjectPreference(models.Model):
 
     preferenceId = models.AutoField(primary_key=True)
     instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE)
-    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
+    subject = models.ForeignKey("scheduling.Subject", on_delete=models.CASCADE)
     preferenceType = models.CharField(max_length=20, choices=PREFERENCE_TYPE_CHOICES)
     reason = models.TextField(blank=True, null=True)
     createdAt = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.instructor.instructorId} prefers {self.subject.code} ({self.preferenceType})"
+
+
+# ---------- Instructor Monitoring (Absences) ----------
+class InstructorAbsence(models.Model):
+    REPORT_TYPE_CHOICES = [
+        ('auto-detected', 'Auto Detected'),
+        ('manual', 'Manual'),
+    ]
+
+    absenceId = models.AutoField(primary_key=True)
+    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE)
+    subject = models.ForeignKey("scheduling.Subject", on_delete=models.CASCADE)
+    schedule = models.ForeignKey("scheduling.Schedule", on_delete=models.CASCADE)
+    reportType = models.CharField(max_length=20, choices=REPORT_TYPE_CHOICES)
+    reason = models.TextField(blank=True, null=True)
+    dateMissed = models.DateField()
+    reportedAt = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.instructor.instructorId} missed {self.subject.code} on {self.dateMissed}"
