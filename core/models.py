@@ -21,15 +21,18 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault('isActive', True)
         return self.create_user(username, email, password, **extra_fields)
 
-# ---------- Custom User Model ----------
-class User(AbstractBaseUser, PermissionsMixin):
-    ROLE_CHOICES = [
-        ('sysAdmin', 'System Admin'),
-        ('deptHead', 'Department Head'),
-        ('instructor', 'Instructor'),
-        ('student', 'Student'),
-    ]
 
+# ---------- Role Model ----------
+class Role(models.Model):
+    name = models.CharField(max_length=20, unique=True)  # e.g., 'sysAdmin'
+    label = models.CharField(max_length=50)  # e.g., 'System Administrator'
+
+    def __str__(self):
+        return self.label
+
+
+# ---------- User Model ----------
+class User(AbstractBaseUser, PermissionsMixin):
     userId = models.AutoField(primary_key=True)
     username = models.CharField(max_length=50, unique=True)
     email = models.EmailField(unique=True)
@@ -39,10 +42,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     lastName = models.CharField(max_length=50)
     middleInitial = models.CharField(max_length=1, blank=True, null=True)
 
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    roles = models.ManyToManyField(Role, blank=True)  # NEW
+
     isActive = models.BooleanField(default=True)
-    is_staff = models.BooleanField(default=False)  # ✅ fixed
-    is_superuser = models.BooleanField(default=False)  # ✅ fixed
+    is_staff = models.BooleanField(default=False)
+    is_superuser = models.BooleanField(default=False)
 
     createdAt = models.DateTimeField(auto_now_add=True)
     lastUpdated = models.DateTimeField(auto_now=True)
@@ -50,53 +54,42 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
 
     USERNAME_FIELD = 'username'
-    REQUIRED_FIELDS = ['email', 'firstName', 'lastName', 'role']
+    REQUIRED_FIELDS = ['email', 'firstName', 'lastName']
 
     def __str__(self):
-        return f"{self.username} ({self.role})"
+        role_names = ", ".join([r.name for r in self.roles.all()])
+        return f"{self.username} ({role_names})"
 
-# ---------- College ----------
-class College(models.Model):
-    collegeId = models.AutoField(primary_key=True)
-    name = models.CharField(max_length=100)
-    acronym = models.CharField(max_length=50)
-    description = models.TextField(blank=True, null=True)
-    isActive = models.BooleanField(default=True)
+
+# ---------- Instructor Table (core) ----------
+class Instructor(models.Model):
+    instructorId = models.CharField(primary_key=True, max_length=20)  # e.g., "2025-123456"
+    employmentType = models.CharField(max_length=20, choices=[
+        ('permanent', 'Permanent'),
+        ('temporary', 'Temporary')
+    ])
     createdAt = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.name
+        return self.instructorId
 
-# ---------- Department ----------
-class Department(models.Model):
-    departmentId = models.AutoField(primary_key=True)
-    college = models.ForeignKey(College, on_delete=models.CASCADE)
-    name = models.CharField(max_length=100)
-    isActive = models.BooleanField(default=True)
+
+# ---------- Student Table (core) ----------
+class Student(models.Model):
+    studentId = models.CharField(primary_key=True, max_length=20)  # e.g., "2025-123456"
     createdAt = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.name
-    
-# ---------- Course ----------
-class Course(models.Model):
-    courseId = models.AutoField(primary_key=True)
-    department = models.ForeignKey('Department', on_delete=models.CASCADE)
-    courseName = models.CharField(max_length=150)
-    acronym = models.CharField(max_length=50)
-    isActive = models.BooleanField(default=True)
-    createdAt = models.DateTimeField(auto_now_add=True)
+        return self.studentId
 
-    def __str__(self):
-        return self.courseName
 
 # ---------- UserLogin ----------
 class UserLogin(models.Model):
     loginId = models.AutoField(primary_key=True)
-    user = models.ForeignKey('User', on_delete=models.CASCADE)
-    instructor = models.ForeignKey('instructors.Instructor', on_delete=models.SET_NULL, null=True, blank=True)
-    student = models.ForeignKey('students.Student', on_delete=models.SET_NULL, null=True, blank=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    instructor = models.ForeignKey(Instructor, on_delete=models.SET_NULL, null=True, blank=True)
+    student = models.ForeignKey(Student, on_delete=models.SET_NULL, null=True, blank=True)
     createdAt = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Login record for {self.user.username} at {self.createdAt}"
+        return f"{self.user.username} login @ {self.createdAt}"

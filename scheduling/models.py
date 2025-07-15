@@ -1,92 +1,200 @@
 from django.db import models
 from instructors.models import Instructor
-from core.models import User
+from core.models import Student, User
 from django.utils import timezone
-from core.models import Course
 
 
-# ---------- Subject ----------
+# ---------- Subjects Table ----------
 class Subject(models.Model):
-    SEMESTER_CHOICES = [('1st', '1st'), ('2nd', '2nd'), ('Summer', 'Summer')]
-
     subjectId = models.AutoField(primary_key=True)
-    course = models.ForeignKey(Course, on_delete=models.CASCADE)
-    subjectCode = models.CharField(max_length=20, unique=True)
-    subjectName = models.CharField(max_length=100)
+    code = models.CharField(max_length=20, unique=True)  # e.g., CS101
+    name = models.CharField(max_length=100)
     units = models.IntegerField()
-    yearLevel = models.IntegerField()
-    semester = models.CharField(max_length=10, choices=SEMESTER_CHOICES)
+    defaultTerm = models.CharField(max_length=10, choices=[('1st', '1st'), ('2nd', '2nd'), ('Summer', 'Summer')])
+    yearLevel = models.CharField(max_length=10, choices=[('1', '1'), ('2', '2'), ('3', '3'), ('4', '4')])
+    durationMinutes = models.IntegerField()
+    hasLabComponent = models.BooleanField(default=False)
+    labDurationMinutes = models.IntegerField(null=True, blank=True)
+    preferredDeliveryMode = models.CharField(max_length=10, choices=[('f2f', 'f2f'), ('online', 'online'), ('hybrid', 'hybrid')])
+    labDeliveryMode = models.CharField(max_length=10, choices=[('f2f', 'f2f'), ('online', 'online'), ('hybrid', 'hybrid')], null=True, blank=True)
+    requiredRoomType = models.CharField(max_length=50, null=True, blank=True)
+    requiredLabRoomType = models.CharField(max_length=50, null=True, blank=True)
+    notes = models.TextField(null=True, blank=True)
     isActive = models.BooleanField(default=True)
     createdAt = models.DateTimeField(auto_now_add=True)
-    lastUpdated = models.DateTimeField(auto_now=True)
+    updatedAt = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.subjectCode} - {self.subjectName}"
+        return f"{self.code} - {self.name}"
 
 
-# ---------- Instructor Matching (AI Results) ----------
-class InstructorMatching(models.Model):
+# ---------- Semesters Table ----------
+class Semester(models.Model):
+    semesterId = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=20)  # e.g., 1st, 2nd, Summer
+    academicYear = models.CharField(max_length=20)  # e.g., 2025–2026
+    term = models.CharField(max_length=10, choices=[('1st', '1st'), ('2nd', '2nd'), ('Summer', 'Summer')])
+    isActive = models.BooleanField(default=False)
+    createdAt = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.term} {self.academicYear}"
+
+
+# ---------- Instructor Matching (AI Result) ----------
+class InstructorSubjectMatch(models.Model):
     matchId = models.AutoField(primary_key=True)
-    experienceId = models.IntegerField(blank=True, null=True)
-    teachingId = models.IntegerField(blank=True, null=True)
-    availabilityId = models.IntegerField(blank=True, null=True)
+    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
-    confidence = models.FloatField()
-    notes = models.TextField(blank=True, null=True)
-    generatedBy = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
-    createdAt = models.DateTimeField(default=timezone.now)
+    confidenceScore = models.FloatField()
+    primaryFactor = models.CharField(max_length=50)  # ENUM in schema
+    experienceScore = models.FloatField()
+    teachingScore = models.FloatField()
+    credentialScore = models.FloatField()
+    availabilityScore = models.FloatField()
+    notes = models.TextField(null=True, blank=True)
+    generatedBy = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    generatedAt = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Match #{self.matchId} – {self.subject.subjectCode}"
+        return f"Match {self.matchId} - {self.instructor.instructorId} -> {self.subject.code}"
 
 
 # ---------- Subject Offering ----------
 class SubjectOffering(models.Model):
-    offeringId = models.AutoField(primary_key=True)
+    offerId = models.AutoField(primary_key=True)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
-    match = models.ForeignKey(InstructorMatching, on_delete=models.CASCADE)
-    sectionCode = models.CharField(max_length=5)
-    createdAt = models.DateTimeField(default=timezone.now)
-    lastUpdated = models.DateTimeField(auto_now=True)
+    match = models.ForeignKey(InstructorSubjectMatch, on_delete=models.CASCADE)
+    semester = models.ForeignKey(Semester, on_delete=models.CASCADE)
+    sectionCode = models.CharField(max_length=10)
+    createdAt = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.subject.subjectCode} - Sec {self.sectionCode}"
+        return f"{self.subject.code} - {self.sectionCode}"
 
 
-# ---------- Room ----------
+# ---------- Section Table ----------
+class Section(models.Model):
+    sectionId = models.AutoField(primary_key=True)
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
+    semester = models.ForeignKey(Semester, on_delete=models.CASCADE)
+    sectionCode = models.CharField(max_length=10)
+    createdAt = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.subject.code} - Section {self.sectionCode}"
+
+
+# ---------- Room Table ----------
 class Room(models.Model):
     roomId = models.AutoField(primary_key=True)
-    roomCode = models.CharField(max_length=20, unique=True)
+    roomCode = models.CharField(max_length=20)
     building = models.CharField(max_length=100)
     capacity = models.IntegerField()
     type = models.CharField(max_length=50)
     isActive = models.BooleanField(default=True)
     notes = models.TextField(blank=True, null=True)
-    createdAt = models.DateTimeField(default=timezone.now)
+    createdAt = models.DateTimeField(auto_now_add=True)
     updatedAt = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.roomCode} - {self.building}"
 
 
-# ---------- Final Schedule ----------
+# ---------- Schedule Table ----------
 class Schedule(models.Model):
-    STATUS_CHOICES = [('draft', 'Draft'), ('final', 'Final'), ('archived', 'Archived')]
-    DAY_CHOICES = [
-        ('Mon', 'Monday'), ('Tue', 'Tuesday'), ('Wed', 'Wednesday'),
-        ('Thu', 'Thursday'), ('Fri', 'Friday'), ('Sat', 'Saturday')
-    ]
-
     scheduleId = models.AutoField(primary_key=True)
-    offering = models.ForeignKey(SubjectOffering, on_delete=models.CASCADE)
+    offer = models.ForeignKey(SubjectOffering, on_delete=models.CASCADE)
     instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE)
-    room = models.ForeignKey(Room, on_delete=models.CASCADE)
-    dayOfWeek = models.CharField(max_length=10, choices=DAY_CHOICES)
+    section = models.ForeignKey(Section, on_delete=models.CASCADE)
+    room = models.ForeignKey(Room, on_delete=models.SET_NULL, null=True, blank=True)
+    semester = models.ForeignKey(Semester, on_delete=models.CASCADE)
+
+    dayOfWeek = models.CharField(max_length=10, choices=[
+        ('Monday', 'Monday'), ('Tuesday', 'Tuesday'), ('Wednesday', 'Wednesday'),
+        ('Thursday', 'Thursday'), ('Friday', 'Friday'), ('Saturday', 'Saturday')
+    ])
     startTime = models.TimeField()
     endTime = models.TimeField()
-    semester = models.CharField(max_length=50)  # e.g., "1st Sem AY 2025–2026"
-    scheduleStatus = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
-    createdAt = models.DateTimeField(default=timezone.now)
+    scheduleType = models.CharField(max_length=10, choices=[('lecture', 'Lecture'), ('lab', 'Lab')])
+    isOvertime = models.BooleanField(default=False)
+    scheduleStatus = models.CharField(max_length=20, choices=[('draft', 'Draft'), ('final', 'Final'), ('archived', 'Archived')])
+    createdAt = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.offering.subject.subjectCode} {self.dayOfWeek} {self.startTime}-{self.endTime}"
+        return f"{self.offer.subject.code} - {self.dayOfWeek} ({self.startTime}-{self.endTime})"
+
+
+# ---------- Schedule Control ----------
+class ScheduleControl(models.Model):
+    schedule = models.ForeignKey(Schedule, on_delete=models.CASCADE)
+    updatedBy = models.ForeignKey(User, on_delete=models.CASCADE)
+    status = models.CharField(max_length=30, choices=[('generating', 'Generating'), ('pendingApproval', 'Pending Approval'), ('finalized', 'Finalized')])
+    updatedAt = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Schedule {self.schedule.scheduleId} - {self.status}"
+
+
+# ---------- Enrollment ----------
+class Enrollment(models.Model):
+    enrollmentId = models.AutoField(primary_key=True)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
+    section = models.ForeignKey(Section, on_delete=models.CASCADE)
+    createdAt = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.student.studentId} enrolled in {self.subject.code}"
+
+
+# ---------- GenEdSchedules ----------
+class GenEdSchedule(models.Model):
+    genedScheduleId = models.AutoField(primary_key=True)
+    semester = models.ForeignKey(Semester, on_delete=models.CASCADE)
+    code = models.CharField(max_length=20)
+    subjectName = models.CharField(max_length=100)
+    sectionCode = models.CharField(max_length=10)
+    instructorName = models.CharField(max_length=100, null=True, blank=True)
+    dayOfWeek = models.CharField(max_length=10)
+    startTime = models.TimeField()
+    endTime = models.TimeField()
+    createdAt = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"GenEd {self.code} - {self.sectionCode}"
+
+
+# ---------- Import ----------
+class Import(models.Model):
+    importId = models.AutoField(primary_key=True)
+    studentId = models.CharField(max_length=20)
+    subjectId = models.IntegerField()
+    sectionCode = models.CharField(max_length=10, null=True, blank=True)
+    firstName = models.CharField(max_length=50)
+    lastName = models.CharField(max_length=50)
+    middleInitial = models.CharField(max_length=5, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=[('pending', 'Pending'), ('processed', 'Processed'), ('failed', 'Failed')])
+    importedAt = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Imported {self.studentId} | {self.status}"
+
+
+# ---------- InstructorSubjectMatchHistory ----------
+class InstructorSubjectMatchHistory(models.Model):
+    matchId = models.AutoField(primary_key=True)
+    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE)
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
+    confidenceScore = models.FloatField()
+    primaryFactor = models.CharField(max_length=50)
+    experienceScore = models.FloatField()
+    teachingScore = models.FloatField()
+    credentialScore = models.FloatField()
+    availabilityScore = models.FloatField()
+    notes = models.TextField(blank=True, null=True)
+    generatedBy = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    generatedAt = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"[History] {self.instructor.instructorId} - {self.subject.code}"

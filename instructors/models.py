@@ -1,43 +1,14 @@
 from django.db import models
-from core.models import User, Department
-from django.utils import timezone
-
-
-# ---------- Instructor ----------
-class Instructor(models.Model):
-    instructorId = models.CharField(primary_key=True, max_length=20)  # e.g., 2025-123456
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    department = models.ForeignKey(Department, on_delete=models.CASCADE)
-    employmentType = models.CharField(max_length=20, choices=[('permanent', 'Permanent'), ('temporary', 'Temporary')])
-
-    def __str__(self):
-        return f"{self.instructorId} - {self.user.lastName}, {self.user.firstName}"
-
-
-# ---------- Instructor Availability ----------
-class InstructorAvailability(models.Model):
-    AVAIL_DAYS = [
-        ('Monday', 'Monday'), ('Tuesday', 'Tuesday'), ('Wednesday', 'Wednesday'),
-        ('Thursday', 'Thursday'), ('Friday', 'Friday'), ('Saturday', 'Saturday')
-    ]
-
-    availabilityId = models.AutoField(primary_key=True)
-    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE)
-    dayOfWeek = models.CharField(max_length=10, choices=AVAIL_DAYS)
-    startTime = models.TimeField()
-    endTime = models.TimeField()
-
-    def __str__(self):
-        return f"{self.instructor.instructorId} | {self.dayOfWeek} {self.startTime}-{self.endTime}"
+from core.models import Instructor
+from scheduling.models import Subject, Schedule
 
 
 # ---------- Instructor Experience ----------
 class InstructorExperience(models.Model):
-    EXPERIENCE_TYPE = [
+    EXPERIENCE_TYPE_CHOICES = [
         ('Work Experience', 'Work Experience'),
-        ('Award', 'Award'),
-        ('Certification', 'Certification'),
-        ('Research', 'Research'),
+        ('Academic Position', 'Academic Position'),
+        ('Research Role', 'Research Role')
     ]
 
     experienceId = models.AutoField(primary_key=True)
@@ -45,32 +16,85 @@ class InstructorExperience(models.Model):
     title = models.CharField(max_length=100)
     organization = models.CharField(max_length=100)
     startDate = models.DateField()
-    endDate = models.DateField(blank=True, null=True)
+    endDate = models.DateField(null=True, blank=True)
     description = models.TextField()
-    isSubjectRelated = models.BooleanField(default=False)
+    type = models.CharField(max_length=30, choices=EXPERIENCE_TYPE_CHOICES)
     isVerified = models.BooleanField(default=False)
-    type = models.CharField(max_length=30, choices=EXPERIENCE_TYPE)
-    documentUrl = models.CharField(max_length=255, blank=True, null=True)
     createdAt = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.instructor.instructorId} - {self.title} at {self.organization}"
+        return f"{self.instructor.instructorId} - {self.title}"
+
+
+# ---------- Instructor Availability ----------
+class InstructorAvailability(models.Model):
+    DAY_CHOICES = [
+        ('Monday', 'Monday'), ('Tuesday', 'Tuesday'), ('Wednesday', 'Wednesday'),
+        ('Thursday', 'Thursday'), ('Friday', 'Friday'), ('Saturday', 'Saturday'),
+        ('Sunday', 'Sunday'),
+    ]
+
+    availabilityId = models.AutoField(primary_key=True)
+    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE)
+    dayOfWeek = models.CharField(max_length=10, choices=DAY_CHOICES)
+    startTime = models.TimeField()
+    endTime = models.TimeField()
+    updatedAt = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.instructor.instructorId} - {self.dayOfWeek} {self.startTime}-{self.endTime}"
 
 
 # ---------- Teaching History ----------
 class TeachingHistory(models.Model):
-    SEMESTER_CHOICES = [
-        ('1st', '1st'),
-        ('2nd', '2nd'),
-        ('Summer', 'Summer')
-    ]
-
     teachingId = models.AutoField(primary_key=True)
     instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE)
-    subject = models.ForeignKey('scheduling.Subject', on_delete=models.CASCADE)
-    schedule = models.ForeignKey('scheduling.Schedule', on_delete=models.CASCADE)
-    semester = models.CharField(max_length=10, choices=SEMESTER_CHOICES)
-    schoolYear = models.CharField(max_length=20)  # e.g., "2025–2026"
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
+    schedule = models.ForeignKey(Schedule, on_delete=models.CASCADE)
+    createdAt = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.instructor.instructorId} taught {self.subject.subjectCode} ({self.semester} {self.schoolYear})"
+        return f"{self.instructor.instructorId} - {self.subject.code}"
+
+
+# ---------- Instructor Credential ----------
+class InstructorCredentials(models.Model):
+    CREDENTIAL_TYPE_CHOICES = [
+        ('Certification', 'Certification'),
+        ('Workshop', 'Workshop'),
+        ('Training', 'Training'),
+        ('License', 'License'),
+    ]
+
+    credentialId = models.AutoField(primary_key=True)
+    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE)
+    subject = models.ForeignKey(Subject, on_delete=models.SET_NULL, null=True, blank=True)
+    type = models.CharField(max_length=30, choices=CREDENTIAL_TYPE_CHOICES)
+    title = models.CharField(max_length=100)
+    description = models.TextField()
+    isVerified = models.BooleanField(default=False)
+    documentUrl = models.CharField(max_length=255, null=True, blank=True)
+    dateEarned = models.DateField()
+    createdAt = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.instructor.instructorId} - {self.title}"
+
+
+# ---------- Instructor Subject Preference ----------
+class InstructorSubjectPreference(models.Model):
+    PREFERENCE_TYPE_CHOICES = [
+        ('Prefer', 'Prefer'),
+        ('Neutral', 'Neutral'),
+        ('Avoid', 'Avoid'),
+    ]
+
+    preferenceId = models.AutoField(primary_key=True)
+    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE)
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
+    preferenceType = models.CharField(max_length=20, choices=PREFERENCE_TYPE_CHOICES)
+    reason = models.TextField(blank=True, null=True)
+    createdAt = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.instructor.instructorId} prefers {self.subject.code} ({self.preferenceType})"

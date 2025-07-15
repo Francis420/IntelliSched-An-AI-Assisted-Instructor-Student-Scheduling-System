@@ -4,5 +4,10 @@ from . import views
 urlpatterns = [
     path('login/', views.loginView, name='login'),
     path('logout/', views.logoutView, name='logout'),
-    path('user/', views.userInfo, name='user-info'),
+
+    # Test Dashboards
+    path('adminpanel/dashboard/', views.sysAdminDashboard, name='sysAdminDashboard'),
+    path('department/dashboard/', views.deptHeadDashboard, name='deptheadDashboard'),
+    path('instructor/dashboard/', views.instructorDashboard, name='instructorDashboard'),
+    path('student/dashboard/', views.studentDashboard, name='studentDashboard'),
 ]

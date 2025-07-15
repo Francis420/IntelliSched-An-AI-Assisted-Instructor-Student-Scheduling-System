@@ -25,12 +25,17 @@ INSTALLED_APPS = [
     'rest_framework', 
     'rest_framework.authtoken',
 
+    'tailwind',
+    'theme', 
+    'django_browser_reload',
+
     'core',
     'students',
     'instructors',
     'scheduling',
     'adminpanel',
     'authapi',
+    'attendance',
 ]
 
 REST_FRAMEWORK = {
@@ -38,6 +43,12 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
     ],
 }
+
+TAILWIND_APP_NAME = 'theme'
+INTERNAL_IPS = ['127.0.0.1']
+
+NPM_BIN_PATH = "C:/Program Files/nodejs/npm.cmd"
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -51,11 +62,11 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'Intellisched.urls'
 
-import os
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'templates')],
+        'DIRS': [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -117,3 +128,5 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'core.User'
+
+LOGIN_URL = '/auth/login/'
