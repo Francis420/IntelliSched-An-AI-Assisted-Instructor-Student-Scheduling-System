@@ -6,6 +6,7 @@ from rest_framework.authtoken.models import Token
 from django.core.exceptions import PermissionDenied
 from functools import wraps
 from core.models import User
+from django.contrib.auth import authenticate, login 
 
 def has_role(required_role):
     def decorator(view_func):
@@ -20,8 +21,6 @@ def has_role(required_role):
             raise PermissionDenied()
         return _wrapped_view
     return decorator
-
-from django.contrib.auth import authenticate, login  # <-- ADD THIS
 
 def loginView(request):
     if request.method == 'POST':
@@ -38,7 +37,7 @@ def loginView(request):
 
             roles = user.roles.all()
 
-            preferred_order = ['sysAdmin', 'deptHead', 'instructor', 'student']
+            preferred_order = ['deptHead', 'instructor', 'student']
             sorted_roles = sorted(
                 roles, key=lambda r: preferred_order.index(r.name) if r.name in preferred_order else 99
             )
@@ -54,9 +53,7 @@ def loginView(request):
             if next_url:
                 return redirect(next_url)
 
-            if selected_role == 'sysAdmin':
-                return redirect('sysAdminDashboard')
-            elif selected_role == 'deptHead':
+            if selected_role == 'deptHead':
                 return redirect('deptHeadDashboard')
             elif selected_role == 'instructor':
                 return redirect('instructorDashboard')
@@ -78,11 +75,6 @@ def logoutView(request):
     request.session.flush()
     return redirect('login')
 
-
-@login_required
-@has_role('sysAdmin')
-def sysAdminDashboard(request):
-    return render(request, 'dashboards/sysadminDashboard.html')
 
 
 @login_required

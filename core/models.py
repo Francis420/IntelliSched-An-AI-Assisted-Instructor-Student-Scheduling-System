@@ -24,8 +24,8 @@ class UserManager(BaseUserManager):
 
 # ---------- Role Model ----------
 class Role(models.Model):
-    name = models.CharField(max_length=20, unique=True)  # e.g., 'sysAdmin'
-    label = models.CharField(max_length=50)  # e.g., 'System Administrator'
+    name = models.CharField(max_length=20, unique=True)
+    label = models.CharField(max_length=50) 
 
     def __str__(self):
         return self.label

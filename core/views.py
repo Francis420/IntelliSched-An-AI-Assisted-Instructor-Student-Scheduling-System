@@ -8,7 +8,6 @@ from core.models import User, Role, Instructor, Student, UserLogin
 
 
 @login_required
-@has_role('sysAdmin')
 @has_role('deptHead')
 def subjectList(request):
     subjects = Subject.objects.all().order_by('code')
@@ -16,7 +15,6 @@ def subjectList(request):
 
 
 @login_required
-@has_role('sysAdmin')
 @has_role('deptHead')
 def subjectCreate(request):
     if request.method == 'POST':
@@ -60,7 +58,6 @@ def subjectCreate(request):
 
 
 @login_required
-@has_role('sysAdmin')
 @has_role('deptHead')
 def subjectUpdate(request, subjectCode):
     subject = get_object_or_404(Subject, code=subjectCode)
@@ -91,7 +88,6 @@ def subjectUpdate(request, subjectCode):
 
 
 @login_required
-@has_role('sysAdmin')
 @has_role('deptHead')
 def subjectDelete(request, subjectCode):
     subject = get_object_or_404(Subject, code=subjectCode)
@@ -105,14 +101,12 @@ def subjectDelete(request, subjectCode):
 
 # ---------- Account Management ----------
 @login_required
-@has_role('sysAdmin')
 @has_role('deptHead')
 def userList(request):
     users = User.objects.prefetch_related('roles').all()
     return render(request, 'core/users/list.html', {'users': users})
 
 @login_required
-@has_role('sysAdmin')
 @has_role('deptHead')
 @transaction.atomic
 def userCreate(request):
@@ -152,7 +146,6 @@ def userCreate(request):
     return render(request, 'core/users/create.html', {'roles': roles})
 
 @login_required
-@has_role('sysAdmin')
 @has_role('deptHead')
 def userUpdate(request, userId):
     user = get_object_or_404(User, userId=userId)
@@ -193,7 +186,6 @@ def userUpdate(request, userId):
     })
 
 @login_required
-@has_role('sysAdmin')
 @has_role('deptHead')
 def userDelete(request, userId):
     user = get_object_or_404(User, userId=userId)
