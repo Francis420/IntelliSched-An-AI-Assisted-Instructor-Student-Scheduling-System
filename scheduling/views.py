@@ -2,7 +2,18 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from authapi.views import has_role  
-from scheduling.models import Room, GenEdSchedule, Semester
+from scheduling.models import (
+    Room, 
+    GenEdSchedule, 
+    Semester,
+    Enrollment,
+    Section,
+    Subject,
+)
+from core.models import (
+    Student,
+    UserLogin,
+)
 from django.db import transaction
 
 
@@ -156,3 +167,101 @@ def genedScheduleDelete(request, scheduleId):
         return redirect('genedScheduleList')
 
     return render(request, 'scheduling/genEdSchedules/delete.html', {'schedule': schedule})
+
+
+
+# ---------- Student Enrollement ----------
+@login_required
+@has_role('student')
+def enrollmentList(request):
+    user_login = get_object_or_404(UserLogin, user=request.user)
+
+    if not user_login.student:
+        messages.error(request, "Student profile not found.")
+        return redirect('dashboard')  # or wherever you want to send them
+
+    enrollments = Enrollment.objects.filter(student=user_login.student).select_related('subject', 'section')
+    return render(request, 'scheduling/enrollments/list.html', {'enrollments': enrollments})
+
+
+@login_required
+@has_role('student')
+def enrollmentCreate(request):
+    user_login = get_object_or_404(UserLogin, user=request.user)
+
+    if not user_login.student:
+        messages.error(request, "Student profile not found.")
+        return redirect('dashboard')
+
+    subjects = Subject.objects.all().order_by('code')
+    sections = Section.objects.all().order_by('sectionCode')
+
+    if request.method == 'POST':
+        subjectId = request.POST.get('subject')
+        sectionId = request.POST.get('section')
+
+        subject = get_object_or_404(Subject, subjectId=subjectId)
+        section = get_object_or_404(Section, sectionId=sectionId)
+
+        Enrollment.objects.create(
+            student=user_login.student,
+            subject=subject,
+            section=section
+        )
+        messages.success(request, 'Enrollment added successfully.')
+        return redirect('enrollmentList')
+
+    return render(request, 'scheduling/enrollments/create.html', {
+        'subjects': subjects,
+        'sections': sections
+    })
+
+
+@login_required
+@has_role('student')
+def enrollmentUpdate(request, enrollmentId):
+    user_login = get_object_or_404(UserLogin, user=request.user)
+
+    if not user_login.student:
+        messages.error(request, "Student profile not found.")
+        return redirect('dashboard')
+
+    enrollment = get_object_or_404(Enrollment, enrollmentId=enrollmentId, student=user_login.student)
+    subjects = Subject.objects.all().order_by('code')
+    sections = Section.objects.all().order_by('sectionCode')
+
+    if request.method == 'POST':
+        subjectId = request.POST.get('subject')
+        sectionId = request.POST.get('section')
+
+        enrollment.subject = get_object_or_404(Subject, subjectId=subjectId)
+        enrollment.section = get_object_or_404(Section, sectionId=sectionId)
+        enrollment.save()
+
+        messages.success(request, 'Enrollment updated successfully.')
+        return redirect('enrollmentList')
+
+    return render(request, 'scheduling/enrollments/update.html', {
+        'enrollment': enrollment,
+        'subjects': subjects,
+        'sections': sections
+    })
+
+
+@login_required
+@has_role('student')
+def enrollmentDelete(request, enrollmentId):
+    user_login = get_object_or_404(UserLogin, user=request.user)
+
+    if not user_login.student:
+        messages.error(request, "Student profile not found.")
+        return redirect('dashboard')
+
+    enrollment = get_object_or_404(Enrollment, enrollmentId=enrollmentId, student=user_login.student)
+
+    if request.method == 'POST':
+        enrollment.delete()
+        messages.success(request, 'Enrollment deleted successfully.')
+        return redirect('enrollmentList')
+
+    return render(request, 'scheduling/enrollments/delete.html', {'enrollment': enrollment})

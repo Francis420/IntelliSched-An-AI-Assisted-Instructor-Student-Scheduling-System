@@ -9,8 +9,7 @@ from .models import (
     Schedule, 
     ScheduleControl, 
     Enrollment, 
-    GenEdSchedule, 
-    Import, 
+    GenEdSchedule,  
     InstructorSubjectMatchHistory
     )
 
@@ -26,7 +25,6 @@ admin.site.register(Schedule)
 admin.site.register(ScheduleControl)
 admin.site.register(Enrollment)
 admin.site.register(GenEdSchedule)
-admin.site.register(Import)
 admin.site.register(InstructorSubjectMatchHistory)
 
 

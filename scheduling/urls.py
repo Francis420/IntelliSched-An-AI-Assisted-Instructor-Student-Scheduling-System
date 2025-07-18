@@ -9,9 +9,14 @@ urlpatterns = [
     path('rooms/delete/<int:roomId>/', views.roomDelete, name='roomDelete'),
 
     # GenEd Schedules
-
     path('genEdSchedules/', views.genedScheduleList, name='genedScheduleList'),
     path('genEdSchedules/create/', views.genedScheduleCreate, name='genedScheduleCreate'),
     path('genEdSchedules/update/<int:scheduleId>/', views.genedScheduleUpdate, name='genedScheduleUpdate'),
     path('genEdSchedules/delete/<int:scheduleId>/', views.genedScheduleDelete, name='genedScheduleDelete'),
+
+    # Student Enrollment
+    path('enrollments/',views.enrollmentList, name='enrollmentList'),
+    path('enrollments/create/', views.enrollmentCreate, name='enrollmentCreate'),
+    path('enrollments/update/<int:enrollmentId>/', views.enrollmentUpdate, name='enrollmentUpdate'),
+    path('enrollments/delete/<int:enrollmentId>/', views.enrollmentDelete, name='enrollmentDelete'),
 ]

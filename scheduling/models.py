@@ -30,8 +30,8 @@ class Subject(models.Model):
 # ---------- Semesters Table ----------
 class Semester(models.Model):
     semesterId = models.AutoField(primary_key=True)
-    name = models.CharField(max_length=20)  # e.g., 1st, 2nd, Summer
-    academicYear = models.CharField(max_length=20)  # e.g., 2025–2026
+    name = models.CharField(max_length=20) 
+    academicYear = models.CharField(max_length=20) 
     term = models.CharField(max_length=10, choices=[('1st', '1st'), ('2nd', '2nd'), ('Summer', 'Summer')])
     isActive = models.BooleanField(default=False)
     createdAt = models.DateTimeField(auto_now_add=True)
@@ -72,7 +72,7 @@ class SubjectOffering(models.Model):
         return f"{self.subject.code} - {self.sectionCode}"
 
 
-# ---------- Section Table ----------
+# ---------- Section Table ---------- 50 check notes
 class Section(models.Model):
     sectionId = models.AutoField(primary_key=True)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
@@ -143,11 +143,14 @@ class Enrollment(models.Model):
     section = models.ForeignKey(Section, on_delete=models.CASCADE)
     createdAt = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        unique_together = ('student', 'subject', 'section')
+
     def __str__(self):
         return f"{self.student.studentId} enrolled in {self.subject.code}"
 
 
-# ---------- GenEdSchedules ----------
+# ---------- GenEdSchedules ---------- 50 check notes
 class GenEdSchedule(models.Model):
     genedScheduleId = models.AutoField(primary_key=True)
     semester = models.ForeignKey(Semester, on_delete=models.CASCADE, null=True, blank=True)
@@ -162,22 +165,6 @@ class GenEdSchedule(models.Model):
 
     def __str__(self):
         return f"GenEd {self.code} - {self.sectionCode}"
-
-
-# ---------- Import ----------
-class Import(models.Model):
-    importId = models.AutoField(primary_key=True)
-    studentId = models.CharField(max_length=20)
-    subjectId = models.IntegerField()
-    sectionCode = models.CharField(max_length=10, null=True, blank=True)
-    firstName = models.CharField(max_length=50)
-    lastName = models.CharField(max_length=50)
-    middleInitial = models.CharField(max_length=5, null=True, blank=True)
-    status = models.CharField(max_length=20, choices=[('pending', 'Pending'), ('processed', 'Processed'), ('failed', 'Failed')])
-    importedAt = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Imported {self.studentId} | {self.status}"
 
 
 # ---------- InstructorSubjectMatchHistory ----------

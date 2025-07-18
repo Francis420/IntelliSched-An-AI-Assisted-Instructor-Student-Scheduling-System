@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Confirm Drop</h2>
+
+<p>Are you sure you want to drop <strong>{{ enrollment.subject.code }} - {{ enrollment.subject.name }}</strong> (Section {{ enrollment.section.sectionCode }})?</p>
+
+<form method="post">
+    {% csrf_token %}
+    <button type="submit">Yes, Drop</button>
+    <a href="{% url 'enrollmentList' %}">Cancel</a>
+</form>
+{% endblock %}

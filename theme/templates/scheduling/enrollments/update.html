@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Update Enrollment</h2>
+
+<form method="post">
+    {% csrf_token %}
+
+    <label for="subject">Subject:</label>
+    <select name="subject" required>
+        {% for subj in subjects %}
+            <option value="{{ subj.subjectId }}" {% if subj == enrollment.subject %}selected{% endif %}>
+                {{ subj.code }} - {{ subj.name }}
+            </option>
+        {% endfor %}
+    </select>
+
+    <label for="section">Section:</label>
+    <select name="section" required>
+        {% for sec in sections %}
+            <option value="{{ sec.sectionId }}" {% if sec == enrollment.section %}selected{% endif %}>
+                {{ sec.sectionCode }}
+            </option>
+        {% endfor %}
+    </select>
+
+    <button type="submit">Save Changes</button>
+</form>
+
+<a href="{% url 'enrollmentList' %}">Back to Enrollments</a>
+{% endblock %}

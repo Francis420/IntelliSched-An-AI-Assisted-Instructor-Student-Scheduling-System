@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>My Enrollments</h2>
+
+<a href="{% url 'enrollmentCreate' %}">+ Enroll in Subject</a>
+
+<table>
+    <thead>
+        <tr>
+            <th>Subject</th>
+            <th>Section</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for enrollment in enrollments %}
+        <tr>
+            <td>{{ enrollment.subject.code }} - {{ enrollment.subject.name }}</td>
+            <td>{{ enrollment.section.sectionCode }}</td>
+            <td>
+                <a href="{% url 'enrollmentUpdate' enrollment.enrollmentId %}">Edit</a>
+                <a href="{% url 'enrollmentDelete' enrollment.enrollmentId %}">Remove</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3">No enrollments yet.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
