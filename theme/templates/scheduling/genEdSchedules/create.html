@@ -10,7 +10,7 @@
         <select name="semester" id="semester" class="form-select">
             <option value="">—</option>
             {% for sem in semesters %}
-                <option value="{{ sem.id }}">{{ sem.name }}</option>
+                <option value="{{ semester.semesterId }}">{{ semester.name }}</option>
             {% endfor %}
         </select>
     </div>

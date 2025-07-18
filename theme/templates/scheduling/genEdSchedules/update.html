@@ -10,9 +10,7 @@
         <select name="semester" id="semester" class="form-select">
             <option value="">—</option>
             {% for sem in semesters %}
-                <option value="{{ sem.id }}" {% if schedule.semester and sem.id == schedule.semester.id %}selected{% endif %}>
-                    {{ sem.name }}
-                </option>
+                <option value="{{ semester.semesterId }}">{{ semester.name }} ({{ semester.academicYear }} - {{ semester.term }})</option>
             {% endfor %}
         </select>
     </div>

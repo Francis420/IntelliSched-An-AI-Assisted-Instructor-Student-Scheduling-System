@@ -122,7 +122,7 @@ def genedScheduleCreate(request):
 @has_role('deptHead')
 def genedScheduleUpdate(request, scheduleId):
     schedule = get_object_or_404(GenEdSchedule, genedScheduleId=scheduleId)
-    semesters = Semester.objects.all().order_by('-id')
+    semesters = Semester.objects.all().order_by('semesterId')
 
     if request.method == 'POST':
         semesterId = request.POST.get('semester')
