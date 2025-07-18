@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Edit Room</h2>
+
+<form method="post">
+    {% csrf_token %}
+    
+    <label>Room Code:</label>
+    <input type="text" name="roomCode" value="{{ room.roomCode }}" required><br>
+
+    <label>Building:</label>
+    <input type="text" name="building" value="{{ room.building }}" required><br>
+
+    <label>Capacity:</label>
+    <input type="number" name="capacity" value="{{ room.capacity }}" required><br>
+
+    <label>Type:</label>
+    <input type="text" name="type" value="{{ room.type }}" required><br>
+
+    <label>Active:</label>
+    <input type="checkbox" name="isActive" {% if room.isActive %}checked{% endif %}><br>
+
+    <label>Notes:</label>
+    <textarea name="notes">{{ room.notes }}</textarea><br>
+
+    <button type="submit">Update Room</button>
+</form>
+
+<a href="{% url 'roomList' %}">Back to Room List</a>
+{% endblock %}

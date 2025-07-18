@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Room List</h2>
+
+<a href="{% url 'roomCreate' %}">Add New Room</a>
+
+<table>
+    <thead>
+        <tr>
+            <th>Code</th>
+            <th>Building</th>
+            <th>Capacity</th>
+            <th>Type</th>
+            <th>Active</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for room in rooms %}
+        <tr>
+            <td>{{ room.roomCode }}</td>
+            <td>{{ room.building }}</td>
+            <td>{{ room.capacity }}</td>
+            <td>{{ room.type }}</td>
+            <td>{{ room.isActive }}</td>
+            <td>
+                <a href="{% url 'roomUpdate' room.roomId %}">Edit</a> |
+                <a href="{% url 'roomDelete' room.roomId %}">Delete</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6">No rooms found.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

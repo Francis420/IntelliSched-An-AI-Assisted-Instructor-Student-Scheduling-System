@@ -3,7 +3,7 @@ from core.models import Student, User
 from django.utils import timezone
 
 
-# ---------- Subjects Table ----------
+# ---------- Subjects Table ---------- 50 still need dynamic checks for subject code and name
 class Subject(models.Model):
     subjectId = models.AutoField(primary_key=True)
     code = models.CharField(max_length=20, unique=True)  # e.g., CS101
