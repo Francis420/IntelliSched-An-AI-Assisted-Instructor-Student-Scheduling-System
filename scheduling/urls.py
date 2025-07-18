@@ -7,4 +7,11 @@ urlpatterns = [
     path('rooms/create/', views.roomCreate, name='roomCreate'),
     path('rooms/update/<int:roomId>/', views.roomUpdate, name='roomUpdate'),
     path('rooms/delete/<int:roomId>/', views.roomDelete, name='roomDelete'),
+
+    # GenEd Schedules
+
+    path('genEdSchedules/', views.genedScheduleList, name='genedScheduleList'),
+    path('genEdSchedules/create/', views.genedScheduleCreate, name='genedScheduleCreate'),
+    path('genEdSchedules/update/<int:scheduleId>/', views.genedScheduleUpdate, name='genedScheduleUpdate'),
+    path('genEdSchedules/delete/<int:scheduleId>/', views.genedScheduleDelete, name='genedScheduleDelete'),
 ]

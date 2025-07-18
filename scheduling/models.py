@@ -84,7 +84,7 @@ class Section(models.Model):
         return f"{self.subject.code} - Section {self.sectionCode}"
 
 
-# ---------- Room Table ----------
+# ---------- Room Table ---------- 50 check notes for info
 class Room(models.Model):
     roomId = models.AutoField(primary_key=True)
     roomCode = models.CharField(max_length=20)
@@ -150,7 +150,7 @@ class Enrollment(models.Model):
 # ---------- GenEdSchedules ----------
 class GenEdSchedule(models.Model):
     genedScheduleId = models.AutoField(primary_key=True)
-    semester = models.ForeignKey(Semester, on_delete=models.CASCADE)
+    semester = models.ForeignKey(Semester, on_delete=models.CASCADE, null=True, blank=True)
     code = models.CharField(max_length=20)
     subjectName = models.CharField(max_length=100)
     sectionCode = models.CharField(max_length=10)

@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>GenEd Schedules</h2>
+<a href="{% url 'genedScheduleCreate' %}" class="btn btn-primary mb-3">Add GenEd Schedule</a>
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Semester</th>
+            <th>Code</th>
+            <th>Subject Name</th>
+            <th>Section</th>
+            <th>Instructor</th>
+            <th>Day</th>
+            <th>Time</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for schedule in schedules %}
+        <tr>
+            <td>{{ schedule.semester.name|default:"—" }}</td>
+            <td>{{ schedule.code }}</td>
+            <td>{{ schedule.subjectName }}</td>
+            <td>{{ schedule.sectionCode }}</td>
+            <td>{{ schedule.instructorName|default:"—" }}</td>
+            <td>{{ schedule.dayOfWeek }}</td>
+            <td>{{ schedule.startTime }} - {{ schedule.endTime }}</td>
+            <td>
+                <a href="{% url 'genedScheduleUpdate' schedule.genedScheduleId %}" class="btn btn-sm btn-warning">Edit</a>
+                <a href="{% url 'genedScheduleDelete' schedule.genedScheduleId %}" class="btn btn-sm btn-danger">Delete</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center">No GenEd schedules found.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
