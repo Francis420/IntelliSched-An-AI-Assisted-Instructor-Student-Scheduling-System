@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h3>Add Subject Preference</h3>
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+            <label>Subject</label>
+            <select name="subject" class="form-control" required>
+                {% for subject in subjects %}
+                <option value="{{ subject.subjectId }}">{{ subject.code }} - {{ subject.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group mt-2">
+            <label>Preference Type</label>
+            <select name="preferenceType" class="form-control" required>
+                {% for t in types %}
+                <option value="{{ t }}">{{ t }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group mt-2">
+            <label>Reason (optional)</label>
+            <textarea name="reason" class="form-control" rows="3"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-success mt-3">Save</button>
+        <a href="{% url 'preferenceList' %}" class="btn btn-secondary mt-3">Cancel</a>
+    </form>
+</div>
+{% endblock %}

@@ -7,6 +7,11 @@ from django.db import transaction
 from core.models import User, Role, Instructor, Student, UserLogin
 
 
+
+def home(request):
+    return render(request, 'home.html')
+
+
 @login_required
 @has_role('deptHead')
 def subjectList(request):

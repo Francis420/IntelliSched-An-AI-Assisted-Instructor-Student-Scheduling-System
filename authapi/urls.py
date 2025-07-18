@@ -6,7 +6,7 @@ urlpatterns = [
     path('logout/', views.logoutView, name='logout'),
 
     # Test Dashboards
-    path('department/dashboard/', views.deptHeadDashboard, name='deptheadDashboard'),
+    path('department/dashboard/', views.deptHeadDashboard, name='deptHeadDashboard'),
     path('instructor/dashboard/', views.instructorDashboard, name='instructorDashboard'),
     path('student/dashboard/', views.studentDashboard, name='studentDashboard'),
 ]

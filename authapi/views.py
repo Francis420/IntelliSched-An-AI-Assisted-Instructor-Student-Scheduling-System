@@ -80,7 +80,7 @@ def logoutView(request):
 @login_required
 @has_role('deptHead')
 def deptHeadDashboard(request):
-    return render(request, 'dashboards/deptheadDashboard.html')
+    return render(request, 'dashboards/deptHeadDashboard.html')
 
 
 @login_required

@@ -2,7 +2,7 @@ from django.db import models
 from core.models import Instructor
 
 
-# ---------- Instructor Experience ----------
+# ---------- Instructor Experience ---------- 50
 class InstructorExperience(models.Model):
     EXPERIENCE_TYPE_CHOICES = [
         ('Work Experience', 'Work Experience'),
@@ -18,6 +18,7 @@ class InstructorExperience(models.Model):
     endDate = models.DateField(null=True, blank=True)
     description = models.TextField()
     type = models.CharField(max_length=30, choices=EXPERIENCE_TYPE_CHOICES)
+    relatedSubjects = models.ManyToManyField('scheduling.Subject', blank=True)
     isVerified = models.BooleanField(default=False)
     createdAt = models.DateTimeField(auto_now_add=True)
 
@@ -25,7 +26,7 @@ class InstructorExperience(models.Model):
         return f"{self.instructor.instructorId} - {self.title}"
 
 
-# ---------- Instructor Availability ----------
+# ---------- Instructor Availability ---------- 25 still needs a better ui and implementation
 class InstructorAvailability(models.Model):
     DAY_CHOICES = [
         ('Monday', 'Monday'), ('Tuesday', 'Tuesday'), ('Wednesday', 'Wednesday'),
@@ -44,19 +45,28 @@ class InstructorAvailability(models.Model):
         return f"{self.instructor.instructorId} - {self.dayOfWeek} {self.startTime}-{self.endTime}"
 
 
+
 # ---------- Teaching History ----------
 class TeachingHistory(models.Model):
     teachingId = models.AutoField(primary_key=True)
     instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE)
-    subject = models.ForeignKey("scheduling.Subject", on_delete=models.CASCADE)
-    schedule = models.ForeignKey("scheduling.Schedule", on_delete=models.CASCADE)
+    subject = models.ForeignKey('scheduling.Subject', on_delete=models.CASCADE)
+
+    semester = models.ForeignKey('scheduling.Semester', on_delete=models.PROTECT, null=True)
+
+    timesTaught = models.PositiveIntegerField(default=1)  # number of times taught in that semester
+
     createdAt = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        unique_together = ('instructor', 'subject', 'semester')  # prevent duplication
+
     def __str__(self):
-        return f"{self.instructor.instructorId} - {self.subject.code}"
+        return f"{self.instructor.instructorId} - {self.subject.code} ({self.semester}) x{self.timesTaught}"
 
 
-# ---------- Instructor Credential ----------
+
+# ---------- Instructor Credential ---------- 50
 class InstructorCredentials(models.Model):
     CREDENTIAL_TYPE_CHOICES = [
         ('Certification', 'Certification'),
@@ -67,10 +77,10 @@ class InstructorCredentials(models.Model):
 
     credentialId = models.AutoField(primary_key=True)
     instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE)
-    subject = models.ForeignKey("scheduling.Subject", on_delete=models.SET_NULL, null=True, blank=True)
     type = models.CharField(max_length=30, choices=CREDENTIAL_TYPE_CHOICES)
     title = models.CharField(max_length=100)
     description = models.TextField()
+    relatedSubjects = models.ManyToManyField('scheduling.Subject', blank=True)
     isVerified = models.BooleanField(default=False)
     documentUrl = models.CharField(max_length=255, null=True, blank=True)
     dateEarned = models.DateField()
@@ -80,7 +90,7 @@ class InstructorCredentials(models.Model):
         return f"{self.instructor.instructorId} - {self.title}"
 
 
-# ---------- Instructor Subject Preference ----------
+# ---------- Instructor Subject Preference ---------- 50 list all subjects, set all preferences to default "Neutral" then let the instructor update
 class InstructorSubjectPreference(models.Model):
     PREFERENCE_TYPE_CHOICES = [
         ('Prefer', 'Prefer'),
@@ -93,6 +103,7 @@ class InstructorSubjectPreference(models.Model):
     subject = models.ForeignKey("scheduling.Subject", on_delete=models.CASCADE)
     preferenceType = models.CharField(max_length=20, choices=PREFERENCE_TYPE_CHOICES)
     reason = models.TextField(blank=True, null=True)
+    updatedAt = models.DateTimeField(auto_now=True)
     createdAt = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

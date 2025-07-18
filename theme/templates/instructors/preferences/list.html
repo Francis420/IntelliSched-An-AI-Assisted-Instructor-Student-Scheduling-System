@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h3>Subject Preferences</h3>
+    <a href="{% url 'preferenceCreate' %}" class="btn btn-primary mb-3">Add New Preference</a>
+
+    {% if preferences %}
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Subject</th>
+                <th>Preference</th>
+                <th>Reason</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in preferences %}
+            <tr>
+                <td>{{ p.subject.code }} - {{ p.subject.name }}</td>
+                <td>{{ p.preferenceType }}</td>
+                <td>{{ p.reason|default:"—" }}</td>
+                <td>
+                    <a href="{% url 'preferenceUpdate' p.preferenceId %}" class="btn btn-sm btn-warning">Edit</a>
+                    <a href="{% url 'preferenceDelete' p.preferenceId %}" class="btn btn-sm btn-danger">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No preferences set yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

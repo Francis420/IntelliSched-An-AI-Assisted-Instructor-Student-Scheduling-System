@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}Instructor Experiences{% endblock %}
+
+{% block content %}
+<h2>My Work Experiences</h2>
+<a href="{% url 'experienceCreate' %}" class="btn btn-primary">+ Add Experience</a>
+
+<ul>
+  {% for exp in experiences %}
+    <li>
+      <strong>{{ exp.title }}</strong>
+      ({{ exp.type|capfirst }}) - {{ exp.organization }}<br>
+      {{ exp.startDate }} to {{ exp.endDate|default:"Present" }}<br>
+
+      <strong>Related Subjects:</strong>
+      {% with exp.relatedSubjects.all as related %}
+        {% if related %}
+          {% for subject in related %}
+            {{ subject.code }}{% if not forloop.last %}, {% endif %}
+          {% endfor %}
+        {% else %}
+          None
+        {% endif %}
+      {% endwith %}
+      <br>
+
+      <a href="{% url 'experienceUpdate' exp.experienceId %}">Edit</a> |
+      <a href="{% url 'experienceDelete' exp.experienceId %}">Delete</a>
+    </li>
+    <hr>
+  {% empty %}
+    <li>No experiences found.</li>
+  {% endfor %}
+</ul>
+{% endblock %}

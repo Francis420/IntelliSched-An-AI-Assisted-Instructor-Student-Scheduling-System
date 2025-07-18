@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Confirm Delete</h2>
+<p>Are you sure you want to delete this teaching history record?</p>
+
+<ul>
+    <li><strong>Subject:</strong> {{ record.subject.code }} - {{ record.subject.title }}</li>
+    <li><strong>Semester:</strong> {{ record.semester.term }} {{ record.semester.year }}</li>
+    <li><strong>Times Taught:</strong> {{ record.timesTaught }}</li>
+</ul>
+
+<form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Yes, Delete</button>
+    <a href="{% url 'teachingHistoryList' %}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

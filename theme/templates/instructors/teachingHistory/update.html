@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Edit Teaching History</h2>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="form-group">
+        <label>Subject:</label>
+        <select name="subject" class="form-control" required>
+            {% for subject in subjects %}
+            <option value="{{ subject.subjectId }}" {% if subject == record.subject %}selected{% endif %}>
+                {{ subject.code }} - {{ subject.title }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label>Semester:</label>
+        <select name="semester" class="form-control" required>
+            {% for sem in semesters %}
+            <option value="{{ sem.semesterId }}" {% if sem == record.semester %}selected{% endif %}>
+                {{ sem.term }} {{ sem.year }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label>Times Taught:</label>
+        <input type="number" name="timesTaught" class="form-control" min="1" value="{{ record.timesTaught }}" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Update</button>
+    <a href="{% url 'teachingHistoryList' %}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

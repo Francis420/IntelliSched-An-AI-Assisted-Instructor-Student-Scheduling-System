@@ -1,5 +1,4 @@
 from django.db import models
-from instructors.models import Instructor
 from core.models import Student, User
 from django.utils import timezone
 
@@ -44,7 +43,7 @@ class Semester(models.Model):
 # ---------- Instructor Matching (AI Result) ----------
 class InstructorSubjectMatch(models.Model):
     matchId = models.AutoField(primary_key=True)
-    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE)
+    instructor = models.ForeignKey('core.Instructor', on_delete=models.CASCADE)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
     confidenceScore = models.FloatField()
     primaryFactor = models.CharField(max_length=50)  # ENUM in schema
@@ -105,7 +104,7 @@ class Room(models.Model):
 class Schedule(models.Model):
     scheduleId = models.AutoField(primary_key=True)
     offer = models.ForeignKey(SubjectOffering, on_delete=models.CASCADE)
-    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE)
+    instructor = models.ForeignKey('core.Instructor', on_delete=models.CASCADE)
     section = models.ForeignKey(Section, on_delete=models.CASCADE)
     room = models.ForeignKey(Room, on_delete=models.SET_NULL, null=True, blank=True)
     semester = models.ForeignKey(Semester, on_delete=models.CASCADE)
@@ -184,7 +183,7 @@ class Import(models.Model):
 # ---------- InstructorSubjectMatchHistory ----------
 class InstructorSubjectMatchHistory(models.Model):
     matchId = models.AutoField(primary_key=True)
-    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE)
+    instructor = models.ForeignKey('core.Instructor', on_delete=models.CASCADE)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
     confidenceScore = models.FloatField()
     primaryFactor = models.CharField(max_length=50)

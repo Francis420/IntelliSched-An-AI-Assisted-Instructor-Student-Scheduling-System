@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>My Availability</h2>
+<a href="{% url 'availabilityCreate' %}" class="btn btn-primary">+ Add Availability</a>
+<ul>
+  {% for slot in availabilities %}
+    <li>
+      <strong>{{ slot.dayOfWeek }}</strong>: {{ slot.startTime|time:"H:i" }} - {{ slot.endTime|time:"H:i" }}
+      <br>
+      <a href="{% url 'availabilityUpdate' slot.availabilityId %}">Edit</a> |
+      <a href="{% url 'availabilityDelete' slot.availabilityId %}">Delete</a>
+    </li>
+  {% empty %}
+    <li>No availability set.</li>
+  {% endfor %}
+</ul>
+{% endblock %}

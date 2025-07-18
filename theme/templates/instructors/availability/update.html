@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Edit Availability</h2>
+<form method="post">
+  {% csrf_token %}
+  <label>Day of Week:</label><br>
+  <select name="dayOfWeek" required>
+    {% for day in days %}
+        <option value="{{ day }}">{{ day }}</option>
+    {% endfor %}
+    </select><br><br>
+
+  <label>Start Time:</label><br>
+  <input type="time" name="startTime" value="{{ availability.startTime|time:'H:i' }}" required><br><br>
+
+  <label>End Time:</label><br>
+  <input type="time" name="endTime" value="{{ availability.endTime|time:'H:i' }}" required><br><br>
+
+  <button type="submit">Update</button>
+</form>
+<a href="{% url 'availabilityList' %}">Back</a>
+{% endblock %}
