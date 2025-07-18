@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Delete Instructor Account</h2>
+
+<p>Are you sure you want to delete the account for <strong>{{ user.firstName }} {{ user.lastName }}</strong>?</p>
+
+<div class="alert alert-warning">
+  <strong>Warning:</strong> If this instructor is still linked to experience, availability, or scheduling records, the deletion may fail.
+</div>
+
+<form method="POST">
+  {% csrf_token %}
+  <button type="submit" class="btn btn-danger">Confirm Delete</button>
+  <a href="{% url 'instructorAccountList' %}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

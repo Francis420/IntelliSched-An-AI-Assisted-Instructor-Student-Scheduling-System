@@ -5,13 +5,40 @@ from scheduling.models import Subject
 from authapi.views import has_role
 from django.db import transaction
 from core.models import User, Role, Instructor, Student, UserLogin
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.hashers import make_password
+from django.db import IntegrityError
+from django.http import JsonResponse
+from django.views.decorators.http import require_GET
 
 
 
+# ---------- Home ----------
 def home(request):
     return render(request, 'home.html')
 
+# ---------- # Check if username/instructorId exists ----------
+@require_GET
+def checkUsernameAvailability(request):
+    username = request.GET.get('value', '').strip()
+    exists = User.objects.filter(username=username).exists()
+    return JsonResponse({
+        'isAvailable': not exists,
+        'message': 'Username available.' if not exists else 'Username already taken.'
+    })
 
+@require_GET
+def checkInstructorIdAvailability(request):
+    instructorId = request.GET.get('value', '').strip()
+    exists = Instructor.objects.filter(instructorId=instructorId).exists()
+    return JsonResponse({
+        'isAvailable': not exists,
+        'message': 'Instructor ID available.' if not exists else 'Instructor ID already taken.'
+    })
+
+
+# ---------- Subjects ----------
 @login_required
 @has_role('deptHead')
 def subjectList(request):
@@ -104,18 +131,146 @@ def subjectDelete(request, subjectCode):
 
 
 
-# ---------- Account Management ----------
+# ---------- Instructor Accounts ----------
 @login_required
 @has_role('deptHead')
-def userList(request):
-    users = User.objects.prefetch_related('roles').all()
-    return render(request, 'core/users/list.html', {'users': users})
+def instructorAccountList(request):
+    instructor_logins = UserLogin.objects.select_related('user', 'instructor') \
+        .filter(user__roles__name='instructor', instructor__isnull=False) \
+        .distinct()
+
+    context = {
+        'instructorLogins': instructor_logins
+    }
+    return render(request, 'core/instructors/list.html', context)
+
 
 @login_required
 @has_role('deptHead')
 @transaction.atomic
-def userCreate(request):
-    roles = Role.objects.all()
+def instructorAccountCreate(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        firstName = request.POST.get('firstName')
+        lastName = request.POST.get('lastName')
+        instructorId = request.POST.get('instructorId')
+        employmentType = request.POST.get('employmentType')
+
+        if User.objects.filter(username=username).exists():
+            messages.error(request, 'Username already exists.')
+        elif Instructor.objects.filter(instructorId=instructorId).exists():
+            messages.error(request, 'Instructor ID already exists.')
+        else:
+            # Create User
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password,
+                firstName=firstName,
+                lastName=lastName,
+                isActive=True
+            )
+
+            # Assign Role
+            instructorRole = Role.objects.get(name='instructor')
+            user.roles.add(instructorRole)
+
+            # Create Instructor Profile
+            instructor = Instructor.objects.create(
+                instructorId=instructorId,
+                employmentType=employmentType
+            )
+
+            # Link in UserLogin
+            UserLogin.objects.create(user=user, instructor=instructor)
+
+            messages.success(request, 'Instructor account sucessfully created.')
+            return redirect('instructorAccountList')
+
+    return render(request, 'core/instructors/create.html')
+
+
+
+@login_required
+@has_role('deptHead')
+@transaction.atomic
+def instructorAccountUpdate(request, userId):
+    user = get_object_or_404(User, pk=userId)
+    user_login = get_object_or_404(UserLogin, user=user)
+
+    if not user_login.instructor:
+        messages.error(request, "This account is not linked to any instructor.")
+        return redirect('instructorAccountList')
+
+    instructor = user_login.instructor
+
+    if request.method == 'POST':
+        # Update User info
+        user.firstName = request.POST.get('firstName')
+        user.lastName = request.POST.get('lastName')
+        user.email = request.POST.get('email')
+        user.save()
+
+        # Update Instructor info
+        newInstructorId = request.POST.get('instructorId')
+        employmentType = request.POST.get('employmentType')
+
+        if newInstructorId and newInstructorId != instructor.instructorId:
+            # Check uniqueness
+            if Instructor.objects.filter(instructorId=newInstructorId).exclude(pk=instructor.pk).exists():
+                messages.error(request, 'Instructor ID already exists.')
+                return redirect('instructorAccountUpdate', userId=user.userId)
+            instructor.instructorId = newInstructorId
+
+        instructor.employmentType = employmentType
+        instructor.save()
+
+        messages.success(request, 'Instructor account updated successfully.')
+        return redirect('instructorAccountList')
+
+    return render(request, 'core/instructors/update.html', {
+        'user': user,
+        'instructor': instructor
+    })
+
+
+@login_required
+@has_role('deptHead')
+@transaction.atomic
+def instructorAccountDelete(request, userId):
+    user = get_object_or_404(User, pk=userId)
+
+    if request.method == 'POST':
+        try:
+            user.delete()
+            messages.success(request, 'Instructor account deleted.')
+            return redirect('instructorAccountList')
+        except IntegrityError:
+            messages.error(request, 'Cannot delete instructor account: It has linked records in the database.')
+            return redirect('instructorAccountList')
+
+    return render(request, 'core/instructors/delete.html', {'user': user})
+
+
+
+# ---------- Student Accounts ----------
+@login_required
+@has_role('deptHead')
+@login_required
+def studentAccountList(request):
+    student_logins = UserLogin.objects.select_related('user', 'student') \
+        .filter(user__roles__name='student', student__isnull=False) \
+        .distinct()
+
+    context = {
+        'studentLogins': student_logins
+    }
+    return render(request, 'core/students/list.html', context)
+
+@transaction.atomic
+def studentAccountCreate(request):
     if request.method == 'POST':
         username = request.POST.get('username')
         email = request.POST.get('email')
@@ -123,80 +278,77 @@ def userCreate(request):
         firstName = request.POST.get('firstName')
         lastName = request.POST.get('lastName')
         middleInitial = request.POST.get('middleInitial')
-        selected_roles = request.POST.getlist('roles')
-        instructorId = request.POST.get('instructorId') or None
-        studentId = request.POST.get('studentId') or None
+        studentId = request.POST.get('studentId')
 
         if User.objects.filter(username=username).exists():
             messages.error(request, 'Username already exists.')
+        elif Student.objects.filter(studentId=studentId).exists():
+            messages.error(request, 'Student ID already exists.')
         else:
+            # Create User
             user = User.objects.create_user(
                 username=username,
                 email=email,
                 password=password,
                 firstName=firstName,
                 lastName=lastName,
-                middleInitial=middleInitial
+                middleInitial=middleInitial,
+                isActive=True
             )
 
-            user.roles.set(Role.objects.filter(id__in=selected_roles))
+            # Assign Role
+            studentRole = Role.objects.get(name='student')
+            user.roles.add(studentRole)
 
-            instructor = Instructor.objects.filter(instructorId=instructorId).first() if instructorId else None
-            student = Student.objects.filter(studentId=studentId).first() if studentId else None
+            # Create Student Profile
+            student = Student.objects.create(studentId=studentId)
 
-            UserLogin.objects.create(user=user, instructor=instructor, student=student)
-            messages.success(request, 'User created successfully.')
-            return redirect('userList')
+            # Link in UserLogin
+            UserLogin.objects.create(user=user, student=student)
 
-    return render(request, 'core/users/create.html', {'roles': roles})
+            messages.success(request, 'Student account successfully created.')
+            return redirect('studentAccountList')
+
+    return render(request, 'core/students/create.html')
 
 @login_required
 @has_role('deptHead')
-def userUpdate(request, userId):
-    user = get_object_or_404(User, userId=userId)
-    roles = Role.objects.all()
-    login_info = UserLogin.objects.filter(user=user).first()
+@has_role('student')
+@transaction.atomic
+def studentAccountUpdate(request, userId):
+    user = get_object_or_404(User, pk=userId)
+    user_login = get_object_or_404(UserLogin, user=user)
+
+    if not user_login.student:
+        messages.error(request, "This account is not linked to any student.")
+        return redirect('studentAccountList')
+
+    student = user_login.student
 
     if request.method == 'POST':
+        # Update User info
         user.firstName = request.POST.get('firstName')
         user.lastName = request.POST.get('lastName')
         user.middleInitial = request.POST.get('middleInitial')
         user.email = request.POST.get('email')
-        selected_roles = request.POST.getlist('roles')
-
-        user.roles.set(Role.objects.filter(id__in=selected_roles))
         user.save()
 
-        instructorId = request.POST.get('instructorId') or None
-        studentId = request.POST.get('studentId') or None
+        # Update Student info
+        newStudentId = request.POST.get('studentId')
 
-        if login_info:
-            login_info.instructor = Instructor.objects.filter(instructorId=instructorId).first() if instructorId else None
-            login_info.student = Student.objects.filter(studentId=studentId).first() if studentId else None
-            login_info.save()
-        else:
-            UserLogin.objects.create(
-                user=user,
-                instructor=Instructor.objects.filter(instructorId=instructorId).first() if instructorId else None,
-                student=Student.objects.filter(studentId=studentId).first() if studentId else None
-            )
+        if newStudentId and newStudentId != student.studentId:
+            if Student.objects.filter(studentId=newStudentId).exclude(pk=student.pk).exists():
+                messages.error(request, 'Student ID already exists.')
+                return redirect('studentAccountUpdate', userId=user.userId)
+            student.studentId = newStudentId
 
-        messages.success(request, 'User updated successfully.')
-        return redirect('userList')
+        student.save()
 
-    return render(request, 'core/users/update.html', {
-        'userObj': user,
-        'roles': roles,
-        'login_info': login_info,
+        messages.success(request, 'Student account updated successfully.')
+        return redirect('studentAccountList')
+
+    return render(request, 'core/students/update.html', {
+        'user': user,
+        'student': student
     })
-
-@login_required
-@has_role('deptHead')
-def userDelete(request, userId):
-    user = get_object_or_404(User, userId=userId)
-    if request.method == 'POST':
-        user.delete()
-        messages.success(request, 'User deleted successfully.')
-        return redirect('userList')
-    return render(request, 'core/users/delete.html', {'userObj': user})
 

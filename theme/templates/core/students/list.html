@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Student Accounts</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>Username</th>
+            <th>Student ID</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for login in studentLogins %}
+        <tr>
+            <td>{{ login.user.username }}</td>
+            <td>{{ login.student.studentId }}</td>
+            <td>{{ login.user.lastName }}, {{ login.user.firstName }} {{ login.user.middleInitial }}</td>
+            <td>{{ login.user.email }}</td>
+            <td>
+                <a href="{% url 'studentAccountUpdate' login.user.userId %}">Edit</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5">No student accounts found.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

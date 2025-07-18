@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 
-# ---------- Custom User Manager ----------
+# ---------- Custom User Manager ---------- 50 need to update templates to handle dynamic checks for username/instructorId
 class UserManager(BaseUserManager):
     def create_user(self, username, email, password=None, **extra_fields):
         if not email:
@@ -42,7 +42,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     lastName = models.CharField(max_length=50)
     middleInitial = models.CharField(max_length=1, blank=True, null=True)
 
-    roles = models.ManyToManyField(Role, blank=True)  # NEW
+    roles = models.ManyToManyField(Role, blank=True)
 
     isActive = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -61,7 +61,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         return f"{self.username} ({role_names})"
 
 
-# ---------- Instructor Table (core) ----------
+# ---------- Instructor Table ----------
 class Instructor(models.Model):
     instructorId = models.CharField(primary_key=True, max_length=20)  # e.g., "2025-123456"
     employmentType = models.CharField(max_length=20, choices=[
@@ -74,7 +74,7 @@ class Instructor(models.Model):
         return self.instructorId
 
 
-# ---------- Student Table (core) ----------
+# ---------- Student Table ----------
 class Student(models.Model):
     studentId = models.CharField(primary_key=True, max_length=20)  # e.g., "2025-123456"
     createdAt = models.DateTimeField(auto_now_add=True)

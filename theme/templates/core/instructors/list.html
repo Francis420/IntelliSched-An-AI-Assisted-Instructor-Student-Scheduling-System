@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Instructor Accounts</h2>
+
+    <a href="{% url 'instructorAccountCreate' %}" class="btn btn-primary mb-3">Create New Instructor Account</a>
+
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                <th>Instructor ID</th>
+                <th>Full Name</th>
+                <th>Email</th>
+                <th>Employment Type</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for login in instructorLogins %}
+                <tr>
+                    <td>{{ login.instructor.instructorId }}</td>
+                    <td>{{ login.user.firstName }} {{ login.user.lastName }}</td>
+                    <td>{{ login.user.email }}</td>
+                    <td>{{ login.instructor.employmentType }}</td>
+                    <td>
+                        <a href="{% url 'instructorAccountUpdate' login.user.userId %}" class="btn btn-sm btn-warning">
+                            Edit
+                        </a>
+                        <a href="{% url 'instructorAccountDelete' login.user.userId %}" class="btn btn-sm btn-danger"
+                           onclick="return confirm('Are you sure you want to delete this instructor account? This cannot be undone, and deletion may fail if linked records exist.')">
+                            Delete
+                        </a>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center">No instructor accounts found.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

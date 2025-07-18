@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<h2>Update Instructor Account</h2>
+
+<form method="POST">
+    {% csrf_token %}
+
+    <label for="firstName">First Name:</label>
+    <input type="text" name="firstName" value="{{ user.firstName }}" required><br>
+
+    <label for="lastName">Last Name:</label>
+    <input type="text" name="lastName" value="{{ user.lastName }}" required><br>
+
+    <label for="email">Email:</label>
+    <input type="email" name="email" value="{{ user.email }}" required><br>
+
+    <label for="instructorId">Instructor ID:</label>
+    <input type="text" name="instructorId" value="{{ instructor.instructorId }}" required><br>
+
+    <label for="employmentType">Employment Type:</label>
+    <select name="employmentType" required>
+        <option value="">Select Type</option>
+        <option value="full-time" {% if instructor.employmentType == 'full-time' %}selected{% endif %}>Full-Time</option>
+        <option value="part-time" {% if instructor.employmentType == 'part-time' %}selected{% endif %}>Part-Time</option>
+    </select><br><br>
+
+    <button type="submit">Update Account</button>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const usernameInput = document.querySelector('input[name="username"]');
+    const instructorIdInput = document.querySelector('input[name="instructorId"]');
+
+    const showAvailabilityMessage = (element, isAvailable, message) => {
+        let msgElem = element.nextElementSibling;
+        if (!msgElem || !msgElem.classList.contains('availability-message')) {
+            msgElem = document.createElement('span');
+            msgElem.classList.add('availability-message');
+            element.parentNode.insertBefore(msgElem, element.nextSibling);
+        }
+        msgElem.textContent = message;
+        msgElem.style.color = isAvailable ? 'green' : 'red';
+    };
+
+    const debounce = (func, delay) => {
+        let timer;
+        return (...args) => {
+            clearTimeout(timer);
+            timer = setTimeout(() => func.apply(this, args), delay);
+        };
+    };
+
+    const checkAvailability = debounce((type, value, element) => {
+        fetch(`/check-${type}-availability/?value=${value}`)
+            .then(res => res.json())
+            .then(data => {
+                showAvailabilityMessage(element, data.isAvailable, data.message);
+            });
+    }, 400);
+
+    usernameInput.addEventListener('input', () => {
+        if (usernameInput.value.trim() !== '') {
+            checkAvailability('username', usernameInput.value, usernameInput);
+        }
+    });
+
+    instructorIdInput.addEventListener('input', () => {
+        if (instructorIdInput.value.trim() !== '') {
+            checkAvailability('instructorId', instructorIdInput.value, instructorIdInput);
+        }
+    });
+});
+</script>
+{% endblock %}
