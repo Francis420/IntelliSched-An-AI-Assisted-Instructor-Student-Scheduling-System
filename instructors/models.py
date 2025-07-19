@@ -54,12 +54,12 @@ class TeachingHistory(models.Model):
 
     semester = models.ForeignKey('scheduling.Semester', on_delete=models.PROTECT, null=True)
 
-    timesTaught = models.PositiveIntegerField(default=1)  # number of times taught in that semester
+    timesTaught = models.PositiveIntegerField(default=1)
 
     createdAt = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('instructor', 'subject', 'semester')  # prevent duplication
+        unique_together = ('instructor', 'subject', 'semester')
 
     def __str__(self):
         return f"{self.instructor.instructorId} - {self.subject.code} ({self.semester}) x{self.timesTaught}"
