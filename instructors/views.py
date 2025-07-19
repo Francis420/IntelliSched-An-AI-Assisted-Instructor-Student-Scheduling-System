@@ -51,7 +51,7 @@ def experienceCreate(request):
         startDate = request.POST.get('startDate')
         endDate = request.POST.get('endDate') or None
         description = request.POST.get('description')
-        type = request.POST.get('type')
+        experienceType = request.POST.get('experienceType')
         relatedSubjectIds = list(map(int, request.POST.getlist('relatedSubjects')))
 
         experience = InstructorExperience.objects.create(
@@ -61,7 +61,7 @@ def experienceCreate(request):
             startDate=startDate,
             endDate=endDate,
             description=description,
-            type=type
+            experienceType=experienceType
         )
         if relatedSubjectIds:
             experience.relatedSubjects.set(relatedSubjectIds)
@@ -90,7 +90,7 @@ def experienceUpdate(request, experienceId):
         experience.startDate = request.POST.get('startDate')
         experience.endDate = request.POST.get('endDate') or None
         experience.description = request.POST.get('description')
-        experience.type = request.POST.get('type')
+        experience.experienceType = request.POST.get('experienceType')
         relatedSubjectIds = list(map(int, request.POST.getlist('relatedSubjects')))
 
         experience.save()

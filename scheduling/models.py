@@ -3,26 +3,39 @@ from core.models import Student, User
 from django.utils import timezone
 
 
-# ---------- Subjects Table ---------- 50 still need dynamic checks for subject code and name
+# ---------- Subjects Table ---------- 60 still need dynamic checks for subject code and name
 class Subject(models.Model):
     subjectId = models.AutoField(primary_key=True)
     code = models.CharField(max_length=20, unique=True)
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=150)
     units = models.IntegerField()
-    defaultTerm = models.CharField(max_length=10, choices=[('1st', '1st'), ('2nd', '2nd'), ('Midyear', 'Midyear')])
-    yearLevel = models.IntegerField(choices=[(1, '1'), (2, '2'), (3, '3'), (4, '4')])
     durationMinutes = models.IntegerField()
+    defaultTerm = models.IntegerField(choices=[(0, '1st'), (1, '2nd'), (2, 'Midyear')])
+    yearLevel = models.IntegerField(choices=[(1, '1st'), (2, '2nd'), (3, '3rd'), (4, '4th')])
     hasLab = models.BooleanField(default=False)
     labDurationMinutes = models.IntegerField(null=True, blank=True)
-    subjectTopics = models.TextField(null=True, blank=True)
-    notes = models.TextField(null=True, blank=True)
     isPriorityForRooms = models.BooleanField(default=False)
     isActive = models.BooleanField(default=True)
+    subjectTopics = models.TextField(null=True, blank=True)
+    notes = models.TextField(null=True, blank=True)
     createdAt = models.DateTimeField(auto_now_add=True)
     updatedAt = models.DateTimeField(auto_now=True)
 
+    @property
+    def normalizedUnits(self):
+        return self.units / 3
+
+    @property
+    def normalizedDuration(self):
+        return self.durationMinutes / 180
+
+    @property
+    def safeLabDuration(self):
+        return self.labDurationMinutes if self.hasLab else 0
+
     def __str__(self):
         return f"{self.code} - {self.name}"
+
 
 
 class Semester(models.Model):
@@ -43,7 +56,7 @@ class InstructorSubjectMatch(models.Model):
     instructor = models.ForeignKey('core.Instructor', on_delete=models.CASCADE)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
     confidenceScore = models.FloatField()
-    primaryFactor = models.CharField(max_length=50)  # ENUM in schema
+    primaryFactor = models.CharField(max_length=50) 
     experienceScore = models.FloatField()
     teachingScore = models.FloatField()
     credentialScore = models.FloatField()
