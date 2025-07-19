@@ -3,10 +3,26 @@ from core.models import Student, User
 from django.utils import timezone
 
 
+# ---------- Curriculum Table ----------
+# This model represents the curriculum to avoid conflicts of new and old curriculums, including its name, effective school year,
+class Curriculum(models.Model):
+    curriculumId = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=100, unique=True)  # e.g., "2021 Curriculum"
+    effectiveSy = models.CharField(max_length=20)  # e.g., "S.Y. 2021-2022"
+    description = models.TextField(null=True, blank=True)
+    createdAt = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+
+
 # ---------- Subjects Table ---------- 60 still need dynamic checks for subject code and name
 # This model represents subjects offered by the IT department, including their code, name, units, and other attributes.
 class Subject(models.Model):
     subjectId = models.AutoField(primary_key=True)
+    curriculum = models.ForeignKey("Curriculum", on_delete=models.CASCADE, related_name="subjects")
+
     code = models.CharField(max_length=20, unique=True)
     name = models.CharField(max_length=150)
     units = models.IntegerField()
@@ -35,10 +51,12 @@ class Subject(models.Model):
         return self.labDurationMinutes if self.hasLab else 0
 
     def __str__(self):
-        return f"{self.code} - {self.name}"
+        return f"[{self.curriculum.name}] {self.code} - {self.name}"
 
 
 
+# ---------- Semester Table ----------
+# This model represents semesters in the academic calendar, including their name, academic year, and term
 class Semester(models.Model):
     semesterId = models.AutoField(primary_key=True)
     name = models.CharField(max_length=50)
@@ -72,7 +90,7 @@ class InstructorSubjectMatch(models.Model):
         return f"Match {self.matchId} - {self.instructor.instructorId} -> {self.subject.code}"
 
 
-# ---------- Subject Offering ----------
+# ---------- Subject Offering Table ----------
 # This model represents the offering of a subject in a specific semester, including the section code and associated instructor match.
 class SubjectOffering(models.Model):
     offerId = models.AutoField(primary_key=True)
