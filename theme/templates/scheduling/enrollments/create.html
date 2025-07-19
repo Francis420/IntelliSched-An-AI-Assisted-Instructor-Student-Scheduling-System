@@ -1,26 +1,23 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Enroll in a Subject</h2>
+<h2>Enroll in a Subject Schedule</h2>
 
 <form method="post">
     {% csrf_token %}
 
-    <label for="subject">Subject:</label>
-    <select name="subject" required>
-        {% for subj in subjects %}
-            <option value="{{ subj.subjectId }}">{{ subj.code }} - {{ subj.name }}</option>
-        {% endfor %}
-    </select>
-
-    <label for="section">Section:</label>
-    <select name="section" required>
-        {% for sec in sections %}
-            <option value="{{ sec.sectionId }}">{{ sec.sectionCode }}</option>
+    <label for="schedule">Schedule:</label>
+    <select name="schedule" required>
+        {% for sched in schedules %}
+            <option value="{{ sched.scheduleId }}">
+                {{ sched.offer.subject.code }} - {{ sched.offer.subject.name }}
+                (Section {{ sched.section.sectionCode }},
+                 {{ sched.day }} {{ sched.startTime|time:"H:i" }}–{{ sched.endTime|time:"H:i" }})
+            </option>
         {% endfor %}
     </select>
 
     <button type="submit">Enroll</button>
 </form>
 
-<a href="{% url 'enrollmentList' %}">Back to Enrollments</a>
+<a href="{% url 'enrollmentList' %}">Back to My Enrollments</a>
 {% endblock %}

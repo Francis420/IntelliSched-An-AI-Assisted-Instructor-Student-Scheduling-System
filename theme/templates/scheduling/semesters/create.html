@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<h2>Create Semester</h2>
+
+<form method="post">
+    {% csrf_token %}
+
+    <label for="term">Term:</label>
+    <select name="term" id="term" required>
+        <option value="1st">1st</option>
+        <option value="2nd">2nd</option>
+        <option value="Summer">Summer</option>
+    </select><br>
+
+    <label for="academicYear">Academic Year (e.g. 2025 - 2026):</label>
+    <input type="text" name="academicYear" required><br>
+
+    <label for="isActive">Set as Active:</label>
+    <input type="checkbox" name="isActive"><br>
+
+    <button type="submit">Create Semester</button>
+</form>
+{% endblock %}

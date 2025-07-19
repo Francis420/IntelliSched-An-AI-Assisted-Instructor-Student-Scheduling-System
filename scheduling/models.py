@@ -18,6 +18,7 @@ class Subject(models.Model):
     labDeliveryMode = models.CharField(max_length=10, choices=[('f2f', 'f2f'), ('online', 'online'), ('hybrid', 'hybrid')], null=True, blank=True)
     requiredRoomType = models.CharField(max_length=50, null=True, blank=True)
     requiredLabRoomType = models.CharField(max_length=50, null=True, blank=True)
+    subjectTopics = models.TextField(null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
     isActive = models.BooleanField(default=True)
     createdAt = models.DateTimeField(auto_now_add=True)
@@ -27,17 +28,16 @@ class Subject(models.Model):
         return f"{self.code} - {self.name}"
 
 
-# ---------- Semesters Table ----------
 class Semester(models.Model):
     semesterId = models.AutoField(primary_key=True)
-    name = models.CharField(max_length=20) 
+    name = models.CharField(max_length=50)
     academicYear = models.CharField(max_length=20) 
     term = models.CharField(max_length=10, choices=[('1st', '1st'), ('2nd', '2nd'), ('Summer', 'Summer')])
     isActive = models.BooleanField(default=False)
     createdAt = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.term} {self.academicYear}"
+        return f"{self.name}"
 
 
 # ---------- Instructor Matching (AI Result) ----------
@@ -135,19 +135,16 @@ class ScheduleControl(models.Model):
         return f"Schedule {self.schedule.scheduleId} - {self.status}"
 
 
-# ---------- Enrollment ----------
+# ---------- Enrollment ---------- # scheduleId may cause errors, rebuild the database if it does.
 class Enrollment(models.Model):
     enrollmentId = models.AutoField(primary_key=True)
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
-    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
-    section = models.ForeignKey(Section, on_delete=models.CASCADE)
-    createdAt = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ('student', 'subject', 'section')
+    schedule = models.ForeignKey(Schedule, on_delete=models.CASCADE)
+    enrollmentDate = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.student.studentId} enrolled in {self.subject.code}"
+        return f"{self.student.studentId} enrolled in {self.schedule.offer.subject.code} - {self.schedule.section.sectionCode}"
+
 
 
 # ---------- GenEdSchedules ---------- 50 check notes

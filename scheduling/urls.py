@@ -14,9 +14,15 @@ urlpatterns = [
     path('genEdSchedules/update/<int:scheduleId>/', views.genedScheduleUpdate, name='genedScheduleUpdate'),
     path('genEdSchedules/delete/<int:scheduleId>/', views.genedScheduleDelete, name='genedScheduleDelete'),
 
-    # Student Enrollment
+    # Student Enrollments
     path('enrollments/',views.enrollmentList, name='enrollmentList'),
     path('enrollments/create/', views.enrollmentCreate, name='enrollmentCreate'),
     path('enrollments/update/<int:enrollmentId>/', views.enrollmentUpdate, name='enrollmentUpdate'),
     path('enrollments/delete/<int:enrollmentId>/', views.enrollmentDelete, name='enrollmentDelete'),
+
+    # Semesters
+    path('semesters/', views.semesterList, name='semesterList'),
+    path('semesters/create/', views.semesterCreate, name='semesterCreate'),
+    path('semesters/update/<int:semesterId>/', views.semesterUpdate, name='semesterUpdate'),
+    path('semesters/delete/<int:semesterId>/', views.semesterDelete, name='semesterDelete'),
 ]

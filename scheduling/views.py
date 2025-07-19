@@ -7,8 +7,7 @@ from scheduling.models import (
     GenEdSchedule, 
     Semester,
     Enrollment,
-    Section,
-    Subject,
+    Schedule,
 )
 from core.models import (
     Student,
@@ -178,9 +177,9 @@ def enrollmentList(request):
 
     if not user_login.student:
         messages.error(request, "Student profile not found.")
-        return redirect('dashboard')  # or wherever you want to send them
+        return redirect('dashboard')
 
-    enrollments = Enrollment.objects.filter(student=user_login.student).select_related('subject', 'section')
+    enrollments = Enrollment.objects.filter(student=user_login.student).select_related('schedule__offer__subject', 'schedule__section')
     return render(request, 'scheduling/enrollments/list.html', {'enrollments': enrollments})
 
 
@@ -193,27 +192,27 @@ def enrollmentCreate(request):
         messages.error(request, "Student profile not found.")
         return redirect('dashboard')
 
-    subjects = Subject.objects.all().order_by('code')
-    sections = Section.objects.all().order_by('sectionCode')
+    schedules = Schedule.objects.select_related('offer__subject', 'section').order_by('offer__subject__code', 'section__sectionCode')
 
     if request.method == 'POST':
-        subjectId = request.POST.get('subject')
-        sectionId = request.POST.get('section')
+        scheduleId = request.POST.get('schedule')
+        schedule = get_object_or_404(Schedule, scheduleId=scheduleId)
 
-        subject = get_object_or_404(Subject, subjectId=subjectId)
-        section = get_object_or_404(Section, sectionId=sectionId)
+        # Prevent duplicate enrollments
+        existing = Enrollment.objects.filter(student=user_login.student, schedule=schedule).exists()
+        if existing:
+            messages.warning(request, 'You are already enrolled in this schedule.')
+            return redirect('enrollmentList')
 
         Enrollment.objects.create(
             student=user_login.student,
-            subject=subject,
-            section=section
+            schedule=schedule
         )
         messages.success(request, 'Enrollment added successfully.')
         return redirect('enrollmentList')
 
     return render(request, 'scheduling/enrollments/create.html', {
-        'subjects': subjects,
-        'sections': sections
+        'schedules': schedules
     })
 
 
@@ -227,15 +226,18 @@ def enrollmentUpdate(request, enrollmentId):
         return redirect('dashboard')
 
     enrollment = get_object_or_404(Enrollment, enrollmentId=enrollmentId, student=user_login.student)
-    subjects = Subject.objects.all().order_by('code')
-    sections = Section.objects.all().order_by('sectionCode')
+    schedules = Schedule.objects.select_related('offer__subject', 'section').order_by('offer__subject__code', 'section__sectionCode')
 
     if request.method == 'POST':
-        subjectId = request.POST.get('subject')
-        sectionId = request.POST.get('section')
+        scheduleId = request.POST.get('schedule')
+        new_schedule = get_object_or_404(Schedule, scheduleId=scheduleId)
 
-        enrollment.subject = get_object_or_404(Subject, subjectId=subjectId)
-        enrollment.section = get_object_or_404(Section, sectionId=sectionId)
+        # Prevent duplicate enrollments
+        if Enrollment.objects.filter(student=user_login.student, schedule=new_schedule).exclude(enrollmentId=enrollmentId).exists():
+            messages.warning(request, 'You are already enrolled in this schedule.')
+            return redirect('enrollmentList')
+
+        enrollment.schedule = new_schedule
         enrollment.save()
 
         messages.success(request, 'Enrollment updated successfully.')
@@ -243,8 +245,7 @@ def enrollmentUpdate(request, enrollmentId):
 
     return render(request, 'scheduling/enrollments/update.html', {
         'enrollment': enrollment,
-        'subjects': subjects,
-        'sections': sections
+        'schedules': schedules
     })
 
 
@@ -265,3 +266,78 @@ def enrollmentDelete(request, enrollmentId):
         return redirect('enrollmentList')
 
     return render(request, 'scheduling/enrollments/delete.html', {'enrollment': enrollment})
+
+
+# ---------- Semesters ----------
+@login_required
+@has_role('deptHead')
+def semesterList(request):
+    semesters = Semester.objects.all().order_by('-createdAt')
+    return render(request, 'scheduling/semesters/list.html', {'semesters': semesters})
+
+@login_required
+@has_role('deptHead')
+def semesterCreate(request):
+    if request.method == 'POST':
+        academicYear = request.POST.get('academicYear')
+        term = request.POST.get('term')
+        isActive = bool(request.POST.get('isActive'))
+        name = f"{term} Semester {academicYear}"
+
+        if Semester.objects.filter(academicYear=academicYear, term=term).exists():
+            messages.error(request, 'Semester for this academic year and term already exists.')
+        else:
+            Semester.objects.create(
+                name=name,
+                academicYear=academicYear,
+                term=term,
+                isActive=isActive
+            )
+            messages.success(request, 'Semester created successfully.')
+            return redirect('semesterList')
+
+    return render(request, 'scheduling/semesters/create.html')
+
+@login_required
+@has_role('deptHead')
+def semesterUpdate(request, semesterId):
+    semester = get_object_or_404(Semester, semesterId=semesterId)
+
+    if request.method == 'POST':
+        academicYear = request.POST.get('academicYear')
+        term = request.POST.get('term')
+        isActive = bool(request.POST.get('isActive'))
+        name = f"{term} Semester {academicYear}"
+
+        if Semester.objects.exclude(semesterId=semester.semesterId).filter(academicYear=academicYear, term=term).exists():
+            messages.error(request, 'Another semester with this academic year and term already exists.')
+        else:
+            semester.name = name
+            semester.academicYear = academicYear
+            semester.term = term
+            semester.isActive = isActive
+            semester.save()
+            messages.success(request, 'Semester updated successfully.')
+            return redirect('semesterList')
+
+    return render(request, 'scheduling/semesters/update.html', {'semester': semester})
+
+from django.db.models import ProtectedError
+
+@login_required
+@has_role('deptHead')
+def semesterDelete(request, semesterId):
+    semester = get_object_or_404(Semester, semesterId=semesterId)
+
+    if semester.isActive:
+        messages.error(request, 'You cannot delete an active semester.')
+        return redirect('semesterList')
+
+    try:
+        semester.delete()
+        messages.success(request, 'Semester deleted successfully.')
+    except ProtectedError:
+        messages.error(request, 'Cannot delete this semester because it is linked to other records (e.g., schedules, enrollments).')
+
+    return redirect('semesterList')
+

@@ -9,21 +9,23 @@
         <tr>
             <th>Subject</th>
             <th>Section</th>
+            <th>Schedule</th>
             <th>Actions</th>
         </tr>
     </thead>
     <tbody>
         {% for enrollment in enrollments %}
         <tr>
-            <td>{{ enrollment.subject.code }} - {{ enrollment.subject.name }}</td>
-            <td>{{ enrollment.section.sectionCode }}</td>
+            <td>{{ enrollment.schedule.offer.subject.code }} - {{ enrollment.schedule.offer.subject.name }}</td>
+            <td>{{ enrollment.schedule.section.sectionCode }}</td>
+            <td>{{ enrollment.schedule.day }} {{ enrollment.schedule.startTime|time:"H:i" }}–{{ enrollment.schedule.endTime|time:"H:i" }}</td>
             <td>
                 <a href="{% url 'enrollmentUpdate' enrollment.enrollmentId %}">Edit</a>
                 <a href="{% url 'enrollmentDelete' enrollment.enrollmentId %}">Remove</a>
             </td>
         </tr>
         {% empty %}
-        <tr><td colspan="3">No enrollments yet.</td></tr>
+        <tr><td colspan="4">No enrollments yet.</td></tr>
         {% endfor %}
     </tbody>
 </table>

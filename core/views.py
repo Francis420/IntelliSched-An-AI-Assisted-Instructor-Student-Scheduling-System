@@ -62,6 +62,7 @@ def subjectCreate(request):
         labDeliveryMode = request.POST.get('labDeliveryMode') or None
         requiredRoomType = request.POST.get('requiredRoomType') or ''
         requiredLabRoomType = request.POST.get('requiredLabRoomType') or ''
+        subjectTopics = request.POST.get('subjectTopics') or ''
         notes = request.POST.get('notes') or ''
 
         if Subject.objects.filter(code=code).exists():
@@ -80,6 +81,7 @@ def subjectCreate(request):
                 labDeliveryMode=labDeliveryMode,
                 requiredRoomType=requiredRoomType,
                 requiredLabRoomType=requiredLabRoomType,
+                subjectTopics=subjectTopics,
                 notes=notes
             )
             messages.success(request, 'Subject created successfully.')
@@ -109,6 +111,7 @@ def subjectUpdate(request, subjectCode):
         subject.labDeliveryMode = request.POST.get('labDeliveryMode') or None
         subject.requiredRoomType = request.POST.get('requiredRoomType') or None
         subject.requiredLabRoomType = request.POST.get('requiredLabRoomType') or None
+        subject.subjectTopics = request.POST.get('subjectTopics') or None
         subject.notes = request.POST.get('notes') or None
 
         subject.save()

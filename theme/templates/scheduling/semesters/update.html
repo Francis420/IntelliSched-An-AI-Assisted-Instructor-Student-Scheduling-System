@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<h2>Update Semester</h2>
+
+<form method="post">
+    {% csrf_token %}
+
+    <label for="term">Term:</label>
+    <select name="term" required>
+        <option value="1st" {% if semester.term == '1st' %}selected{% endif %}>1st</option>
+        <option value="2nd" {% if semester.term == '2nd' %}selected{% endif %}>2nd</option>
+        <option value="Summer" {% if semester.term == 'Summer' %}selected{% endif %}>Summer</option>
+    </select><br>
+
+    <label for="academicYear">Academic Year (e.g. 2025 - 2026):</label>
+    <input type="text" name="academicYear" value="{{ semester.academicYear }}" required><br>
+
+    <label for="isActive">Set as Active:</label>
+    <input type="checkbox" name="isActive" {% if semester.isActive %}checked{% endif %}><br>
+
+    <button type="submit">Update Semester</button>
+</form>
+{% endblock %}

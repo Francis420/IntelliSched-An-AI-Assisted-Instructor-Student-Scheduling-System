@@ -5,20 +5,13 @@
 <form method="post">
     {% csrf_token %}
 
-    <label for="subject">Subject:</label>
-    <select name="subject" required>
-        {% for subj in subjects %}
-            <option value="{{ subj.subjectId }}" {% if subj == enrollment.subject %}selected{% endif %}>
-                {{ subj.code }} - {{ subj.name }}
-            </option>
-        {% endfor %}
-    </select>
-
-    <label for="section">Section:</label>
-    <select name="section" required>
-        {% for sec in sections %}
-            <option value="{{ sec.sectionId }}" {% if sec == enrollment.section %}selected{% endif %}>
-                {{ sec.sectionCode }}
+    <label for="schedule">Schedule:</label>
+    <select name="schedule" required>
+        {% for sched in schedules %}
+            <option value="{{ sched.scheduleId }}" {% if sched == enrollment.schedule %}selected{% endif %}>
+                {{ sched.offer.subject.code }} - {{ sched.offer.subject.name }}
+                (Section {{ sched.section.sectionCode }},
+                 {{ sched.day }} {{ sched.startTime|time:"H:i" }}–{{ sched.endTime|time:"H:i" }})
             </option>
         {% endfor %}
     </select>
@@ -26,5 +19,5 @@
     <button type="submit">Save Changes</button>
 </form>
 
-<a href="{% url 'enrollmentList' %}">Back to Enrollments</a>
+<a href="{% url 'enrollmentList' %}">Back to My Enrollments</a>
 {% endblock %}
