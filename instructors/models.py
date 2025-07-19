@@ -23,8 +23,25 @@ class InstructorExperience(models.Model):
     createdAt = models.DateTimeField(auto_now_add=True)
     updatedAt = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        unique_together = ('instructor', 'title', 'organization', 'startDate')
+        indexes = [
+            models.Index(fields=['instructor', 'isVerified']),
+        ]
+
     def __str__(self):
         return f"{self.instructor.instructorId} - {self.title}"
+
+    def is_current(self):
+        # Returns True if the experience is ongoing (no endDate)
+        return self.endDate is None
+
+    def durationInMonths(self):
+        # Returns duration of the experience in months
+        from datetime import date
+        end = self.endDate or date.today()
+        return (end.year - self.startDate.year) * 12 + (end.month - self.startDate.month)
+
 
 
 # ---------- Instructor Availability ---------- 35 still needs a better ui and implementation
@@ -43,6 +60,17 @@ class InstructorAvailability(models.Model):
     createdAt = models.DateTimeField(auto_now_add=True)
     updatedAt = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        unique_together = ('instructor', 'dayOfWeek', 'startTime', 'endTime')
+        indexes = [
+            models.Index(fields=['instructor', 'dayOfWeek']),
+        ]
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.startTime >= self.endTime:
+            raise ValidationError("Start time must be before end time.")
+
     def __str__(self):
         return f"{self.instructor.instructorId} - {self.dayOfWeek} {self.startTime}-{self.endTime}"
 
@@ -60,9 +88,18 @@ class TeachingHistory(models.Model):
 
     class Meta:
         unique_together = ('instructor', 'subject', 'semester')
+        indexes = [
+            models.Index(fields=['instructor', 'subject', 'semester']),
+        ]
 
     def __str__(self):
         return f"{self.instructor.instructorId} - {self.subject.code} ({self.semester}) x{self.timesTaught}"
+
+    def incrementTimesTaught(self, count=1):
+        if self.timesTaught + count < 0:
+            raise ValueError("timesTaught cannot be negative.")
+        self.timesTaught += count
+        self.save()
 
 
 
@@ -92,6 +129,7 @@ class InstructorCredentials(models.Model):
         indexes = [
             models.Index(fields=['instructor', 'isVerified']),
         ]
+        ordering = ['-dateEarned']
 
     def __str__(self):
         return f"{self.instructor.instructorId} - {self.title}"
@@ -118,6 +156,13 @@ class InstructorSubjectPreference(models.Model):
         indexes = [
             models.Index(fields=['instructor', 'preferenceType']),
         ]
+        ordering = ['instructor', 'subject']
+
+    def is_preferred(self):
+        return self.preferenceType == 'Prefer'
+
+    def is_avoided(self):
+        return self.preferenceType == 'Avoid'
 
     def __str__(self):
         return f"{self.instructor.instructorId} prefers {self.subject.code} ({self.preferenceType})"
