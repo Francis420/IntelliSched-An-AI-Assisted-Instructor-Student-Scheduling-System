@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 
 # ---------- Custom User Manager ---------- 50 need to update templates to handle dynamic checks for username/instructorId
+# This manager handles user creation and superuser creation with custom fields.
 class UserManager(BaseUserManager):
     def create_user(self, username, email, password=None, **extra_fields):
         if not email:
@@ -23,6 +24,7 @@ class UserManager(BaseUserManager):
 
 
 # ---------- Role Model ----------
+# This model defines roles that users can have, such as "deptHead", "instructor" or "student".
 class Role(models.Model):
     name = models.CharField(max_length=20, unique=True)
     label = models.CharField(max_length=50) 
@@ -32,6 +34,7 @@ class Role(models.Model):
 
 
 # ---------- User Model ----------
+# This model represents the user accounts in the system, including their roles and authentication details.
 class User(AbstractBaseUser, PermissionsMixin):
     userId = models.AutoField(primary_key=True)
     username = models.CharField(max_length=50, unique=True)
@@ -62,19 +65,29 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 
 # ---------- Instructor Table ----------
+# This model represents instructors in the system, including their ID, rank, designation, and employment type.
 class Instructor(models.Model):
     instructorId = models.CharField(primary_key=True, max_length=20)  # e.g., "2025-123456"
+    rank = models.ForeignKey("instructors.InstructorRank", on_delete=models.SET_NULL, null=True, blank=True)
+    designation = models.ForeignKey("instructors.InstructorDesignation", on_delete=models.SET_NULL, null=True, blank=True)
     employmentType = models.CharField(max_length=20, choices=[
         ('permanent', 'Permanent'),
         ('temporary', 'Temporary')
     ])
     createdAt = models.DateTimeField(auto_now_add=True)
+    updatedAt = models.DateTimeField(auto_now=True)
+
+    @property
+    def activeWorkloadSource(self):
+        return self.designation or self.rank
+
 
     def __str__(self):
         return self.instructorId
 
 
 # ---------- Student Table ----------
+# This model represents students in the system, identified by their student ID.
 class Student(models.Model):
     studentId = models.CharField(primary_key=True, max_length=20)  # e.g., "2025-123456"
     createdAt = models.DateTimeField(auto_now_add=True)
@@ -84,6 +97,7 @@ class Student(models.Model):
 
 
 # ---------- UserLogin ----------
+# This model tracks user logins, linking them to the User, Instructor or Student models.
 class UserLogin(models.Model):
     loginId = models.AutoField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)

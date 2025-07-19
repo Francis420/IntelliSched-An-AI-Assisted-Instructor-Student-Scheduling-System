@@ -3,6 +3,7 @@ from core.models import Instructor
 
 
 # ---------- Instructor Experience ---------- 60/update views/templates to handle experienceType
+# This model tracks the professional experiences of instructors, including work experience, academic positions, and research roles.
 class InstructorExperience(models.Model):
     EXPERIENCE_TYPE_CHOICES = [
         ('Work Experience', 'Work Experience'),
@@ -45,6 +46,7 @@ class InstructorExperience(models.Model):
 
 
 # ---------- Instructor Availability ---------- 35 still needs a better ui and implementation
+# This model tracks the availability of instructors for scheduling purposes.
 class InstructorAvailability(models.Model):
     DAY_CHOICES = [
         ('Monday', 'Monday'), ('Tuesday', 'Tuesday'), ('Wednesday', 'Wednesday'),
@@ -77,6 +79,8 @@ class InstructorAvailability(models.Model):
 
 
 # ---------- Teaching History ---------- 60
+# This model tracks the history of subjects taught by instructors, including the number of times taught.
+# It will help in analyzing teaching patterns and subject expertise.
 class TeachingHistory(models.Model):
     teachingId = models.AutoField(primary_key=True)
     instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE)
@@ -104,6 +108,7 @@ class TeachingHistory(models.Model):
 
 
 # ---------- Instructor Credential ---------- 60
+# This model stores various credentials that instructors have, such as certifications, workshops, and training.
 class InstructorCredentials(models.Model):
     CREDENTIAL_TYPE_CHOICES = [
         ('Certification', 'Certification'),
@@ -136,6 +141,7 @@ class InstructorCredentials(models.Model):
 
 
 # ---------- Instructor Subject Preference ---------- 60 list all subjects, set all preferences to default "Neutral" then let the instructor update
+# This model allows instructors to set their preferences for subjects they would like to teach.
 class InstructorSubjectPreference(models.Model):
     PREFERENCE_TYPE_CHOICES = [
         ('Prefer', 'Prefer'),
@@ -169,6 +175,7 @@ class InstructorSubjectPreference(models.Model):
 
 
 # ---------- Instructor Monitoring (Absences) ----------
+# This model tracks instructor absences, both auto-detected and manually reported.
 class InstructorAbsence(models.Model):
     REPORT_TYPE_CHOICES = [
         ('auto-detected', 'Auto Detected'),
@@ -186,3 +193,84 @@ class InstructorAbsence(models.Model):
 
     def __str__(self):
         return f"{self.instructor.instructorId} missed {self.subject.code} on {self.dateMissed}"
+    
+
+
+# ---------- Instructor Designation ----------
+# This model defines the designations available for instructors, including their workload allocations and overload caps.
+class InstructorDesignation(models.Model):
+    DESIGNATION_CHOICES = [
+        ('University Professor', 'University Professor'),
+        ('Professor I-VI', 'Professor I-VI'),
+        ('Associate Professor I-V', 'Associate Professor I-V'),
+        ('Assistant Professor I-IV', 'Assistant Professor I-IV'),
+        ('Instructor I-III', 'Instructor I-III'),
+        ('Vice President', 'Vice President'),
+        ('Campus Director', 'Campus Director'),
+        ('Dean', 'Dean'),
+        ('Director', 'Director'),
+        ('Head', 'Head'),
+        ('Chairperson/Coordinator', 'Chairperson/Coordinator'),
+    ]
+
+    designationId = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=100, choices=DESIGNATION_CHOICES, unique=True)
+
+    # Workload allocations (in hours per week)
+    instructionHours = models.IntegerField(default=0)
+    researchHours = models.IntegerField(default=0)
+    extensionHours = models.IntegerField(default=0)
+    productionHours = models.IntegerField(default=0)
+    consultationHours = models.IntegerField(default=0)
+    adminSupervisionHours = models.IntegerField(default=0)
+    otherAssignmentHours = models.IntegerField(default=0)
+
+    # Overload caps based on highest educational attainment
+    overloadDoctoral = models.IntegerField(default=6)
+    overloadMasters = models.IntegerField(default=6)
+    overloadBaccalaureate = models.IntegerField(default=6)
+
+    totalHours = models.IntegerField(default=40)
+
+    def __str__(self):
+        return self.name
+    
+
+
+# ---------- Instructor Rank ----------
+# This model defines the ranks available for instructors, including their workload allocations and overload caps.
+class InstructorRank(models.Model):
+    RANK_CHOICES = [
+        ('University Professor', 'University Professor'),
+        ('Professor I-VI', 'Professor I-VI'),
+        ('Associate Professor I-V', 'Associate Professor I-V'),
+        ('Assistant Professor I-IV', 'Assistant Professor I-IV'),
+        ('Instructor I-III', 'Instructor I-III'),
+    ]
+
+    rankId = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=100, choices=RANK_CHOICES, unique=True)
+
+    instructionHours = models.IntegerField(default=0)
+    researchHours = models.IntegerField(default=0)
+    extensionHours = models.IntegerField(default=0)
+    productionHours = models.IntegerField(default=0)
+    consultationHours = models.IntegerField(default=0)
+    otherAssignmentHours = models.IntegerField(default=0)
+
+    overloadDoctoral = models.IntegerField(default=9)
+    overloadMasters = models.IntegerField(default=6)
+    overloadBaccalaureate = models.IntegerField(default=6)
+
+    totalHours = models.IntegerField(default=40)
+
+    class Meta:
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['name']),
+        ]
+
+    def __str__(self):
+        return self.name
+
+

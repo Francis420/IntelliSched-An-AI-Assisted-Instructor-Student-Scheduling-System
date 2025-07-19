@@ -4,6 +4,7 @@ from django.utils import timezone
 
 
 # ---------- Subjects Table ---------- 60 still need dynamic checks for subject code and name
+# This model represents subjects offered by the IT department, including their code, name, units, and other attributes.
 class Subject(models.Model):
     subjectId = models.AutoField(primary_key=True)
     code = models.CharField(max_length=20, unique=True)
@@ -51,6 +52,8 @@ class Semester(models.Model):
 
 
 # ---------- Instructor Matching (AI Result) ----------
+# This model stores the results of AI-based instructor matching for subjects, including confidence scores and other metrics.
+# It links instructors to subjects based on various factors like experience, teaching ability, and availability.
 class InstructorSubjectMatch(models.Model):
     matchId = models.AutoField(primary_key=True)
     instructor = models.ForeignKey('core.Instructor', on_delete=models.CASCADE)
@@ -70,6 +73,7 @@ class InstructorSubjectMatch(models.Model):
 
 
 # ---------- Subject Offering ----------
+# This model represents the offering of a subject in a specific semester, including the section code and associated instructor match.
 class SubjectOffering(models.Model):
     offerId = models.AutoField(primary_key=True)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
@@ -83,6 +87,7 @@ class SubjectOffering(models.Model):
 
 
 # ---------- Section Table ---------- 50 check notes
+# This model represents sections of subjects in a specific semester, linking to the subject and semester models.
 class Section(models.Model):
     sectionId = models.AutoField(primary_key=True)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
@@ -95,6 +100,7 @@ class Section(models.Model):
 
 
 # ---------- Room Table ---------- 50 check notes for info
+# This model represents rooms available for scheduling classes, including their code, building, capacity, and type.
 class Room(models.Model):
     roomId = models.AutoField(primary_key=True)
     roomCode = models.CharField(max_length=20)
@@ -111,6 +117,7 @@ class Room(models.Model):
 
 
 # ---------- Schedule Table ----------
+# This model represents the schedule of classes, linking subject offerings, instructors, sections, rooms, and semesters.
 class Schedule(models.Model):
     scheduleId = models.AutoField(primary_key=True)
     offer = models.ForeignKey(SubjectOffering, on_delete=models.CASCADE)
@@ -135,6 +142,7 @@ class Schedule(models.Model):
 
 
 # ---------- Schedule Control ----------
+# This model tracks the control and status of schedules, including who updated it and its current status.
 class ScheduleControl(models.Model):
     schedule = models.ForeignKey(Schedule, on_delete=models.CASCADE)
     updatedBy = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -146,6 +154,7 @@ class ScheduleControl(models.Model):
 
 
 # ---------- Enrollment ---------- # scheduleId may cause errors, rebuild the database if it does.
+# This model represents student enrollments in schedules, linking students to specific schedules.
 class Enrollment(models.Model):
     enrollmentId = models.AutoField(primary_key=True)
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
@@ -158,6 +167,7 @@ class Enrollment(models.Model):
 
 
 # ---------- GenEdSchedules ---------- 50 check notes
+# This model represents the General Education schedules, linking them to semesters and including details like code, subject name, section code, instructor name, and time.
 class GenEdSchedule(models.Model):
     genedScheduleId = models.AutoField(primary_key=True)
     semester = models.ForeignKey(Semester, on_delete=models.CASCADE, null=True, blank=True)
@@ -175,6 +185,8 @@ class GenEdSchedule(models.Model):
 
 
 # ---------- InstructorSubjectMatchHistory ----------
+# This model stores the history of instructor-subject matches, including confidence scores and other metrics.
+# It allows tracking changes over time and provides insights into the matching process.
 class InstructorSubjectMatchHistory(models.Model):
     matchId = models.AutoField(primary_key=True)
     instructor = models.ForeignKey('core.Instructor', on_delete=models.CASCADE)
