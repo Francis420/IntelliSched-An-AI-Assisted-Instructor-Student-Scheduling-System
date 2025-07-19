@@ -16,11 +16,11 @@
     <tbody>
         {% for record in histories %}
         <tr>
-            <td>{{ record.subject.code }} - {{ record.subject.title }}</td>
-            <td>{{ record.semester.term }} {{ record.semester.year }}</td>
+            <td>{{ record.subject.code }} - {{ record.subject.name }}</td>
+            <td>{{ record.semester.name }}</td>
             <td>{{ record.timesTaught }}</td>
             <td>
-                <a href="{% url 'teachingHistoryUpdate' record.teachingId %}" class="btn btn-sm btn-warning">Edit</a>
+                <a href="{% url 'teachingHistoryUpdate' record.teachingId %}" class="btn btn-sm btn-warning">Update</a>
                 <form action="{% url 'teachingHistoryDelete' record.teachingId %}" method="post" style="display:inline;">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</button>

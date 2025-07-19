@@ -19,7 +19,7 @@
         <select name="semester" class="form-control" required>
             {% for sem in semesters %}
             <option value="{{ sem.semesterId }}" {% if sem == record.semester %}selected{% endif %}>
-                {{ sem.term }} {{ sem.year }}
+                {{ sem.name }}
             </option>
             {% endfor %}
         </select>

@@ -46,7 +46,7 @@ class InstructorAvailability(models.Model):
 
 
 
-# ---------- Teaching History ----------
+# ---------- Teaching History ---------- 50
 class TeachingHistory(models.Model):
     teachingId = models.AutoField(primary_key=True)
     instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE)

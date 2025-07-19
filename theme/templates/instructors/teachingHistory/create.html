@@ -16,7 +16,7 @@
         <label>Semester:</label>
         <select name="semester" class="form-control" required>
             {% for sem in semesters %}
-            <option value="{{ sem.semesterId }}">{{ sem.term }} {{ sem.year }}</option>
+            <option value="{{ sem.semesterId }}">{{ sem.name }}</option>
             {% endfor %}
         </select>
     </div>

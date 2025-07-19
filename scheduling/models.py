@@ -32,7 +32,7 @@ class Semester(models.Model):
     semesterId = models.AutoField(primary_key=True)
     name = models.CharField(max_length=50)
     academicYear = models.CharField(max_length=20) 
-    term = models.CharField(max_length=10, choices=[('1st', '1st'), ('2nd', '2nd'), ('Summer', 'Summer')])
+    term = models.CharField(max_length=10, choices=[('1st', '1st'), ('2nd', '2nd'), ('Midyear', 'Midyear')])
     isActive = models.BooleanField(default=False)
     createdAt = models.DateTimeField(auto_now_add=True)
 
