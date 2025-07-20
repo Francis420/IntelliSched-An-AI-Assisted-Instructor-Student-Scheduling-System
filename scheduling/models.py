@@ -4,7 +4,7 @@ from django.utils import timezone
 
 
 # ---------- Curriculum Table ----------
-# This model represents the curriculum to avoid conflicts of new and old curriculums, including its name, effective school year,
+# This model represents the curriculum to avoids conflicts/mixing of new and old curriculums, including its name, effective school year,
 class Curriculum(models.Model):
     curriculumId = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100, unique=True)  # e.g., "2021 Curriculum"

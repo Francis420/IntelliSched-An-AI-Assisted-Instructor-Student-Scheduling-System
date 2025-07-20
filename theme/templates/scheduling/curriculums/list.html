@@ -1,0 +1,13 @@
+<h2>Curriculum List</h2>
+<a href="{% url 'curriculumCreate' %}">Add Curriculum</a>
+<ul>
+    {% for curriculum in curriculums %}
+        <li>
+            <a href="{% url 'curriculumDetail' curriculum.curriculumId %}">
+                {{ curriculum.name }} ({{ curriculum.effectiveSy }})
+            </a>
+            | <a href="{% url 'curriculumUpdate' curriculum.curriculumId %}">Edit</a>
+            | <a href="{% url 'curriculumDelete' curriculum.curriculumId %}">Delete</a>
+        </li>
+    {% endfor %}
+</ul>

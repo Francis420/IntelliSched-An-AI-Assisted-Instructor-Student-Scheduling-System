@@ -1,0 +1,50 @@
+<h2>{{ curriculum.name }} ({{ curriculum.effectiveSy }})</h2>
+<p>{{ curriculum.description }}</p>
+
+<h3>Subjects under this curriculum:</h3>
+
+{% regroup subjects by yearLevel as yearLevel_groups %}
+{% for year_group in yearLevel_groups %}
+    {% regroup year_group.list by defaultTerm as term_groups %}
+
+    {% for term_group in term_groups %}
+        <h4>{{ year_group.grouper }} Year, 
+            {% if term_group.grouper == 1 %}1st{% elif term_group.grouper == 2 %}2nd{% else %}Summer{% endif %} Sem
+        </h4>
+
+        <table border="1" cellspacing="0" cellpadding="6">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th colspan="2">No. Hours/week</th>
+                    <th>Unit</th>
+                </tr>
+                <tr>
+                    <th></th><th></th><th>Lecture</th><th>Lab</th><th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for subject in term_group.list %}
+                <tr>
+                    <td>{{ subject.code }}</td>
+                    <td>{{ subject.name }}</td>
+                    <td>{{ subject.durationMinutes|default:0|divisibleby:60|floatformat:2 }}</td>
+                    <td>
+                        {% if subject.labDurationMinutes %}
+                            {{ subject.labDurationMinutes|divisibleby:60|floatformat:2 }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </td>
+                    <td>{{ subject.units }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5">No subjects found for this term.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endfor %}
+{% endfor %}
+
+<a href="{% url 'curriculumList' %}">Back to List</a>

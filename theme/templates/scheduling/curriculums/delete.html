@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Delete Curriculum</h2>
+
+<p>Are you sure you want to delete the curriculum: <strong>{{ curriculum.name }}</strong>?</p>
+
+<form method="POST">
+    {% csrf_token %}
+    <button type="submit">Yes, Delete</button>
+    <a href="{% url 'curriculumList' %}">Cancel</a>
+</form>
+{% endblock %}

@@ -3,9 +3,23 @@
 
 {% block content %}
 <div class="p-6">
-    <h1 class="text-2xl font-bold mb-4">Subjects</h1>
-    <a href="{% url 'subjectCreate' %}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add Subject</a>
+    <div class="flex justify-between items-center mb-4">
+    <h1 class="text-2xl font-bold">Subjects</h1>
+    <a href="{% url 'subjectCreate' %}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">+ Add Subject</a>
+</div>
 
+
+<form method="get" class="mb-4">
+    <label for="curriculumId" class="font-semibold">Select Curriculum:</label>
+    <select name="curriculumId" id="curriculumId" onchange="this.form.submit()" class="border rounded p-1 ml-2">
+        <option value="">-- Select Curriculum --</option>
+        {% for curriculum in curriculums %}
+            <option value="{{ curriculum.curriculumId }}" {% if curriculum.curriculumId == selectedCurriculumId %}selected{% endif %}>
+                {{ curriculum.name }}
+            </option>
+        {% endfor %}
+    </select>
+</form>
     <div class="overflow-x-auto mt-6">
         <table class="min-w-full border rounded shadow text-left text-sm">
             <thead class="bg-gray-100 text-xs uppercase tracking-wide">
@@ -16,12 +30,9 @@
                     <th class="p-2">Term</th>
                     <th class="p-2">Year</th>
                     <th class="p-2">Duration</th>
-                    <th class="p-2">Lab?</th>
+                    <th class="p-2">Has Lab?</th>
                     <th class="p-2">Lab Duration</th>
-                    <th class="p-2">Delivery</th>
-                    <th class="p-2">Lab Delivery</th>
-                    <th class="p-2">Room Type</th>
-                    <th class="p-2">Lab Room Type</th>
+                    <th class="p-2">Has Priority Room?</th>
                     <th class="p-2">Active?</th>
                     <th class="p-2">Actions</th>
                 </tr>
@@ -32,19 +43,22 @@
                         <td class="p-2">{{ subject.code }}</td>
                         <td class="p-2">{{ subject.name }}</td>
                         <td class="p-2">{{ subject.units }}</td>
-                        <td class="p-2">{{ subject.defaultTerm }}</td>
-                        <td class="p-2">{{ subject.yearLevel }}</td>
+                        <td class="p-2">
+                            {% if subject.defaultTerm == 0 %}1st{% elif subject.defaultTerm == 1 %}2nd{% else %}Midyear{% endif %}
+                        </td>
+                        <td class="p-2">
+                            {% if subject.yearLevel == 1 %}1st{% elif subject.yearLevel == 2 %}2nd{% elif subject.yearLevel == 3 %}3rd{% else %}4th{% endif %}
+                        </td>
                         <td class="p-2">{{ subject.durationMinutes }} mins</td>
-                        <td class="p-2">{{ subject.hasLabComponent|yesno:"Yes,No" }}</td>
+                        <td class="p-2">{{ subject.hasLab|yesno:"Yes,No" }}</td>
                         <td class="p-2">
-                            {% if subject.labDurationMinutes %}{{ subject.labDurationMinutes }} mins{% else %}-{% endif %}
+                            {% if subject.hasLab and subject.labDurationMinutes %}
+                                {{ subject.labDurationMinutes }} mins
+                            {% else %}
+                                -
+                            {% endif %}
                         </td>
-                        <td class="p-2">{{ subject.preferredDeliveryMode }}</td>
-                        <td class="p-2">
-                            {% if subject.labDeliveryMode %}{{ subject.labDeliveryMode }}{% else %}-{% endif %}
-                        </td>
-                        <td class="p-2">{{ subject.requiredRoomType|default:"-" }}</td>
-                        <td class="p-2">{{ subject.requiredLabRoomType|default:"-" }}</td>
+                        <td class="p-2">{{ subject.isPriorityForRooms|yesno:"Yes,No" }}</td>
                         <td class="p-2">
                             <span class="{% if subject.isActive %}text-green-600{% else %}text-red-600{% endif %}">
                                 {{ subject.isActive|yesno:"Yes,No" }}
@@ -56,7 +70,7 @@
                         </td>
                     </tr>
                 {% empty %}
-                    <tr><td colspan="14" class="p-4 text-center text-gray-500">No subjects found.</td></tr>
+                    <tr><td colspan="11" class="p-4 text-center text-gray-500">No subjects found for this curriculum.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

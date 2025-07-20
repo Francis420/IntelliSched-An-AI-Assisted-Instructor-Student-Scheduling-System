@@ -8,6 +8,7 @@ from scheduling.models import (
     Semester,
     Enrollment,
     Schedule,
+    Curriculum,
 )
 from core.models import (
     Student,
@@ -340,4 +341,84 @@ def semesterDelete(request, semesterId):
         messages.error(request, 'Cannot delete this semester because it is linked to other records (e.g., schedules, enrollments).')
 
     return redirect('semesterList')
+
+
+
+
+# ---------- Curriculum ----------
+@login_required
+@has_role('deptHead')
+def curriculumList(request):
+    curriculums = Curriculum.objects.all().order_by('-createdAt')
+    return render(request, 'scheduling/curriculums/list.html', {'curriculums': curriculums})
+
+
+@login_required
+@has_role('deptHead')
+def curriculumCreate(request):
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        effectiveSy = request.POST.get('effectiveSy')
+        description = request.POST.get('description')
+
+        if Curriculum.objects.filter(name=name).exists():
+            messages.error(request, 'A curriculum with this name already exists.')
+        else:
+            Curriculum.objects.create(
+                name=name,
+                effectiveSy=effectiveSy,
+                description=description
+            )
+            messages.success(request, 'Curriculum created successfully.')
+            return redirect('curriculumList')
+
+    return render(request, 'scheduling/curriculums/create.html')
+
+
+@login_required
+@has_role('deptHead')
+def curriculumUpdate(request, curriculumId):
+    curriculum = get_object_or_404(Curriculum, curriculumId=curriculumId)
+
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        effectiveSy = request.POST.get('effectiveSy')
+        description = request.POST.get('description')
+
+        if Curriculum.objects.exclude(curriculumId=curriculum.curriculumId).filter(name=name).exists():
+            messages.error(request, 'Another curriculum with this name already exists.')
+        else:
+            curriculum.name = name
+            curriculum.effectiveSy = effectiveSy
+            curriculum.description = description
+            curriculum.save()
+            messages.success(request, 'Curriculum updated successfully.')
+            return redirect('curriculumList')
+
+    return render(request, 'scheduling/curriculums/update.html', {'curriculum': curriculum})
+
+
+@login_required
+@has_role('deptHead')
+def curriculumDelete(request, curriculumId):
+    curriculum = get_object_or_404(Curriculum, curriculumId=curriculumId)
+
+    try:
+        curriculum.delete()
+        messages.success(request, 'Curriculum deleted successfully.')
+    except ProtectedError:
+        messages.error(request, 'Cannot delete this curriculum because it has linked subjects.')
+
+    return redirect('curriculumList')
+
+
+@login_required
+@has_role('deptHead')
+def curriculumDetail(request, curriculumId):
+    curriculum = get_object_or_404(Curriculum, curriculumId=curriculumId)
+    subjects = curriculum.subjects.all().order_by('yearLevel', 'defaultTerm')
+    return render(request, 'scheduling/curriculums/detail.html', {
+        'curriculum': curriculum,
+        'subjects': subjects
+    })
 

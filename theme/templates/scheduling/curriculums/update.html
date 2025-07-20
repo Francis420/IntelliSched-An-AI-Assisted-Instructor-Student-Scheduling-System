@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Update Curriculum</h2>
+
+<form method="POST">
+    {% csrf_token %}
+    <label for="name">Curriculum Name:</label><br>
+    <input type="text" name="name" value="{{ curriculum.name }}" required><br><br>
+
+    <label for="effectiveSy">Effective School Year:</label><br>
+    <input type="text" name="effectiveSy" value="{{ curriculum.effectiveSy }}" required><br><br>
+
+    <label for="description">Description:</label><br>
+    <textarea name="description" rows="4" cols="50">{{ curriculum.description }}</textarea><br><br>
+
+    <button type="submit">Update Curriculum</button>
+</form>
+
+<br>
+<a href="{% url 'curriculumList' %}">← Back to Curriculum List</a>
+{% endblock %}

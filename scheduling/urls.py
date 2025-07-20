@@ -25,4 +25,11 @@ urlpatterns = [
     path('semesters/create/', views.semesterCreate, name='semesterCreate'),
     path('semesters/update/<int:semesterId>/', views.semesterUpdate, name='semesterUpdate'),
     path('semesters/delete/<int:semesterId>/', views.semesterDelete, name='semesterDelete'),
+
+    # Curriculums
+    path('curriculums/', views.curriculumList, name='curriculumList'),
+    path('curriculums/create/', views.curriculumCreate, name='curriculumCreate'),
+    path('curriculums/<int:curriculumId>/update/', views.curriculumUpdate, name='curriculumUpdate'),
+    path('curriculums/<int:curriculumId>/delete/', views.curriculumDelete, name='curriculumDelete'),
+    path('curriculums/<int:curriculumId>/', views.curriculumDetail, name='curriculumDetail'),# Check subs under that curiculum
 ]

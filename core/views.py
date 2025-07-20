@@ -1,10 +1,19 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from scheduling.models import Subject
+from scheduling.models import (
+    Subject, 
+    Curriculum,
+)
 from authapi.views import has_role
 from django.db import transaction
-from core.models import User, Role, Instructor, Student, UserLogin
+from core.models import (
+    User, 
+    Role, 
+    Instructor, 
+    Student, 
+    UserLogin,
+)
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import make_password
@@ -39,11 +48,23 @@ def checkInstructorIdAvailability(request):
 
 
 # ---------- Subjects ----------
-@login_required
-@has_role('deptHead')
 def subjectList(request):
-    subjects = Subject.objects.all().order_by('code')
-    return render(request, 'core/subjects/list.html', {'subjects': subjects})
+    curriculums = Curriculum.objects.order_by('-createdAt')
+    
+    curriculum_id = request.GET.get('curriculumId')
+
+    if not curriculum_id and curriculums.exists():
+        selected_curriculum = curriculums.first()
+    else:
+        selected_curriculum = get_object_or_404(Curriculum, pk=curriculum_id)
+
+    subjects = Subject.objects.filter(curriculum=selected_curriculum)
+
+    return render(request, 'core/subjects/list.html', {
+        'subjects': subjects,
+        'curriculums': curriculums,
+        'selectedCurriculumId': selected_curriculum.curriculumId,
+    })
 
 
 @login_required
@@ -52,16 +73,15 @@ def subjectCreate(request):
     if request.method == 'POST':
         code = request.POST.get('code')
         name = request.POST.get('name')
+        curriculumId = request.POST.get('curriculumId')
+        curriculum = get_object_or_404(Curriculum, pk=curriculumId)
         units = request.POST.get('units')
         defaultTerm = request.POST.get('defaultTerm')
         yearLevel = request.POST.get('yearLevel')
         durationMinutes = request.POST.get('durationMinutes')
-        hasLabComponent = request.POST.get('hasLabComponent') == 'on'
+        hasLab = request.POST.get('hasLab') == 'on'
         labDurationMinutes = request.POST.get('labDurationMinutes') or None
-        preferredDeliveryMode = request.POST.get('preferredDeliveryMode')
-        labDeliveryMode = request.POST.get('labDeliveryMode') or None
-        requiredRoomType = request.POST.get('requiredRoomType') or ''
-        requiredLabRoomType = request.POST.get('requiredLabRoomType') or ''
+        isPriorityForRooms = request.POST.get('isPriorityForRooms') == 'on'
         subjectTopics = request.POST.get('subjectTopics') or ''
         notes = request.POST.get('notes') or ''
 
@@ -71,24 +91,22 @@ def subjectCreate(request):
             Subject.objects.create(
                 code=code,
                 name=name,
+                curriculum=curriculum,
                 units=units,
                 defaultTerm=defaultTerm,
                 yearLevel=yearLevel,
                 durationMinutes=durationMinutes,
-                hasLabComponent=hasLabComponent,
+                hasLab=hasLab,
                 labDurationMinutes=labDurationMinutes,
-                preferredDeliveryMode=preferredDeliveryMode,
-                labDeliveryMode=labDeliveryMode,
-                requiredRoomType=requiredRoomType,
-                requiredLabRoomType=requiredLabRoomType,
+                isPriorityForRooms=isPriorityForRooms,
                 subjectTopics=subjectTopics,
                 notes=notes
             )
             messages.success(request, 'Subject created successfully.')
             return redirect('subjectList')
 
-    return render(request, 'core/subjects/create.html')
-
+    curriculums = Curriculum.objects.all()
+    return render(request, 'core/subjects/create.html', {'curriculums': curriculums})
 
 
 @login_required
@@ -97,29 +115,38 @@ def subjectUpdate(request, subjectCode):
     subject = get_object_or_404(Subject, code=subjectCode)
 
     if request.method == 'POST':
+        newCode = request.POST.get('code')
+        if newCode and newCode != subject.code:
+            # Optional: check if new code already exists
+            if Subject.objects.filter(code=newCode).exclude(subjectId=subject.subjectId).exists():
+                messages.error(request, f'Subject code "{newCode}" is already taken.')
+                return redirect('subjectUpdate', subjectCode=subject.code)
+
+            subject.code = newCode
+
         subject.name = request.POST.get('name')
+        curriculumId = request.POST.get('curriculumId')
+        subject.curriculum = get_object_or_404(Curriculum, pk=curriculumId)
         subject.units = int(request.POST.get('units'))
-        subject.defaultTerm = request.POST.get('defaultTerm')
-        subject.yearLevel = request.POST.get('yearLevel')
+        subject.defaultTerm = int(request.POST.get('defaultTerm'))
+        subject.yearLevel = int(request.POST.get('yearLevel'))
         subject.durationMinutes = int(request.POST.get('durationMinutes'))
-
-        subject.hasLabComponent = 'hasLabComponent' in request.POST
-        subject.labDurationMinutes = request.POST.get('labDurationMinutes') or None
-        subject.labDurationMinutes = int(subject.labDurationMinutes) if subject.labDurationMinutes else None
-
-        subject.preferredDeliveryMode = request.POST.get('preferredDeliveryMode')
-        subject.labDeliveryMode = request.POST.get('labDeliveryMode') or None
-        subject.requiredRoomType = request.POST.get('requiredRoomType') or None
-        subject.requiredLabRoomType = request.POST.get('requiredLabRoomType') or None
-        subject.subjectTopics = request.POST.get('subjectTopics') or None
-        subject.notes = request.POST.get('notes') or None
+        subject.hasLab = 'hasLab' in request.POST
+        labDuration = request.POST.get('labDurationMinutes') or None
+        subject.labDurationMinutes = int(labDuration) if labDuration else None
+        subject.isPriorityForRooms = 'isPriorityForRooms' in request.POST
+        subject.subjectTopics = request.POST.get('subjectTopics') or ''
+        subject.notes = request.POST.get('notes') or ''
 
         subject.save()
         messages.success(request, 'Subject updated successfully.')
         return redirect('subjectList')
 
-    return render(request, 'core/subjects/update.html', {'subject': subject})
-
+    curriculums = Curriculum.objects.all()
+    return render(request, 'core/subjects/update.html', {
+        'subject': subject,
+        'curriculums': curriculums
+    })
 
 
 @login_required

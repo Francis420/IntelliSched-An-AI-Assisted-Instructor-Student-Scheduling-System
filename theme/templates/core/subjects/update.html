@@ -1,107 +1,81 @@
 {% extends 'base.html' %}
-{% block title %}Edit Subject{% endblock %}
-
 {% block content %}
-<div class="max-w-2xl mx-auto mt-10 bg-white p-6 shadow rounded">
-    <h2 class="text-xl font-semibold mb-4">Edit Subject: {{ subject.code }}</h2>
-    <form method="post">
-        {% csrf_token %}
+<h2>Update Subject: {{ subject.code }}</h2>
+<form method="post">
+  {% csrf_token %}
 
-        <!-- Subject Code (disabled, not editable) -->
-        <div class="mb-4">
-            <label class="block text-sm font-medium">Subject Code</label>
-            <input type="text" value="{{ subject.code }}" disabled class="w-full mt-1 p-2 border rounded bg-gray-100">
-        </div>
+  <label>Subject Name:</label>
+  <input type="text" name="name" value="{{ subject.name }}" required><br>
 
-        <div class="mb-4">
-            <label class="block text-sm font-medium">Subject Name</label>
-            <input type="text" name="name" value="{{ subject.name }}" required class="w-full mt-1 p-2 border rounded">
-        </div>
+  <label>Curriculum:</label>
+  <select name="curriculumId" required>
+    {% for curriculum in curriculums %}
+      <option value="{{ curriculum.curriculumId }}" {% if curriculum.curriculumId == subject.curriculum.curriculumId %}selected{% endif %}>
+        {{ curriculum.name }}
+      </option>
+    {% endfor %}
+  </select><br>
 
-        <div class="mb-4">
-            <label class="block text-sm font-medium">Units</label>
-            <input type="number" name="units" value="{{ subject.units }}" required class="w-full mt-1 p-2 border rounded">
-        </div>
+  <label>Units:</label>
+  <input type="number" name="units" min="0" value="{{ subject.units }}" required><br>
 
-        <div class="mb-4">
-            <label class="block text-sm font-medium">Default Term</label>
-            <select name="defaultTerm" required class="w-full mt-1 p-2 border rounded">
-                <option value="1st" {% if subject.defaultTerm == '1st' %}selected{% endif %}>1st</option>
-                <option value="2nd" {% if subject.defaultTerm == '2nd' %}selected{% endif %}>2nd</option>
-                <option value="Summer" {% if subject.defaultTerm == 'Summer' %}selected{% endif %}>Summer</option>
-            </select>
-        </div>
+  <label>Default Term:</label>
+  <select name="defaultTerm" required>
+    <option value="0" {% if subject.defaultTerm == 0 %}selected{% endif %}>1st</option>
+    <option value="1" {% if subject.defaultTerm == 1 %}selected{% endif %}>2nd</option>
+    <option value="2" {% if subject.defaultTerm == 2 %}selected{% endif %}>Midyear</option>
+  </select><br>
 
-        <div class="mb-4">
-            <label class="block text-sm font-medium">Year Level</label>
-            <select name="yearLevel" required class="w-full mt-1 p-2 border rounded">
-                <option value="1" {% if subject.yearLevel == '1' %}selected{% endif %}>1</option>
-                <option value="2" {% if subject.yearLevel == '2' %}selected{% endif %}>2</option>
-                <option value="3" {% if subject.yearLevel == '3' %}selected{% endif %}>3</option>
-                <option value="4" {% if subject.yearLevel == '4' %}selected{% endif %}>4</option>
-            </select>
-        </div>
+  <label>Year Level:</label>
+  <select name="yearLevel" required>
+    <option value="1" {% if subject.yearLevel == 1 %}selected{% endif %}>1st</option>
+    <option value="2" {% if subject.yearLevel == 2 %}selected{% endif %}>2nd</option>
+    <option value="3" {% if subject.yearLevel == 3 %}selected{% endif %}>3rd</option>
+    <option value="4" {% if subject.yearLevel == 4 %}selected{% endif %}>4th</option>
+  </select><br>
 
-        <div class="mb-4">
-            <label class="block text-sm font-medium">Duration (Minutes)</label>
-            <input type="number" name="durationMinutes" value="{{ subject.durationMinutes }}" required class="w-full mt-1 p-2 border rounded">
-        </div>
+  <label>Lecture Duration (minutes):</label>
+  <input type="number" name="durationMinutes" min="0" value="{{ subject.durationMinutes }}" required><br>
 
-        <div class="mb-4">
-            <label class="inline-flex items-center">
-                <input type="checkbox" name="hasLabComponent" {% if subject.hasLabComponent %}checked{% endif %} class="mr-2">
-                Has Lab Component
-            </label>
-        </div>
+  <input type="hidden" name="hasLab" value="false">
+  <label><input type="checkbox" name="hasLab" id="hasLabToggle" value="true" {% if subject.hasLab %}checked{% endif %}> Has Lab Component</label><br>
 
-        <div class="mb-4">
-            <label class="block text-sm font-medium">Lab Duration (Minutes)</label>
-            <input type="number" name="labDurationMinutes" value="{{ subject.labDurationMinutes|default_if_none:'' }}" class="w-full mt-1 p-2 border rounded">
-        </div>
+  <div id="labFields" style="display: {% if subject.hasLab %}block{% else %}none{% endif %};">
+    <label>Lab Duration (minutes):</label>
+    <input type="number" id="labDurationInput" name="labDurationMinutes" min="0" value="{{ subject.labDurationMinutes|default_if_none:'' }}"><br>
+  </div>
 
-        <div class="mb-4">
-            <label class="block text-sm font-medium">Preferred Delivery Mode</label>
-            <select name="preferredDeliveryMode" class="w-full mt-1 p-2 border rounded">
-                <option value="f2f" {% if subject.preferredDeliveryMode == 'f2f' %}selected{% endif %}>Face-to-Face</option>
-                <option value="online" {% if subject.preferredDeliveryMode == 'online' %}selected{% endif %}>Online</option>
-                <option value="hybrid" {% if subject.preferredDeliveryMode == 'hybrid' %}selected{% endif %}>Hybrid</option>
-            </select>
-        </div>
+  <input type="hidden" name="isPriorityForRooms" value="false">
+  <label><input type="checkbox" name="isPriorityForRooms" value="true" {% if subject.isPriorityForRooms %}checked{% endif %}> Priority for Room Assignment</label><br>
 
-        <div class="mb-4">
-            <label class="block text-sm font-medium">Lab Delivery Mode</label>
-            <select name="labDeliveryMode" class="w-full mt-1 p-2 border rounded">
-                <option value="">-- None --</option>
-                <option value="f2f" {% if subject.labDeliveryMode == 'f2f' %}selected{% endif %}>Face-to-Face</option>
-                <option value="online" {% if subject.labDeliveryMode == 'online' %}selected{% endif %}>Online</option>
-                <option value="hybrid" {% if subject.labDeliveryMode == 'hybrid' %}selected{% endif %}>Hybrid</option>
-            </select>
-        </div>
+  <label>Subject Topics:</label><br>
+  <textarea name="subjectTopics">{{ subject.subjectTopics }}</textarea><br>
 
-        <div class="mb-4">
-            <label class="block text-sm font-medium">Required Room Type</label>
-            <input type="text" name="requiredRoomType" value="{{ subject.requiredRoomType|default_if_none:'' }}" class="w-full mt-1 p-2 border rounded">
-        </div>
+  <label>Notes:</label><br>
+  <textarea name="notes">{{ subject.notes }}</textarea><br>
 
-        <div class="mb-4">
-            <label class="block text-sm font-medium">Required Lab Room Type</label>
-            <input type="text" name="requiredLabRoomType" value="{{ subject.requiredLabRoomType|default_if_none:'' }}" class="w-full mt-1 p-2 border rounded">
-        </div>
+  <button type="submit">Update</button>
+</form>
 
-        <div class="mb-4">
-            <label class="block text-sm font-medium">Subject Topics</label>
-            <textarea name="notes" rows="4" class="w-full mt-1 p-2 border rounded">{{ subject.subjectTopics }}</textarea>
-        </div>
+<script>
+  const labToggle = document.getElementById('hasLabToggle');
+  const labFields = document.getElementById('labFields');
+  const labInput = document.getElementById('labDurationInput');
 
-        <div class="mb-4">
-            <label class="block text-sm font-medium">Notes</label>
-            <textarea name="notes" rows="4" class="w-full mt-1 p-2 border rounded">{{ subject.notes }}</textarea>
-        </div>
+  labToggle.addEventListener('change', () => {
+    if (labToggle.checked) {
+      labFields.style.display = 'block';
+      labInput.disabled = false;
+    } else {
+      labFields.style.display = 'none';
+      labInput.value = '';
+      labInput.disabled = true;
+    }
+  });
 
-        <div class="flex items-center justify-between mt-6">
-            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Save</button>
-            <a href="{% url 'subjectList' %}" class="ml-4 text-gray-600 hover:underline">Cancel</a>
-        </div>
-    </form>
-</div>
+  // Disable lab input on page load if unchecked
+  if (!labToggle.checked) {
+    labInput.disabled = true;
+  }
+</script>
 {% endblock %}
