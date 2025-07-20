@@ -1,22 +1,43 @@
 {% extends "base.html" %}
+
 {% block content %}
-<h2>Edit Availability</h2>
-<form method="post">
-  {% csrf_token %}
-  <label>Day of Week:</label><br>
-  <select name="dayOfWeek" required>
-    {% for day in days %}
-        <option value="{{ day }}">{{ day }}</option>
-    {% endfor %}
-    </select><br><br>
+<div class="max-w-xl mx-auto mt-10 px-4 sm:px-6 lg:px-8">
+  <h2 class="text-2xl font-bold text-gray-800 mb-6">Edit Availability</h2>
 
-  <label>Start Time:</label><br>
-  <input type="time" name="startTime" value="{{ availability.startTime|time:'H:i' }}" required><br><br>
+  <form method="post" class="bg-white shadow-md rounded-lg p-6 space-y-4">
+    {% csrf_token %}
 
-  <label>End Time:</label><br>
-  <input type="time" name="endTime" value="{{ availability.endTime|time:'H:i' }}" required><br><br>
+    <div>
+      <label for="dayOfWeek" class="block text-sm font-medium text-gray-700">Day of Week</label>
+      <select id="dayOfWeek" name="dayOfWeek" required
+              class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+        {% for day in days %}
+          <option value="{{ day }}" {% if day == availability.dayOfWeek %}selected{% endif %}>{{ day }}</option>
+        {% endfor %}
+      </select>
+    </div>
 
-  <button type="submit">Update</button>
-</form>
-<a href="{% url 'availabilityList' %}">Back</a>
+    <div>
+      <label for="startTime" class="block text-sm font-medium text-gray-700">Start Time</label>
+      <input type="time" id="startTime" name="startTime" required
+             value="{{ availability.startTime|time:'H:i' }}"
+             class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+    </div>
+
+    <div>
+      <label for="endTime" class="block text-sm font-medium text-gray-700">End Time</label>
+      <input type="time" id="endTime" name="endTime" required
+             value="{{ availability.endTime|time:'H:i' }}"
+             class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+    </div>
+
+    <div class="flex items-center justify-between">
+      <button type="submit"
+              class="bg-blue-600 text-white px-4 py-2 rounded-md shadow-sm hover:bg-blue-700 transition">
+        Update
+      </button>
+      <a href="{% url 'availabilityList' %}" class="text-sm text-gray-600 hover:underline">Back</a>
+    </div>
+  </form>
+</div>
 {% endblock %}

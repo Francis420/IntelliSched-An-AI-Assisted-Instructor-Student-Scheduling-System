@@ -1,17 +1,154 @@
-{% load static tailwind_tags %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>{% block title %}IntelliSched | {% endblock %}</title>
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+  <meta charset="UTF-8">
+  <title>{% block title %}IntelliSched{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  {% block extra_head %}{% endblock %}
 </head>
-<body class="bg-gray-50 text-gray-900">
+<body class="bg-gray-100 min-h-screen flex flex-col">
 
-    <!-- Navigation bar here -->
-    {% block content %}
-    {% endblock %}
+  <div class="relative min-h-screen flex">
+
+    <!-- Sidebar -->
+    <div id="sidebar" class="w-64 bg-white shadow-md h-screen fixed top-0 left-0 overflow-y-auto transform -translate-x-full transition-transform duration-300 z-40">
+      <div class="flex justify-between items-center p-4 border-b">
+        <span class="text-lg font-bold">IntelliSched</span>
+        <button id="closeSidebar" class="text-2xl text-gray-700 focus:outline-none">☰</button>
+      </div>
+      <nav class="p-4 space-y-4 text-sm">
+        <!-- Home -->
+        <div class="space-y-1">
+            <a href="{% url 'home' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800 font-medium">🏠 Home</a>
+        </div>
+
+        {% if request.user.is_authenticated %}
+
+            {% if 'deptHead' in request.user.get_roles %}
+            <!-- Department Head Section -->
+            <div class="pt-4 border-t border-gray-200 space-y-1">
+            <span class="text-xs text-gray-500 uppercase tracking-wide px-4">Department Head</span>
+            <a href="{% url 'deptHeadDashboard' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📊 Dashboard</a>
+            <a href="{% url 'instructorAccountList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">👨‍🏫 Instructor Accounts</a>
+            <a href="{% url 'studentAccountList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🧑‍🎓 Student Accounts</a>
+            </div>
+
+            <!-- Scheduling Section -->
+            <div class="pt-4 border-t border-gray-200 space-y-1">
+            <span class="text-xs text-gray-500 uppercase tracking-wide px-4">Scheduling</span>
+            <a href="{% url 'curriculumList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📘 Curriculums</a>
+            <a href="{% url 'semesterList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🗓️ Semesters</a>
+            <a href="{% url 'subjectList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📚 Subjects</a>
+            <a href="{% url 'roomList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🏫 Rooms</a>
+            <a href="{% url 'genedScheduleList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">⚙️ GenEd Schedules</a>
+            </div>
+            {% endif %}
+
+            {% if 'instructor' in request.user.get_roles %}
+            <!-- Instructor Section -->
+            <div class="pt-4 border-t border-gray-200 space-y-1">
+            <span class="text-xs text-gray-500 uppercase tracking-wide px-4">Instructor Tools</span>
+            <a href="{% url 'instructorDashboard' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📊 Dashboard</a>
+            <a href="{% url 'experienceList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🧠 Experiences</a>
+            <a href="{% url 'credentialList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📄 Credentials</a>
+            <a href="{% url 'availabilityList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🕒 Availability</a>
+            <a href="{% url 'preferenceList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🎯 Preferences</a>
+            <a href="{% url 'teachingHistoryList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📖 Teaching History</a>
+            </div>
+            {% endif %}
+
+            {% if 'student' in request.user.get_roles %}
+            <!-- Student Section -->
+            <div class="pt-4 border-t border-gray-200 space-y-1">
+            <span class="text-xs text-gray-500 uppercase tracking-wide px-4">Student</span>
+            <a href="{% url 'studentDashboard' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📊 Dashboard</a>
+            <a href="{% url 'enrollmentList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📝 Enrollments</a>
+            </div>
+            {% endif %}
+
+            <!-- Logout -->
+            <div class="pt-4 border-t border-gray-200">
+            <a href="{% url 'logout' %}" class="block px-4 py-2 rounded-lg hover:bg-red-100 text-red-600 font-medium">🚪 Logout</a>
+            </div>
+
+        {% endif %}
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+        <div id="mainContent" class="flex-1 flex flex-col transition-all duration-300 ml-0">
+        <!-- Header -->
+        <header class="flex items-center justify-between bg-white shadow px-4 py-3">
+            <div id="menuToggle" class="flex items-center gap-3">
+                <button id="openSidebar" class="text-2xl text-gray-700 focus:outline-none">
+                    ☰ <span id="openSidebarText" class="text-xl font-bold text-gray-800">IntelliSched {% block header %}{% endblock %}</span>
+                </button>
+                
+            </div>
+        </header>
+
+
+      <!-- Page Content -->
+      <main class="flex-1 p-6">
+        {% block content %}{% endblock %}
+      </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t text-center text-sm text-gray-500 p-4">
+      &copy; {% now "Y" %} IntelliSched. All rights reserved.
+    </footer>
+    </div>
+  </div>
+
+  <!-- Sidebar Toggle Script -->
+  <script>
+    const sidebar = document.getElementById('sidebar');
+    const openSidebarBtn = document.getElementById('openSidebar');
+    const closeSidebarBtn = document.getElementById('closeSidebar');
+    const mainContent = document.getElementById('mainContent');
+
+    openSidebarBtn.addEventListener('click', () => {
+      sidebar.classList.remove('-translate-x-full');
+      mainContent.classList.add('ml-64');
+      openSidebarBtn.classList.add('hidden');
+    });
+
+    closeSidebarBtn.addEventListener('click', () => {
+      sidebar.classList.add('-translate-x-full');
+      mainContent.classList.remove('ml-64');
+      openSidebarBtn.classList.remove('hidden');
+    });
+
+    {% if request.user.is_authenticated %}
+        sidebar.classList.remove('-translate-x-full');
+        mainContent.classList.add('ml-64');
+        openSidebarBtn.classList.add('hidden');
+    {% endif %}
+
+    // Restore sidebar state on page load
+    if (localStorage.getItem("sidebarOpen") === "true") {
+        sidebar.classList.remove('-translate-x-full');
+        mainContent.classList.add('ml-64');
+        openSidebarBtn.classList.add('hidden');
+    }
+
+    // Open sidebar and save state
+    openSidebarBtn.addEventListener('click', () => {
+        sidebar.classList.remove('-translate-x-full');
+        mainContent.classList.add('ml-64');
+        openSidebarBtn.classList.add('hidden');
+        localStorage.setItem("sidebarOpen", "true");
+    });
+
+    // Close sidebar and save state
+    closeSidebarBtn.addEventListener('click', () => {
+        sidebar.classList.add('-translate-x-full');
+        mainContent.classList.remove('ml-64');
+        openSidebarBtn.classList.remove('hidden');
+        localStorage.setItem("sidebarOpen", "false");
+    });
+
+  </script>
 
 </body>
 </html>
-

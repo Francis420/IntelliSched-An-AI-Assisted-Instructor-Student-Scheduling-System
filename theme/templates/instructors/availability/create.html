@@ -1,22 +1,42 @@
 {% extends "base.html" %}
+
 {% block content %}
-<h2>Add Availability</h2>
-<form method="post">
-  {% csrf_token %}
-  <label>Day of Week:</label><br>
-  <select name="dayOfWeek" required>
-    {% for day in days %}
-        <option value="{{ day }}">{{ day }}</option>
-    {% endfor %}
-    </select><br><br>
+<div class="max-w-3xl mx-auto mt-10 px-4 sm:px-6 lg:px-8">
+  <h2 class="text-2xl font-bold text-gray-800 mb-6">Add Availability</h2>
 
-  <label>Start Time:</label><br>
-  <input type="time" name="startTime" required><br><br>
+  <form method="post" class="bg-white p-6 rounded-lg shadow-md space-y-6">
+    {% csrf_token %}
 
-  <label>End Time:</label><br>
-  <input type="time" name="endTime" required><br><br>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Day of Week:</label>
+      <select name="dayOfWeek" required
+              class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm shadow-sm focus:ring-blue-500 focus:border-blue-500">
+        {% for day in days %}
+          <option value="{{ day }}">{{ day }}</option>
+        {% endfor %}
+      </select>
+    </div>
 
-  <button type="submit">Save</button>
-</form>
-<a href="{% url 'availabilityList' %}">Back</a>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Start Time:</label>
+      <input type="time" name="startTime" required
+             class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm shadow-sm focus:ring-blue-500 focus:border-blue-500">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">End Time:</label>
+      <input type="time" name="endTime" required
+             class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm shadow-sm focus:ring-blue-500 focus:border-blue-500">
+    </div>
+
+    <div class="flex justify-between items-center pt-4">
+      <a href="{% url 'availabilityList' %}"
+         class="text-sm text-blue-600 hover:underline">← Back to Availability</a>
+      <button type="submit"
+              class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition">
+        Save
+      </button>
+    </div>
+  </form>
+</div>
 {% endblock %}

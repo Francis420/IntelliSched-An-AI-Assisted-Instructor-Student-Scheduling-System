@@ -1,30 +1,49 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Register as Student</h2>
+<div class="max-w-md mx-auto bg-white p-6 rounded-xl shadow-md mt-10">
+  <h2 class="text-2xl font-bold mb-4 text-center">Register as Student</h2>
 
-<form method="post">
+  <form method="post" class="space-y-4">
     {% csrf_token %}
-    <label>Username:</label>
-    <input type="text" name="username" required><br>
+    
+    <div>
+      <label class="block text-gray-700">Username:</label>
+      <input type="text" name="username" required class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
 
-    <label>Email:</label>
-    <input type="email" name="email" required><br>
+    <div>
+      <label class="block text-gray-700">Email:</label>
+      <input type="email" name="email" required class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
 
-    <label>Password:</label>
-    <input type="password" name="password" required><br>
+    <div>
+      <label class="block text-gray-700">Password:</label>
+      <input type="password" name="password" required class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
 
-    <label>First Name:</label>
-    <input type="text" name="firstName" required><br>
+    <div>
+      <label class="block text-gray-700">First Name:</label>
+      <input type="text" name="firstName" required class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
 
-    <label>Last Name:</label>
-    <input type="text" name="lastName" required><br>
+    <div>
+      <label class="block text-gray-700">Last Name:</label>
+      <input type="text" name="lastName" required class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
 
-    <label>Middle Initial:</label>
-    <input type="text" name="middleInitial" maxlength="1"><br>
+    <div>
+      <label class="block text-gray-700">Middle Initial:</label>
+      <input type="text" name="middleInitial" maxlength="1" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
 
-    <label>Student ID:</label>
-    <input type="text" name="studentId" required><br>
+    <div>
+      <label class="block text-gray-700">Student ID:</label>
+      <input type="text" name="studentId" required class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
 
-    <button type="submit">Create Account</button>
-</form>
+    <div class="text-center">
+      <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">Create Account</button>
+    </div>
+  </form>
+</div>
 {% endblock %}

@@ -1,16 +1,29 @@
 {% extends 'base.html' %}
+
 {% block content %}
-<h2>Delete Instructor Account</h2>
+<div class="max-w-xl mx-auto bg-white p-8 mt-10 rounded-xl shadow space-y-6">
+  <h2 class="text-2xl font-bold text-red-600">Delete Instructor Account</h2>
 
-<p>Are you sure you want to delete the account for <strong>{{ user.firstName }} {{ user.lastName }}</strong>?</p>
+  <p class="text-gray-700 text-lg">
+    Are you sure you want to delete the account for
+    <strong>{{ user.firstName }} {{ user.lastName }}</strong>?
+  </p>
 
-<div class="alert alert-warning">
-  <strong>Warning:</strong> If this instructor is still linked to experience, availability, or scheduling records, the deletion may fail.
+  <div class="bg-yellow-100 text-yellow-800 px-4 py-3 rounded border border-yellow-300 text-sm">
+    <strong class="font-semibold">⚠ Warning:</strong>
+    If this instructor is still linked to experience, availability, or scheduling records, the deletion may fail.
+  </div>
+
+  <form method="POST" class="flex flex-col sm:flex-row gap-4">
+    {% csrf_token %}
+    <button type="submit"
+            class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition w-full sm:w-auto">
+      Confirm Delete
+    </button>
+    <a href="{% url 'instructorAccountList' %}"
+       class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-md transition w-full sm:w-auto text-center">
+      Cancel
+    </a>
+  </form>
 </div>
-
-<form method="POST">
-  {% csrf_token %}
-  <button type="submit" class="btn btn-danger">Confirm Delete</button>
-  <a href="{% url 'instructorAccountList' %}" class="btn btn-secondary">Cancel</a>
-</form>
 {% endblock %}

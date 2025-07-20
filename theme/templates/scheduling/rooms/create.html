@@ -1,30 +1,45 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Add New Room</h2>
+<div class="max-w-xl mx-auto mt-6 p-6 bg-white rounded-2xl shadow">
+  <h2 class="text-2xl font-semibold mb-4">Add New Room</h2>
 
-<form method="post">
+  <form method="post" class="space-y-4">
     {% csrf_token %}
-    
-    <label>Room Code:</label>
-    <input type="text" name="roomCode" required><br>
 
-    <label>Building:</label>
-    <input type="text" name="building" required><br>
+    <div>
+      <label for="roomCode" class="block text-sm font-medium text-gray-700">Room Code</label>
+      <input type="text" name="roomCode" id="roomCode" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
+    </div>
 
-    <label>Capacity:</label>
-    <input type="number" name="capacity" required><br>
+    <div>
+      <label for="building" class="block text-sm font-medium text-gray-700">Building</label>
+      <input type="text" name="building" id="building" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
+    </div>
 
-    <label>Type:</label>
-    <input type="text" name="type" required><br>
+    <div>
+      <label for="capacity" class="block text-sm font-medium text-gray-700">Capacity</label>
+      <input type="number" name="capacity" id="capacity" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
+    </div>
 
-    <label>Active:</label>
-    <input type="checkbox" name="isActive" checked><br>
+    <div>
+      <label for="type" class="block text-sm font-medium text-gray-700">Type</label>
+      <input type="text" name="type" id="type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
+    </div>
 
-    <label>Notes:</label>
-    <textarea name="notes"></textarea><br>
+    <div class="flex items-center">
+      <input type="checkbox" name="isActive" id="isActive" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" checked>
+      <label for="isActive" class="ml-2 block text-sm text-gray-700">Active</label>
+    </div>
 
-    <button type="submit">Create Room</button>
-</form>
+    <div>
+      <label for="notes" class="block text-sm font-medium text-gray-700">Notes</label>
+      <textarea name="notes" id="notes" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
+    </div>
 
-<a href="{% url 'roomList' %}">Back to Room List</a>
+    <div class="flex justify-between mt-6">
+      <a href="{% url 'roomList' %}" class="text-sm text-blue-600 hover:underline">Back to Room List</a>
+      <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Create Room</button>
+    </div>
+  </form>
+</div>
 {% endblock %}

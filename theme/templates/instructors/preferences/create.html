@@ -1,34 +1,37 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="container mt-4">
-    <h3>Add Subject Preference</h3>
-    <form method="post">
-        {% csrf_token %}
-        <div class="form-group">
-            <label>Subject</label>
-            <select name="subject" class="form-control" required>
-                {% for subject in subjects %}
-                <option value="{{ subject.subjectId }}">{{ subject.code }} - {{ subject.name }}</option>
-                {% endfor %}
-            </select>
-        </div>
+<div class="max-w-xl mx-auto mt-8 bg-white p-6 rounded-2xl shadow">
+  <h2 class="text-2xl font-semibold mb-6">Add Subject Preference</h2>
+  <form method="post">
+    {% csrf_token %}
 
-        <div class="form-group mt-2">
-            <label>Preference Type</label>
-            <select name="preferenceType" class="form-control" required>
-                {% for t in types %}
-                <option value="{{ t }}">{{ t }}</option>
-                {% endfor %}
-            </select>
-        </div>
+    <div class="mb-4">
+      <label for="subject" class="block font-medium mb-1">Subject</label>
+      <select name="subject" id="subject" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+        {% for subject in subjects %}
+          <option value="{{ subject.subjectId }}">{{ subject.code }} - {{ subject.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
 
-        <div class="form-group mt-2">
-            <label>Reason (optional)</label>
-            <textarea name="reason" class="form-control" rows="3"></textarea>
-        </div>
+    <div class="mb-4">
+      <label for="preferenceType" class="block font-medium mb-1">Preference Type</label>
+      <select name="preferenceType" id="preferenceType" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+        {% for t in types %}
+          <option value="{{ t }}">{{ t }}</option>
+        {% endfor %}
+      </select>
+    </div>
 
-        <button type="submit" class="btn btn-success mt-3">Save</button>
-        <a href="{% url 'preferenceList' %}" class="btn btn-secondary mt-3">Cancel</a>
-    </form>
+    <div class="mb-4">
+      <label for="reason" class="block font-medium mb-1">Reason (optional)</label>
+      <textarea name="reason" id="reason" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" rows="3"></textarea>
+    </div>
+
+    <div class="flex justify-between">
+      <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg">Save</button>
+      <a href="{% url 'preferenceList' %}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold px-4 py-2 rounded-lg">Cancel</a>
+    </div>
+  </form>
 </div>
 {% endblock %}

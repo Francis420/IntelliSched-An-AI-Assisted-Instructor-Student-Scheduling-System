@@ -1,79 +1,70 @@
 {% extends 'base.html' %}
-{% block title %}Subjects{% endblock %}
 
 {% block content %}
-<div class="p-6">
-    <div class="flex justify-between items-center mb-4">
-    <h1 class="text-2xl font-bold">Subjects</h1>
-    <a href="{% url 'subjectCreate' %}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">+ Add Subject</a>
-</div>
+<div class="max-w-6xl mx-auto mt-10 px-4 sm:px-6 lg:px-8">
+  <h2 class="text-2xl font-bold text-gray-800 mb-6">Subjects</h2>
 
-
-<form method="get" class="mb-4">
-    <label for="curriculumId" class="font-semibold">Select Curriculum:</label>
-    <select name="curriculumId" id="curriculumId" onchange="this.form.submit()" class="border rounded p-1 ml-2">
-        <option value="">-- Select Curriculum --</option>
-        {% for curriculum in curriculums %}
-            <option value="{{ curriculum.curriculumId }}" {% if curriculum.curriculumId == selectedCurriculumId %}selected{% endif %}>
-                {{ curriculum.name }}
-            </option>
-        {% endfor %}
+  <!-- Curriculum Selector -->
+  <form method="get" class="mb-6">
+    <label for="curriculumSelect" class="block text-sm font-medium text-gray-700 mb-1">
+      Select Curriculum:
+    </label>
+    <select id="curriculumSelect" name="curriculumId" onchange="this.form.submit()"
+            class="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+      {% for curriculum in curriculums %}
+        <option value="{{ curriculum.curriculumId }}"
+          {% if curriculum.curriculumId == selectedCurriculumId %}selected{% endif %}>
+          {{ curriculum.name }} ({{ curriculum.effectiveSy }})
+        </option>
+      {% endfor %}
     </select>
-</form>
-    <div class="overflow-x-auto mt-6">
-        <table class="min-w-full border rounded shadow text-left text-sm">
-            <thead class="bg-gray-100 text-xs uppercase tracking-wide">
-                <tr>
-                    <th class="p-2">Code</th>
-                    <th class="p-2">Name</th>
-                    <th class="p-2">Units</th>
-                    <th class="p-2">Term</th>
-                    <th class="p-2">Year</th>
-                    <th class="p-2">Duration</th>
-                    <th class="p-2">Has Lab?</th>
-                    <th class="p-2">Lab Duration</th>
-                    <th class="p-2">Has Priority Room?</th>
-                    <th class="p-2">Active?</th>
-                    <th class="p-2">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for subject in subjects %}
-                    <tr class="border-t">
-                        <td class="p-2">{{ subject.code }}</td>
-                        <td class="p-2">{{ subject.name }}</td>
-                        <td class="p-2">{{ subject.units }}</td>
-                        <td class="p-2">
-                            {% if subject.defaultTerm == 0 %}1st{% elif subject.defaultTerm == 1 %}2nd{% else %}Midyear{% endif %}
-                        </td>
-                        <td class="p-2">
-                            {% if subject.yearLevel == 1 %}1st{% elif subject.yearLevel == 2 %}2nd{% elif subject.yearLevel == 3 %}3rd{% else %}4th{% endif %}
-                        </td>
-                        <td class="p-2">{{ subject.durationMinutes }} mins</td>
-                        <td class="p-2">{{ subject.hasLab|yesno:"Yes,No" }}</td>
-                        <td class="p-2">
-                            {% if subject.hasLab and subject.labDurationMinutes %}
-                                {{ subject.labDurationMinutes }} mins
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
-                        <td class="p-2">{{ subject.isPriorityForRooms|yesno:"Yes,No" }}</td>
-                        <td class="p-2">
-                            <span class="{% if subject.isActive %}text-green-600{% else %}text-red-600{% endif %}">
-                                {{ subject.isActive|yesno:"Yes,No" }}
-                            </span>
-                        </td>
-                        <td class="p-2 space-x-2">
-                            <a href="{% url 'subjectUpdate' subject.code %}" class="text-blue-600 hover:underline">Edit</a>
-                            <a href="{% url 'subjectDelete' subject.code %}" class="text-red-600 hover:underline">Delete</a>
-                        </td>
-                    </tr>
-                {% empty %}
-                    <tr><td colspan="11" class="p-4 text-center text-gray-500">No subjects found for this curriculum.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+  </form>
+
+  <!-- Add Subject Button -->
+  {% if selectedCurriculumId %}
+    <div class="mb-4 text-right">
+      <a href="{% url 'subjectCreate' %}?curriculumId={{ selectedCurriculumId }}"
+         class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition">
+        + Add Subject
+      </a>
     </div>
+  {% endif %}
+
+  <!-- Subject Table -->
+  {% if subjects %}
+    <div class="overflow-x-auto">
+      <table class="min-w-full bg-white border border-gray-200 rounded-lg shadow-sm text-sm">
+        <thead class="bg-gray-100 text-gray-700 uppercase tracking-wider text-xs">
+          <tr>
+            <th class="px-4 py-3 border-b">Code</th>
+            <th class="px-4 py-3 border-b">Title</th>
+            <th class="px-4 py-3 border-b">Units</th>
+            <th class="px-4 py-3 border-b">Year Level</th>
+            <th class="px-4 py-3 border-b">Semester</th>
+            <th class="px-4 py-3 border-b text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for subject in subjects %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-4 py-3 border-b">{{ subject.code }}</td>
+              <td class="px-4 py-3 border-b">{{ subject.name }}</td>
+              <td class="px-4 py-3 border-b">{{ subject.units }}</td>
+              <td class="px-4 py-3 border-b">{{ subject.get_yearLevel_display }}</td>
+              <td class="px-4 py-3 border-b">{{ subject.get_defaultTerm_display }}</td>
+              <td class="px-4 py-3 border-b text-center">
+                <a href="{% url 'subjectUpdate' subject.code %}"
+                   class="inline-block bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded-md transition text-xs font-medium">
+                  Update
+                </a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="text-gray-500 mt-4">No subjects found for the selected curriculum.</p>
+  {% endif %}
 </div>
 {% endblock %}

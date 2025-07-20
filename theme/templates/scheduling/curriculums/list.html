@@ -1,13 +1,55 @@
-<h2>Curriculum List</h2>
-<a href="{% url 'curriculumCreate' %}">Add Curriculum</a>
-<ul>
-    {% for curriculum in curriculums %}
-        <li>
-            <a href="{% url 'curriculumDetail' curriculum.curriculumId %}">
-                {{ curriculum.name }} ({{ curriculum.effectiveSy }})
-            </a>
-            | <a href="{% url 'curriculumUpdate' curriculum.curriculumId %}">Edit</a>
-            | <a href="{% url 'curriculumDelete' curriculum.curriculumId %}">Delete</a>
-        </li>
-    {% endfor %}
-</ul>
+{% extends 'base.html' %}
+{% block content %}
+<div class="max-w-6xl mx-auto mt-10 px-4 sm:px-6 lg:px-8">
+  <h2 class="text-2xl font-bold text-gray-800 mb-6">Curriculums</h2>
+
+  <!-- Add Curriculum Button -->
+  <div class="mb-4 text-right">
+    <a href="{% url 'curriculumCreate' %}"
+       class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition">
+      + Add Curriculum
+    </a>
+  </div>
+
+  <!-- Curriculum Table -->
+  {% if curriculums %}
+    <div class="overflow-x-auto">
+      <table class="min-w-full bg-white border border-gray-200 rounded-lg shadow-sm text-sm">
+        <thead class="bg-gray-100 text-gray-700 uppercase tracking-wider text-xs">
+          <tr>
+            <th class="px-4 py-3 border-b">Name</th>
+            <th class="px-4 py-3 border-b">Effective School Year</th>
+            <th class="px-4 py-3 border-b text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for curriculum in curriculums %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-4 py-3 border-b">
+                <a href="{% url 'curriculumDetail' curriculum.curriculumId %}"
+                   class="text-blue-700 hover:underline font-medium">
+                  {{ curriculum.name }}
+                </a>
+              </td>
+              <td class="px-4 py-3 border-b">{{ curriculum.effectiveSy }}</td>
+              <td class="px-4 py-3 border-b text-center space-x-2">
+                <a href="{% url 'curriculumUpdate' curriculum.curriculumId %}"
+                   class="inline-block bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded-md transition text-xs font-medium">
+                  Update
+                </a>
+                <a href="{% url 'curriculumDelete' curriculum.curriculumId %}"
+                   class="inline-block bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md transition text-xs font-medium"
+                   onclick="return confirm('Are you sure you want to delete this curriculum?');">
+                  Delete
+                </a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="text-gray-500 mt-4">No curriculums available.</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,41 +1,68 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Add Experience</h2>
+<div class="max-w-3xl mx-auto p-6 bg-white rounded-lg shadow-md">
+  <h2 class="text-2xl font-bold mb-6 text-gray-800">Add Experience</h2>
 
-<form method="post">
-  {% csrf_token %}
-  
-  <label for="title">Title:</label>
-  <input type="text" name="title" required><br>
+  <form method="post" class="space-y-4">
+    {% csrf_token %}
 
-  <label for="organization">Organization:</label>
-  <input type="text" name="organization" required><br>
+    <div>
+      <label for="title" class="block font-medium text-gray-700">Title</label>
+      <input type="text" name="title" required
+             class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:outline-none focus:ring focus:border-blue-500">
+    </div>
 
-  <label for="startDate">Start Date:</label>
-  <input type="date" name="startDate"><br>
+    <div>
+      <label for="organization" class="block font-medium text-gray-700">Organization</label>
+      <input type="text" name="organization" required
+             class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:outline-none focus:ring focus:border-blue-500">
+    </div>
 
-  <label for="endDate">End Date:</label>
-  <input type="date" name="endDate"><br>
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label for="startDate" class="block font-medium text-gray-700">Start Date</label>
+        <input type="date" name="startDate"
+               class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:outline-none focus:ring focus:border-blue-500">
+      </div>
+      <div>
+        <label for="endDate" class="block font-medium text-gray-700">End Date</label>
+        <input type="date" name="endDate"
+               class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:outline-none focus:ring focus:border-blue-500">
+      </div>
+    </div>
 
-  <label for="type">Type:</label>
-  <select name="type">
-    <option value="Work Experience">Work Experience</option>
-    <option value="Academic Position">Academic Position</option>
-    <option value="Research Role">Research Role</option>
-  </select><br>
+    <div>
+      <label for="experienceType" class="block font-medium text-gray-700">Type</label>
+      <select name="experienceType"
+              class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:outline-none focus:ring focus:border-blue-500">
+        <option value="Work Experience">Work Experience</option>
+        <option value="Academic Position">Academic Position</option>
+        <option value="Research Role">Research Role</option>
+      </select>
+    </div>
 
-  <label for="description">Description:</label><br>
-  <textarea name="description" rows="4" cols="50"></textarea><br>
+    <div>
+      <label for="description" class="block font-medium text-gray-700">Description</label>
+      <textarea name="description" rows="4"
+                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:outline-none focus:ring focus:border-blue-500"></textarea>
+    </div>
 
-  <label for="relatedSubjects">Related Subjects:</label><br>
-  <select name="relatedSubjects" multiple>
-  {% for subject in subjects %}
-    <option value="{{ subject.subjectId }}">{{ subject.code }} - {{ subject.name }}</option>
-  {% endfor %}
-  </select><br><br>
+    <div>
+      <label for="relatedSubjects" class="block font-medium text-gray-700">Related Subjects</label>
+      <select name="relatedSubjects" multiple
+              class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:outline-none focus:ring focus:border-blue-500">
+        {% for subject in subjects %}
+          <option value="{{ subject.subjectId }}">{{ subject.code }} - {{ subject.name }}</option>
+        {% endfor %}
+      </select>
+      <p class="text-sm text-gray-500 mt-1">Hold Ctrl or Cmd (Mac) to select multiple subjects</p>
+    </div>
 
-  <button type="submit">Save Experience</button>
-</form>
-
-<a href="{% url 'experienceList' %}">Back to List</a>
+    <div class="flex justify-between items-center pt-4">
+      <a href="{% url 'experienceList' %}" class="text-blue-600 hover:underline">← Back to List</a>
+      <button type="submit"
+              class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Save Experience</button>
+    </div>
+  </form>
+</div>
 {% endblock %}

@@ -1,50 +1,68 @@
-<h2>{{ curriculum.name }} ({{ curriculum.effectiveSy }})</h2>
-<p>{{ curriculum.description }}</p>
+{% extends 'base.html' %}
+{% block content %}
+<div class="max-w-5xl mx-auto mt-6 p-6 bg-white rounded-2xl shadow">
+  <h2 class="text-2xl font-semibold text-gray-800 mb-2">
+    {{ curriculum.name }} ({{ curriculum.effectiveSy }})
+  </h2>
+  <p class="text-gray-600 mb-6">{{ curriculum.description }}</p>
 
-<h3>Subjects under this curriculum:</h3>
+  <h3 class="text-xl font-semibold text-gray-700 mb-4">Subjects under this curriculum:</h3>
 
-{% regroup subjects by yearLevel as yearLevel_groups %}
-{% for year_group in yearLevel_groups %}
+  {% regroup subjects by yearLevel as yearLevel_groups %}
+  {% for year_group in yearLevel_groups %}
     {% regroup year_group.list by defaultTerm as term_groups %}
 
     {% for term_group in term_groups %}
-        <h4>{{ year_group.grouper }} Year, 
-            {% if term_group.grouper == 1 %}1st{% elif term_group.grouper == 2 %}2nd{% else %}Summer{% endif %} Sem
-        </h4>
+      <h4 class="text-lg font-medium text-blue-700 mb-2 mt-6">
+        {{ year_group.grouper }} Year, 
+        {% if term_group.grouper == 1 %}1st{% elif term_group.grouper == 2 %}2nd{% else %}Summer{% endif %} Sem
+      </h4>
 
-        <table border="1" cellspacing="0" cellpadding="6">
-            <thead>
-                <tr>
-                    <th>Code</th>
-                    <th>Name</th>
-                    <th colspan="2">No. Hours/week</th>
-                    <th>Unit</th>
-                </tr>
-                <tr>
-                    <th></th><th></th><th>Lecture</th><th>Lab</th><th></th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for subject in term_group.list %}
-                <tr>
-                    <td>{{ subject.code }}</td>
-                    <td>{{ subject.name }}</td>
-                    <td>{{ subject.durationMinutes|default:0|divisibleby:60|floatformat:2 }}</td>
-                    <td>
-                        {% if subject.labDurationMinutes %}
-                            {{ subject.labDurationMinutes|divisibleby:60|floatformat:2 }}
-                        {% else %}
-                            0
-                        {% endif %}
-                    </td>
-                    <td>{{ subject.units }}</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="5">No subjects found for this term.</td></tr>
-                {% endfor %}
-            </tbody>
+      <div class="overflow-x-auto rounded-xl shadow mb-4">
+        <table class="min-w-full bg-white border border-gray-300">
+          <thead class="bg-gray-100">
+            <tr>
+              <th class="px-4 py-2 border-b text-left">Code</th>
+              <th class="px-4 py-2 border-b text-left">Name</th>
+              <th class="px-4 py-2 border-b text-center" colspan="2">No. Hours/week</th>
+              <th class="px-4 py-2 border-b text-center">Units</th>
+            </tr>
+            <tr class="bg-gray-50 text-gray-600 text-sm">
+              <th></th><th></th><th class="text-center">Lecture</th><th class="text-center">Lab</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for subject in term_group.list %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-4 py-2 border-b">{{ subject.code }}</td>
+              <td class="px-4 py-2 border-b">{{ subject.name }}</td>
+              <td class="px-4 py-2 border-b text-center">
+                {{ subject.durationMinutes|default:0|divisibleby:60|floatformat:2 }}
+              </td>
+              <td class="px-4 py-2 border-b text-center">
+                {% if subject.labDurationMinutes %}
+                  {{ subject.labDurationMinutes|divisibleby:60|floatformat:2 }}
+                {% else %}
+                  0
+                {% endif %}
+              </td>
+              <td class="px-4 py-2 border-b text-center">{{ subject.units }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="text-center text-gray-500 py-3">No subjects found for this term.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
         </table>
+      </div>
     {% endfor %}
-{% endfor %}
+  {% endfor %}
 
-<a href="{% url 'curriculumList' %}">Back to List</a>
+  <div class="mt-6">
+    <a href="{% url 'curriculumList' %}" class="inline-block bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300">
+      ← Back to Curriculum List
+    </a>
+  </div>
+</div>
+{% endblock %}

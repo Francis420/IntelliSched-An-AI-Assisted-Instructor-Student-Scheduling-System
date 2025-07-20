@@ -1,23 +1,32 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Enroll in a Subject Schedule</h2>
+<div class="max-w-xl mx-auto mt-6 p-6 bg-white rounded-2xl shadow">
+  <h2 class="text-2xl font-semibold mb-4">Enroll in a Subject Schedule</h2>
 
-<form method="post">
+  <form method="POST" class="space-y-4">
     {% csrf_token %}
 
-    <label for="schedule">Schedule:</label>
-    <select name="schedule" required>
+    <div>
+      <label for="schedule" class="block font-medium text-gray-700">Select Schedule:</label>
+      <select name="schedule" required
+              class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
         {% for sched in schedules %}
-            <option value="{{ sched.scheduleId }}">
-                {{ sched.offer.subject.code }} - {{ sched.offer.subject.name }}
-                (Section {{ sched.section.sectionCode }},
-                 {{ sched.day }} {{ sched.startTime|time:"H:i" }}–{{ sched.endTime|time:"H:i" }})
-            </option>
+          <option value="{{ sched.scheduleId }}">
+            {{ sched.offer.subject.code }} - {{ sched.offer.subject.name }}
+            (Section {{ sched.section.sectionCode }},
+             {{ sched.day }} {{ sched.startTime|time:"H:i" }}–{{ sched.endTime|time:"H:i" }})
+          </option>
         {% endfor %}
-    </select>
+      </select>
+    </div>
 
-    <button type="submit">Enroll</button>
-</form>
-
-<a href="{% url 'enrollmentList' %}">Back to My Enrollments</a>
+    <div class="flex justify-between items-center pt-4">
+      <a href="{% url 'enrollmentList' %}" class="text-gray-600 hover:underline">Back to My Enrollments</a>
+      <button type="submit"
+              class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-xl shadow">
+        Enroll
+      </button>
+    </div>
+  </form>
+</div>
 {% endblock %}

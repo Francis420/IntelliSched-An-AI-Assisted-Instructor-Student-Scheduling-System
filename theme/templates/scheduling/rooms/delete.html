@@ -1,12 +1,20 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Delete Room</h2>
+<div class="max-w-lg mx-auto mt-10 p-6 bg-white rounded-2xl shadow">
+  <h2 class="text-2xl font-semibold text-red-600 mb-4">Delete Room</h2>
 
-<p>Are you sure you want to delete room <strong>{{ room.roomCode }}</strong> from <strong>{{ room.building }}</strong>?</p>
+  <p class="text-gray-700 mb-6">
+    Are you sure you want to delete room 
+    <strong class="text-gray-900">{{ room.roomCode }}</strong> 
+    from <strong class="text-gray-900">{{ room.building }}</strong>?
+  </p>
 
-<form method="post">
+  <form method="post" class="flex items-center justify-between">
     {% csrf_token %}
-    <button type="submit">Confirm Delete</button>
-    <a href="{% url 'roomList' %}">Cancel</a>
-</form>
+    <a href="{% url 'roomList' %}" class="text-sm text-gray-600 hover:underline">Cancel</a>
+    <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+      Confirm Delete
+    </button>
+  </form>
+</div>
 {% endblock %}

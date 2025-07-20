@@ -1,12 +1,24 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Confirm Drop</h2>
+<div class="max-w-xl mx-auto mt-10 p-6 bg-white rounded-2xl shadow">
+  <h2 class="text-2xl font-semibold mb-4 text-red-600">Confirm Drop</h2>
 
-<p>Are you sure you want to drop <strong>{{ enrollment.subject.code }} - {{ enrollment.subject.name }}</strong> (Section {{ enrollment.section.sectionCode }})?</p>
+  <p class="mb-6 text-gray-800">
+    Are you sure you want to drop
+    <strong class="text-black">{{ enrollment.subject.code }} - {{ enrollment.subject.name }}</strong>
+    (Section {{ enrollment.section.sectionCode }})?
+  </p>
 
-<form method="post">
+  <form method="post" class="flex items-center justify-between">
     {% csrf_token %}
-    <button type="submit">Yes, Drop</button>
-    <a href="{% url 'enrollmentList' %}">Cancel</a>
-</form>
+    <button type="submit"
+            class="bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-xl shadow">
+      Yes, Drop
+    </button>
+    <a href="{% url 'enrollmentList' %}"
+       class="text-gray-600 hover:underline font-medium">
+      Cancel
+    </a>
+  </form>
+</div>
 {% endblock %}

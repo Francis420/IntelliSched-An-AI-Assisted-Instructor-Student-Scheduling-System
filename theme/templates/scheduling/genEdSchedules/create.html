@@ -1,56 +1,62 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Create GenEd Schedule</h2>
+<div class="max-w-2xl mx-auto mt-8 p-6 bg-white rounded-2xl shadow">
+  <h2 class="text-2xl font-semibold mb-6">Create GenEd Schedule</h2>
 
-<form method="post">
+  <form method="post" class="space-y-4">
     {% csrf_token %}
 
-    <div class="mb-3">
-        <label for="semester" class="form-label">Semester</label>
-        <select name="semester" id="semester" class="form-select">
-            <option value="">—</option>
-            {% for sem in semesters %}
-                <option value="{{ semester.semesterId }}">{{ semester.name }}</option>
-            {% endfor %}
-        </select>
+    <div>
+      <label for="semester" class="block text-sm font-medium text-gray-700 mb-1">Semester</label>
+      <select name="semester" id="semester" class="w-full border rounded-lg px-4 py-2">
+        <option value="">—</option>
+        {% for semester in semesters %}
+          <option value="{{ semester.semesterId }}">{{ semester.name }}</option>
+        {% endfor %}
+      </select>
     </div>
 
-    <div class="mb-3">
-        <label for="code" class="form-label">Subject Code</label>
-        <input type="text" name="code" id="code" class="form-control" required>
+    <div>
+      <label for="code" class="block text-sm font-medium text-gray-700 mb-1">Subject Code</label>
+      <input type="text" name="code" id="code" class="w-full border rounded-lg px-4 py-2" required>
     </div>
 
-    <div class="mb-3">
-        <label for="subjectName" class="form-label">Subject Name</label>
-        <input type="text" name="subjectName" id="subjectName" class="form-control" required>
+    <div>
+      <label for="subjectName" class="block text-sm font-medium text-gray-700 mb-1">Subject Name</label>
+      <input type="text" name="subjectName" id="subjectName" class="w-full border rounded-lg px-4 py-2" required>
     </div>
 
-    <div class="mb-3">
-        <label for="sectionCode" class="form-label">Section Code</label>
-        <input type="text" name="sectionCode" id="sectionCode" class="form-control" required>
+    <div>
+      <label for="sectionCode" class="block text-sm font-medium text-gray-700 mb-1">Section Code</label>
+      <input type="text" name="sectionCode" id="sectionCode" class="w-full border rounded-lg px-4 py-2" required>
     </div>
 
-    <div class="mb-3">
-        <label for="instructorName" class="form-label">Instructor Name</label>
-        <input type="text" name="instructorName" id="instructorName" class="form-control">
+    <div>
+      <label for="instructorName" class="block text-sm font-medium text-gray-700 mb-1">Instructor Name</label>
+      <input type="text" name="instructorName" id="instructorName" class="w-full border rounded-lg px-4 py-2">
     </div>
 
-    <div class="mb-3">
-        <label for="dayOfWeek" class="form-label">Day of Week</label>
-        <input type="text" name="dayOfWeek" id="dayOfWeek" class="form-control" required>
+    <div>
+      <label for="dayOfWeek" class="block text-sm font-medium text-gray-700 mb-1">Day of Week</label>
+      <input type="text" name="dayOfWeek" id="dayOfWeek" class="w-full border rounded-lg px-4 py-2" required>
     </div>
 
-    <div class="mb-3">
-        <label for="startTime" class="form-label">Start Time</label>
-        <input type="time" name="startTime" id="startTime" class="form-control" required>
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label for="startTime" class="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+        <input type="time" name="startTime" id="startTime" class="w-full border rounded-lg px-4 py-2" required>
+      </div>
+
+      <div>
+        <label for="endTime" class="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+        <input type="time" name="endTime" id="endTime" class="w-full border rounded-lg px-4 py-2" required>
+      </div>
     </div>
 
-    <div class="mb-3">
-        <label for="endTime" class="form-label">End Time</label>
-        <input type="time" name="endTime" id="endTime" class="form-control" required>
+    <div class="flex justify-end gap-4 pt-4">
+      <a href="{% url 'genedScheduleList' %}" class="px-4 py-2 rounded-lg bg-gray-300 hover:bg-gray-400 text-sm">Cancel</a>
+      <button type="submit" class="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm">Create</button>
     </div>
-
-    <button type="submit" class="btn btn-success">Create</button>
-    <a href="{% url 'genedScheduleList' %}" class="btn btn-secondary">Cancel</a>
-</form>
+  </form>
+</div>
 {% endblock %}

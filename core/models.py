@@ -58,10 +58,13 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['email', 'firstName', 'lastName']
-
+    
     def __str__(self):
         role_names = ", ".join([r.name for r in self.roles.all()])
         return f"{self.username} ({role_names})"
+
+    def get_roles(self):
+        return [role.name for role in self.roles.all()]
 
 
 # ---------- Instructor Table ----------

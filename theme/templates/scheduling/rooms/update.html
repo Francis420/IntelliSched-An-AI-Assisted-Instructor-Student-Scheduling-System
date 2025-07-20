@@ -1,30 +1,45 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Edit Room</h2>
+<div class="max-w-xl mx-auto mt-6 p-6 bg-white rounded-2xl shadow">
+  <h2 class="text-2xl font-semibold mb-4">Update Room</h2>
 
-<form method="post">
+  <form method="post" class="space-y-4">
     {% csrf_token %}
-    
-    <label>Room Code:</label>
-    <input type="text" name="roomCode" value="{{ room.roomCode }}" required><br>
 
-    <label>Building:</label>
-    <input type="text" name="building" value="{{ room.building }}" required><br>
+    <div>
+      <label for="roomCode" class="block font-medium">Room Code:</label>
+      <input type="text" name="roomCode" value="{{ room.roomCode }}" required class="w-full border border-gray-300 rounded px-3 py-2">
+    </div>
 
-    <label>Capacity:</label>
-    <input type="number" name="capacity" value="{{ room.capacity }}" required><br>
+    <div>
+      <label for="building" class="block font-medium">Building:</label>
+      <input type="text" name="building" value="{{ room.building }}" required class="w-full border border-gray-300 rounded px-3 py-2">
+    </div>
 
-    <label>Type:</label>
-    <input type="text" name="type" value="{{ room.type }}" required><br>
+    <div>
+      <label for="capacity" class="block font-medium">Capacity:</label>
+      <input type="number" name="capacity" value="{{ room.capacity }}" required class="w-full border border-gray-300 rounded px-3 py-2">
+    </div>
 
-    <label>Active:</label>
-    <input type="checkbox" name="isActive" {% if room.isActive %}checked{% endif %}><br>
+    <div>
+      <label for="type" class="block font-medium">Type:</label>
+      <input type="text" name="type" value="{{ room.type }}" required class="w-full border border-gray-300 rounded px-3 py-2">
+    </div>
 
-    <label>Notes:</label>
-    <textarea name="notes">{{ room.notes }}</textarea><br>
+    <div class="flex items-center">
+      <input type="checkbox" name="isActive" id="isActive" {% if room.isActive %}checked{% endif %} class="mr-2">
+      <label for="isActive" class="font-medium">Active</label>
+    </div>
 
-    <button type="submit">Update Room</button>
-</form>
+    <div>
+      <label for="notes" class="block font-medium">Notes:</label>
+      <textarea name="notes" rows="3" class="w-full border border-gray-300 rounded px-3 py-2">{{ room.notes }}</textarea>
+    </div>
 
-<a href="{% url 'roomList' %}">Back to Room List</a>
+    <div class="flex justify-between items-center">
+      <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded">Update Room</button>
+      <a href="{% url 'roomList' %}" class="text-gray-600 hover:underline">Back to Room List</a>
+    </div>
+  </form>
+</div>
 {% endblock %}

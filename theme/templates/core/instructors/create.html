@@ -2,85 +2,113 @@
 {% load static %}
 
 {% block content %}
-<h2>Create Instructor Account</h2>
+<div class="max-w-2xl mx-auto bg-white p-8 mt-10 rounded-xl shadow">
+  <h2 class="text-2xl font-bold text-indigo-600 mb-6">Create Instructor Account</h2>
 
-<form method="POST">
+  <form method="POST" class="space-y-5">
     {% csrf_token %}
-    
-    <label for="username">Username:</label>
-    <input type="text" name="username" id="username" required>
-    <span id="username-check" style="color:red; font-size: 0.9em;"></span><br>
 
-    <label for="email">Email:</label>
-    <input type="email" name="email" required><br>
+    <div>
+      <label for="username" class="block font-medium text-gray-700">Username</label>
+      <input type="text" name="username" id="username" required
+             class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+      <span id="username-check" class="text-sm text-red-500"></span>
+    </div>
 
-    <label for="password">Password:</label>
-    <input type="password" name="password" required><br>
+    <div>
+      <label for="email" class="block font-medium text-gray-700">Email</label>
+      <input type="email" name="email" required
+             class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+    </div>
 
-    <label for="firstName">First Name:</label>
-    <input type="text" name="firstName" required><br>
+    <div>
+      <label for="password" class="block font-medium text-gray-700">Password</label>
+      <input type="password" name="password" required
+             class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+    </div>
 
-    <label for="lastName">Last Name:</label>
-    <input type="text" name="lastName" required><br>
+    <div>
+      <label for="firstName" class="block font-medium text-gray-700">First Name</label>
+      <input type="text" name="firstName" required
+             class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+    </div>
 
-    <label for="instructorId">Instructor ID:</label>
-    <input type="text" name="instructorId" id="instructorId" required>
-    <span id="instructor-check" style="color:red; font-size: 0.9em;"></span><br>
+    <div>
+      <label for="lastName" class="block font-medium text-gray-700">Last Name</label>
+      <input type="text" name="lastName" required
+             class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+    </div>
 
-    <label for="employmentType">Employment Type:</label>
-    <select name="employmentType" required>
+    <div>
+      <label for="instructorId" class="block font-medium text-gray-700">Instructor ID</label>
+      <input type="text" name="instructorId" id="instructorId" required
+             class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+      <span id="instructor-check" class="text-sm text-red-500"></span>
+    </div>
+
+    <div>
+      <label for="employmentType" class="block font-medium text-gray-700">Employment Type</label>
+      <select name="employmentType" required
+              class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md bg-white focus:ring-indigo-500 focus:border-indigo-500">
         <option value="">Select Type</option>
         <option value="full-time">Full-Time</option>
         <option value="part-time">Part-Time</option>
-    </select><br><br>
+      </select>
+    </div>
 
-    <button type="submit">Create Account</button>
-</form>
+    <div>
+      <button type="submit"
+              class="w-full bg-indigo-600 text-white font-medium py-2 px-4 rounded-md hover:bg-indigo-700 transition">
+        Create Account
+      </button>
+    </div>
+  </form>
+</div>
 
+<!-- JS: availability check -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    const usernameInput = document.querySelector('input[name="username"]');
-    const instructorIdInput = document.querySelector('input[name="instructorId"]');
+  const usernameInput = document.querySelector('input[name="username"]');
+  const instructorIdInput = document.querySelector('input[name="instructorId"]');
 
-    const showAvailabilityMessage = (element, isAvailable, message) => {
-        let msgElem = element.nextElementSibling;
-        if (!msgElem || !msgElem.classList.contains('availability-message')) {
-            msgElem = document.createElement('span');
-            msgElem.classList.add('availability-message');
-            element.parentNode.insertBefore(msgElem, element.nextSibling);
-        }
-        msgElem.textContent = message;
-        msgElem.style.color = isAvailable ? 'green' : 'red';
+  const showAvailabilityMessage = (element, isAvailable, message) => {
+    let msgElem = element.nextElementSibling;
+    if (!msgElem || !msgElem.classList.contains('availability-message')) {
+      msgElem = document.createElement('span');
+      msgElem.classList.add('availability-message');
+      element.parentNode.insertBefore(msgElem, element.nextSibling);
+    }
+    msgElem.textContent = message;
+    msgElem.style.color = isAvailable ? 'green' : 'red';
+  };
+
+  const debounce = (func, delay) => {
+    let timer;
+    return (...args) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => func.apply(this, args), delay);
     };
+  };
 
-    const debounce = (func, delay) => {
-        let timer;
-        return (...args) => {
-            clearTimeout(timer);
-            timer = setTimeout(() => func.apply(this, args), delay);
-        };
-    };
+  const checkAvailability = debounce((type, value, element) => {
+    fetch(`/check-${type}-availability/?value=${value}`)
+      .then(res => res.json())
+      .then(data => {
+        showAvailabilityMessage(element, data.isAvailable, data.message);
+      });
+  }, 400);
 
-    const checkAvailability = debounce((type, value, element) => {
-        fetch(`/check-${type}-availability/?value=${value}`)
-            .then(res => res.json())
-            .then(data => {
-                showAvailabilityMessage(element, data.isAvailable, data.message);
-            });
-    }, 400);
+  usernameInput.addEventListener('input', () => {
+    if (usernameInput.value.trim() !== '') {
+      checkAvailability('username', usernameInput.value, usernameInput);
+    }
+  });
 
-    usernameInput.addEventListener('input', () => {
-        if (usernameInput.value.trim() !== '') {
-            checkAvailability('username', usernameInput.value, usernameInput);
-        }
-    });
-
-    instructorIdInput.addEventListener('input', () => {
-        if (instructorIdInput.value.trim() !== '') {
-            checkAvailability('instructorId', instructorIdInput.value, instructorIdInput);
-        }
-    });
+  instructorIdInput.addEventListener('input', () => {
+    if (instructorIdInput.value.trim() !== '') {
+      checkAvailability('instructorId', instructorIdInput.value, instructorIdInput);
+    }
+  });
 });
 </script>
-
 {% endblock %}

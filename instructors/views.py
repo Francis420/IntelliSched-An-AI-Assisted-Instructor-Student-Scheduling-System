@@ -168,6 +168,7 @@ def availabilityCreate(request):
     return render(request, 'instructors/availability/create.html', {'days': days})
 
 
+DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 @login_required
 @has_role('instructor')
 def availabilityUpdate(request, availabilityId):
@@ -187,7 +188,10 @@ def availabilityUpdate(request, availabilityId):
         messages.success(request, "Availability updated successfully.")
         return redirect('availabilityList')
 
-    return render(request, 'instructors/availability/update.html', {'availability': availability})
+    return render(request, 'instructors/availability/update.html', {
+        'availability': availability,
+        'days': DAYS_OF_WEEK,
+        })
 
 
 @login_required
@@ -235,7 +239,7 @@ def credentialCreate(request):
         type = request.POST.get('type')
         title = request.POST.get('title')
         description = request.POST.get('description')
-        relatedSubjectIds = request.POST.getlist('relatedSubjects')
+        relatedSubjectIds = request.POST.getlist('relatedSubjects')  # ✅ this is valid in view
         isVerified = request.POST.get('isVerified') == 'on'
         documentUrl = request.POST.get('documentUrl')
         dateEarned = request.POST.get('dateEarned')

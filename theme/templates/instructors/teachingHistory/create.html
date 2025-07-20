@@ -1,30 +1,38 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Add Teaching History</h2>
+<div class="max-w-xl mx-auto mt-6 p-6 bg-white rounded-2xl shadow">
+  <h2 class="text-2xl font-semibold mb-4">Add Teaching History</h2>
 
-<form method="post">
+  <form method="post">
     {% csrf_token %}
-    <div class="form-group">
-        <label>Subject:</label>
-        <select name="subject" class="form-control" required>
-            {% for subject in subjects %}
-            <option value="{{ subject.subjectId }}">{{ subject.code }} - {{ subject.title }}</option>
-            {% endfor %}
-        </select>
+
+    <div class="mb-4">
+      <label class="block font-medium mb-1">Subject</label>
+      <select name="subject" class="w-full border border-gray-300 rounded px-3 py-2" required>
+        {% for subject in subjects %}
+        <option value="{{ subject.subjectId }}">{{ subject.code }} - {{ subject.name }}</option>
+        {% endfor %}
+      </select>
     </div>
-    <div class="form-group">
-        <label>Semester:</label>
-        <select name="semester" class="form-control" required>
-            {% for sem in semesters %}
-            <option value="{{ sem.semesterId }}">{{ sem.name }}</option>
-            {% endfor %}
-        </select>
+
+    <div class="mb-4">
+      <label class="block font-medium mb-1">Semester</label>
+      <select name="semester" class="w-full border border-gray-300 rounded px-3 py-2" required>
+        {% for sem in semesters %}
+        <option value="{{ sem.semesterId }}">{{ sem.name }}</option>
+        {% endfor %}
+      </select>
     </div>
-    <div class="form-group">
-        <label>Times Taught:</label>
-        <input type="number" name="timesTaught" class="form-control" min="1" value="1" required>
+
+    <div class="mb-4">
+      <label class="block font-medium mb-1">Times Taught</label>
+      <input type="number" name="timesTaught" min="1" value="1" class="w-full border border-gray-300 rounded px-3 py-2" required>
     </div>
-    <button type="submit" class="btn btn-success">Save</button>
-    <a href="{% url 'teachingHistoryList' %}" class="btn btn-secondary">Cancel</a>
-</form>
+
+    <div class="flex gap-3">
+      <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded">Save</button>
+      <a href="{% url 'teachingHistoryList' %}" class="bg-gray-300 hover:bg-gray-400 text-black font-semibold px-4 py-2 rounded">Cancel</a>
+    </div>
+  </form>
+</div>
 {% endblock %}

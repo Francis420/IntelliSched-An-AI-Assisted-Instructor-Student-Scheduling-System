@@ -1,21 +1,36 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Create Curriculum</h2>
+<div class="max-w-xl mx-auto mt-6 p-6 bg-white rounded-2xl shadow">
+  <h2 class="text-2xl font-semibold mb-4">Create Curriculum</h2>
 
-<form method="POST">
+  <form method="POST">
     {% csrf_token %}
-    <label for="name">Curriculum Name:</label><br>
-    <input type="text" name="name" required><br><br>
+    
+    <div class="mb-4">
+      <label for="name" class="block text-sm font-medium text-gray-700">Curriculum Name</label>
+      <input type="text" name="name" id="name" required
+             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+    </div>
 
-    <label for="effectiveSy">Effective School Year (e.g., S.Y. 2024-2025):</label><br>
-    <input type="text" name="effectiveSy" required><br><br>
+    <div class="mb-4">
+      <label for="effectiveSy" class="block text-sm font-medium text-gray-700">Effective School Year</label>
+      <input type="text" name="effectiveSy" id="effectiveSy" required
+             placeholder="e.g., S.Y. 2024–2025"
+             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+    </div>
 
-    <label for="description">Description (optional):</label><br>
-    <textarea name="description" rows="4" cols="50"></textarea><br><br>
+    <div class="mb-4">
+      <label for="description" class="block text-sm font-medium text-gray-700">Description (optional)</label>
+      <textarea name="description" id="description" rows="4"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"></textarea>
+    </div>
 
-    <button type="submit">Create Curriculum</button>
-</form>
-
-<br>
-<a href="{% url 'curriculumList' %}">← Back to Curriculum List</a>
+    <div class="flex items-center justify-between mt-6">
+      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+        Create Curriculum
+      </button>
+      <a href="{% url 'curriculumList' %}" class="text-gray-600 hover:underline">← Back to Curriculum List</a>
+    </div>
+  </form>
+</div>
 {% endblock %}

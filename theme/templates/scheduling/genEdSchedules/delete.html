@@ -1,12 +1,21 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Confirm Deletion</h2>
+<div class="max-w-xl mx-auto mt-10 p-6 bg-white rounded-2xl shadow">
+  <h2 class="text-2xl font-semibold text-red-600 mb-4">Confirm Deletion</h2>
 
-<p>Are you sure you want to delete the schedule for <strong>{{ schedule.code }} - {{ schedule.sectionCode }}</strong>?</p>
+  <p class="mb-6 text-gray-700">
+    Are you sure you want to delete the schedule for
+    <strong class="font-medium">{{ schedule.code }} - {{ schedule.sectionCode }}</strong>?
+  </p>
 
-<form method="post">
+  <form method="post" class="flex items-center gap-4">
     {% csrf_token %}
-    <button type="submit" class="btn btn-danger">Delete</button>
-    <a href="{% url 'genedScheduleList' %}" class="btn btn-secondary">Cancel</a>
-</form>
+    <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition">
+      Delete
+    </button>
+    <a href="{% url 'genedScheduleList' %}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-xl hover:bg-gray-300 transition">
+      Cancel
+    </a>
+  </form>
+</div>
 {% endblock %}

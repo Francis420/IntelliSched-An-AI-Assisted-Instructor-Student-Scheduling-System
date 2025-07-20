@@ -1,66 +1,91 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block content %}
-<h2>Create Subject</h2>
-<form method="post">
-  {% csrf_token %}
-  <label>Subject Code:</label>
-  <input type="text" name="code" required><br>
+<div class="max-w-3xl mx-auto mt-8 p-6 bg-white rounded-2xl shadow">
+  <h2 class="text-2xl font-bold mb-4">Create New Subject</h2>
 
-  <label>Subject Name:</label>
-  <input type="text" name="name" required><br>
+  <form method="POST">
+    {% csrf_token %}
+    
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block mb-1 font-medium">Subject Code</label>
+        <input type="text" name="code" required class="w-full p-2 border rounded" />
+      </div>
 
-  <label>Curriculum:</label>
-  <select name="curriculumId" required>
-    {% for curriculum in curriculums %}
-      <option value="{{ curriculum.curriculumId }}">{{ curriculum.name }}</option>
-    {% endfor %}
-  </select><br>
+      <div>
+        <label class="block mb-1 font-medium">Subject Name</label>
+        <input type="text" name="name" required class="w-full p-2 border rounded" />
+      </div>
 
-  <label>Units:</label>
-  <input type="number" name="units" min="0" required><br>
+      <div>
+        <label class="block mb-1 font-medium">Curriculum</label>
+        <select name="curriculumId" required class="w-full p-2 border rounded">
+          {% for curriculum in curriculums %}
+            <option value="{{ curriculum.curriculumId }}">{{ curriculum.name }} ({{ curriculum.effectiveSy }})</option>
+          {% endfor %}
+        </select>
+      </div>
 
-  <label>Default Term:</label>
-  <select name="defaultTerm" required>
-    <option value="0">1st</option>
-    <option value="1">2nd</option>
-    <option value="2">Midyear</option>
-  </select><br>
+      <div>
+        <label class="block mb-1 font-medium">Units</label>
+        <input type="number" name="units" min="1" required class="w-full p-2 border rounded" />
+      </div>
 
-  <label>Year Level:</label>
-  <select name="yearLevel" required>
-    <option value="1">1st</option>
-    <option value="2">2nd</option>
-    <option value="3">3rd</option>
-    <option value="4">4th</option>
-  </select><br>
+      <div>
+        <label class="block mb-1 font-medium">Year Level</label>
+        <select name="yearLevel" required class="w-full p-2 border rounded">
+          <option value="1">1st</option>
+          <option value="2">2nd</option>
+          <option value="3">3rd</option>
+          <option value="4">4th</option>
+        </select>
+      </div>
 
-  <label>Lecture Duration (minutes):</label>
-  <input type="number" name="durationMinutes" min="0" required><br>
+      <div>
+        <label class="block mb-1 font-medium">Default Term</label>
+        <select name="defaultTerm" required class="w-full p-2 border rounded">
+          <option value="0">1st</option>
+          <option value="1">2nd</option>
+          <option value="2">Midyear</option>
+        </select>
+      </div>
 
-  <label><input type="checkbox" name="hasLab" id="hasLabToggle"> Has Laboratory</label><br>
+      <div>
+        <label class="block mb-1 font-medium">Lecture Duration (minutes)</label>
+        <input type="number" name="durationMinutes" required min="1" class="w-full p-2 border rounded" />
+      </div>
 
-  <div id="labFields" style="display: none;">
-    <label>Lab Duration (minutes):</label>
-    <input type="number" name="labDurationMinutes" min="0"><br>
-  </div>
+      <div class="flex items-center space-x-2 mt-6">
+        <input type="checkbox" id="hasLab" name="hasLab" class="h-5 w-5" />
+        <label for="hasLab" class="font-medium">Has Laboratory</label>
+      </div>
 
-  <label><input type="checkbox" name="isPriorityForRooms"> Priority for Room Assignment</label><br>
+      <div>
+        <label class="block mb-1 font-medium">Lab Duration (minutes)</label>
+        <input type="number" name="labDurationMinutes" min="0" class="w-full p-2 border rounded" />
+      </div>
 
-  <label>Subject Topics:</label><br>
-  <textarea name="subjectTopics"></textarea><br>
+      <div class="flex items-center space-x-2 mt-6">
+        <input type="checkbox" id="isPriorityForRooms" name="isPriorityForRooms" class="h-5 w-5" />
+        <label for="isPriorityForRooms" class="font-medium">Priority Room Assignment</label>
+      </div>
+    </div>
 
-  <label>Notes:</label><br>
-  <textarea name="notes"></textarea><br>
+    <div class="mt-4">
+      <label class="block mb-1 font-medium">Subject Topics</label>
+      <textarea name="subjectTopics" rows="3" class="w-full p-2 border rounded"></textarea>
+    </div>
 
-  <button type="submit">Create</button>
-</form>
+    <div class="mt-4">
+      <label class="block mb-1 font-medium">Notes</label>
+      <textarea name="notes" rows="3" class="w-full p-2 border rounded"></textarea>
+    </div>
 
-<script>
-  const labToggle = document.getElementById('hasLabToggle');
-  const labFields = document.getElementById('labFields');
-
-  labToggle.addEventListener('change', () => {
-    labFields.style.display = labToggle.checked ? 'block' : 'none';
-  });
-</script>
+    <div class="mt-6">
+      <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Create Subject</button>
+      <a href="{% url 'subjectList' %}" class="ml-3 text-blue-600 hover:underline">Cancel</a>
+    </div>
+  </form>
+</div>
 {% endblock %}
