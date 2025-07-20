@@ -52,6 +52,15 @@ class Subject(models.Model):
 
     def __str__(self):
         return f"[{self.curriculum.name}] {self.code} - {self.name}"
+    
+    @property
+    def lectureHours(self):
+        return round(self.durationMinutes / 60, 2)
+
+    @property
+    def labHours(self):
+        return round((self.labDurationMinutes or 0) / 60, 2)
+
 
 
 

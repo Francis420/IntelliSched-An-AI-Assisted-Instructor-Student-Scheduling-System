@@ -14,8 +14,28 @@
 
     {% for term_group in term_groups %}
       <h4 class="text-lg font-medium text-blue-700 mb-2 mt-6">
-        {{ year_group.grouper }} Year, 
-        {% if term_group.grouper == 1 %}1st{% elif term_group.grouper == 2 %}2nd{% else %}Summer{% endif %} Sem
+        {% if year_group.grouper == 1 %}
+          1st
+        {% elif year_group.grouper == 2 %}
+          2nd
+        {% elif year_group.grouper == 3 %}
+          3rd
+        {% elif year_group.grouper == 4 %}
+          4th
+        {% else %}
+          {{ year_group.grouper }}th
+        {% endif %}
+        Year, 
+        {% if term_group.grouper == 0 %}
+          1st
+        {% elif term_group.grouper == 1 %}
+          2nd
+        {% elif term_group.grouper == 2 %}
+          Midyear
+        {% else %}
+          Unknown
+        {% endif %}
+        Sem
       </h4>
 
       <div class="overflow-x-auto rounded-xl shadow mb-4">
@@ -33,25 +53,23 @@
           </thead>
           <tbody>
             {% for subject in term_group.list %}
-            <tr class="hover:bg-gray-50">
-              <td class="px-4 py-2 border-b">{{ subject.code }}</td>
-              <td class="px-4 py-2 border-b">{{ subject.name }}</td>
-              <td class="px-4 py-2 border-b text-center">
-                {{ subject.durationMinutes|default:0|divisibleby:60|floatformat:2 }}
-              </td>
-              <td class="px-4 py-2 border-b text-center">
-                {% if subject.labDurationMinutes %}
-                  {{ subject.labDurationMinutes|divisibleby:60|floatformat:2 }}
-                {% else %}
-                  0
-                {% endif %}
-              </td>
-              <td class="px-4 py-2 border-b text-center">{{ subject.units }}</td>
-            </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="px-4 py-2 border-b">{{ subject.code }}</td>
+                <td class="px-4 py-2 border-b">{{ subject.name }}</td>
+                <td class="px-4 py-2 border-b text-center">{{ subject.lectureHours|floatformat:"-1" }}</td>
+                <td class="px-4 py-2 border-b text-center">
+                  {% if subject.labHours %}
+                    {{ subject.labHours|floatformat:"-1" }}
+                  {% else %}
+                    0
+                  {% endif %}
+                </td>
+                <td class="px-4 py-2 border-b text-center">{{ subject.units }}</td>
+              </tr>
             {% empty %}
-            <tr>
-              <td colspan="5" class="text-center text-gray-500 py-3">No subjects found for this term.</td>
-            </tr>
+              <tr>
+                <td colspan="5" class="text-center text-gray-500 py-3">No subjects found for this term.</td>
+              </tr>
             {% endfor %}
           </tbody>
         </table>
