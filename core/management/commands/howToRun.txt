@@ -1,4 +1,5 @@
 on vscode terminal
 make sure venv is running
+make sure to check the path
 use: python manage.py importSubjectsFromFile "core/management/commands/2021_curriculum_prospectus.txt" --curriculumId=1
 where: [command] ["path"] --curriculumId=[id of the curriculum(check on Database)]
