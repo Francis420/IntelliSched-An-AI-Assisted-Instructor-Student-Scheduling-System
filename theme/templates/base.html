@@ -65,12 +65,6 @@
             <a href="{% url 'enrollmentList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📝 Enrollments</a>
             </div>
             {% endif %}
-
-            <!-- Logout -->
-            <div class="pt-4 border-t border-gray-200">
-            <a href="{% url 'logout' %}" class="block px-4 py-2 rounded-lg hover:bg-red-100 text-red-600 font-medium">🚪 Logout</a>
-            </div>
-
         {% endif %}
         </nav>
     </div>
@@ -85,6 +79,16 @@
                 </button>
                 
             </div>
+
+            {% if request.user.is_authenticated %}
+            <div>
+                <a href="{% url 'logout' %}" 
+                onclick="return confirm('Are you sure you want to logout?');"
+                class="inline-block bg-red-600 hover:bg-red-700 text-white font-semibold px-3 py-1.5 rounded-md shadow-md text-sm transition duration-150">
+                Logout
+                </a>
+            </div>
+            {% endif %}
         </header>
 
 
