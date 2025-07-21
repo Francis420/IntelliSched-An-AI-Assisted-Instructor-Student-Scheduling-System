@@ -1,6 +1,7 @@
 from django.db import models
 from core.models import Student, User
 from django.utils import timezone
+from django.apps import apps
 
 
 # ---------- Curriculum Table ----------
@@ -78,25 +79,7 @@ class Semester(models.Model):
         return f"{self.name}"
 
 
-# ---------- Instructor Matching (AI Result) ----------
-# This model stores the results of AI-based instructor matching for subjects, including confidence scores and other metrics.
-# It links instructors to subjects based on various factors like experience, teaching ability, and availability.
-class InstructorSubjectMatch(models.Model):
-    matchId = models.AutoField(primary_key=True)
-    instructor = models.ForeignKey('core.Instructor', on_delete=models.CASCADE)
-    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
-    confidenceScore = models.FloatField()
-    primaryFactor = models.CharField(max_length=50) 
-    experienceScore = models.FloatField()
-    teachingScore = models.FloatField()
-    credentialScore = models.FloatField()
-    availabilityScore = models.FloatField()
-    notes = models.TextField(null=True, blank=True)
-    generatedBy = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
-    generatedAt = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return f"Match {self.matchId} - {self.instructor.instructorId} -> {self.subject.code}"
 
 
 # ---------- Subject Offering Table ----------
@@ -104,7 +87,7 @@ class InstructorSubjectMatch(models.Model):
 class SubjectOffering(models.Model):
     offerId = models.AutoField(primary_key=True)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
-    match = models.ForeignKey(InstructorSubjectMatch, on_delete=models.CASCADE)
+    match = models.ForeignKey("aimatching.InstructorSubjectMatch", on_delete=models.CASCADE)
     semester = models.ForeignKey(Semester, on_delete=models.CASCADE)
     sectionCode = models.CharField(max_length=10)
     createdAt = models.DateTimeField(auto_now_add=True)
@@ -210,23 +193,3 @@ class GenEdSchedule(models.Model):
     def __str__(self):
         return f"GenEd {self.code} - {self.sectionCode}"
 
-
-# ---------- InstructorSubjectMatchHistory ----------
-# This model stores the history of instructor-subject matches, including confidence scores and other metrics.
-# It allows tracking changes over time and provides insights into the matching process.
-class InstructorSubjectMatchHistory(models.Model):
-    matchId = models.AutoField(primary_key=True)
-    instructor = models.ForeignKey('core.Instructor', on_delete=models.CASCADE)
-    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
-    confidenceScore = models.FloatField()
-    primaryFactor = models.CharField(max_length=50)
-    experienceScore = models.FloatField()
-    teachingScore = models.FloatField()
-    credentialScore = models.FloatField()
-    availabilityScore = models.FloatField()
-    notes = models.TextField(blank=True, null=True)
-    generatedBy = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
-    generatedAt = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"[History] {self.instructor.instructorId} - {self.subject.code}"

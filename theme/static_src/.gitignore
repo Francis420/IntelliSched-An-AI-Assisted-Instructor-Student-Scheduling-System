@@ -1,1 +1,5 @@
-node_modules
+# Ignore virtual environment
+root310/
+
+# (Optional) Ignore Node modules anywhere
+/node_modules/

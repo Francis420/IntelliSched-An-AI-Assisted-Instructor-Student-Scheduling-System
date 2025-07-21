@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'scheduling',
     'adminpanel',
     'authapi',
+    'aimatching',       
 ]
 
 REST_FRAMEWORK = {

@@ -1,0 +1,10 @@
+
+# Ignore virtual environment
+root310/
+root/
+
+# Ignore node modules from static_src
+theme/static_src/node_modules/
+theme/static_src/root/
+theme/static_src/root310/
+

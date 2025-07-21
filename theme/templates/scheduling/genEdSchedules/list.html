@@ -37,17 +37,20 @@
               <td class="px-4 py-3 border-b">{{ schedule.instructorName|default:"—" }}</td>
               <td class="px-4 py-3 border-b">{{ schedule.dayOfWeek }}</td>
               <td class="px-4 py-3 border-b">{{ schedule.startTime }} - {{ schedule.endTime }}</td>
-              <td class="px-4 py-3 border-b text-center space-x-2">
-                <a href="{% url 'genedScheduleUpdate' schedule.genedScheduleId %}"
-                   class="inline-block bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded-md transition text-xs font-medium">
-                  Update
-                </a>
-                <a href="{% url 'genedScheduleDelete' schedule.genedScheduleId %}"
-                   class="inline-block bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md transition text-xs font-medium"
-                   onclick="return confirm('Are you sure you want to delete this schedule?');">
-                  Delete
-                </a>
-              </td>
+              <td class="px-4 py-3 border-b text-center">
+                <div class="flex justify-center space-x-2">
+                    <a href="{% url 'genedScheduleUpdate' schedule.genedScheduleId %}"
+                    class="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded-md transition text-xs font-medium">
+                    Update
+                    </a>
+
+                    <a href="{% url 'genedScheduleDelete' schedule.genedScheduleId %}"
+                    class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md transition text-xs font-medium"
+                    onclick="return confirm('Are you sure you want to delete this schedule?');">
+                    Delete
+                    </a>
+                </div>
+                </td>
             </tr>
           {% endfor %}
         </tbody>
