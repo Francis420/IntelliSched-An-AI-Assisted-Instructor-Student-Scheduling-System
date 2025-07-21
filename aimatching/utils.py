@@ -1,7 +1,7 @@
 from core.models import Instructor
-from instructors.models import InstructorExperience, InstructorCredentials
+from instructors.models import InstructorExperience, InstructorCredentials, InstructorSubjectPreference, TeachingHistory
 from scheduling.models import Subject
-from aimatching.models import InstructorSubjectMatch  # adjust import if needed
+from aimatching.models import InstructorSubjectMatch
 
 def getTrainingData():
     data = []
@@ -11,11 +11,13 @@ def getTrainingData():
         instructor = match.instructor
         subject = match.subject
 
-        # Gather experience & credentials / teaching history?
+        # --- Gather related data ---
         experiences = InstructorExperience.objects.filter(instructor=instructor)
         credentials = InstructorCredentials.objects.filter(instructor=instructor)
+        preferences = InstructorSubjectPreference.objects.filter(instructor=instructor, subject=subject).first()
+        teaching_history = TeachingHistory.objects.filter(instructor=instructor, subject=subject).first()
 
-        # Combine all text fields
+        # --- Combine all relevant text fields ---
         text_parts = []
 
         for exp in experiences:
@@ -26,10 +28,17 @@ def getTrainingData():
             text_parts.append(cred.title or "")
             text_parts.append(cred.description or "")
 
+        if preferences:
+            text_parts.append(preferences.preferenceType or "")
+            text_parts.append(preferences.reason or "")
+
+        if teaching_history:
+            text_parts.append(f"Taught {teaching_history.timesTaught} times")
+
         combined_text = " ".join(text_parts).strip()
 
         if combined_text and subject.code:
             data.append(combined_text)
-            labels.append(subject.code)  # or use subject.subjectId? code nalang ata since more descriptive
+            labels.append(subject.code)
 
     return data, labels
