@@ -9,4 +9,4 @@ class Command(BaseCommand):
         if model:
             self.stdout.write(self.style.SUCCESS("✅ Model trained and saved successfully."))
         else:
-            self.stdout.write(self.style.WARNING("⚠️ Model not trained. Check if training data is available."))
+            self.stdout.write(self.style.WARNING("⚠️ Not enough training data. Skipping model training."))

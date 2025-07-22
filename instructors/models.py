@@ -1,5 +1,8 @@
 from django.db import models
 from core.models import Instructor
+from django.core.validators import MinValueValidator
+from django.core.exceptions import ValidationError
+
 
 
 # ---------- Instructor Experience ---------- 60/update views/templates to handle experienceType
@@ -42,6 +45,11 @@ class InstructorExperience(models.Model):
         from datetime import date
         end = self.endDate or date.today()
         return (end.year - self.startDate.year) * 12 + (end.month - self.startDate.month)
+    
+    def clean(self):
+        if self.endDate and self.endDate < self.startDate:
+            raise ValidationError("End date cannot be before start date.")
+
 
 
 
@@ -67,6 +75,7 @@ class InstructorAvailability(models.Model):
         indexes = [
             models.Index(fields=['instructor', 'dayOfWeek']),
         ]
+        ordering = ['instructor', 'dayOfWeek', 'startTime']
 
     def clean(self):
         from django.core.exceptions import ValidationError
@@ -83,10 +92,10 @@ class InstructorAvailability(models.Model):
 # It will help in analyzing teaching patterns and subject expertise.
 class TeachingHistory(models.Model):
     teachingId = models.AutoField(primary_key=True)
-    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE)
+    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE, related_name='teachingHistory')
     subject = models.ForeignKey('scheduling.Subject', on_delete=models.CASCADE)
     semester = models.ForeignKey('scheduling.Semester', on_delete=models.PROTECT, null=True)
-    timesTaught = models.PositiveIntegerField(default=1)
+    timesTaught = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
     createdAt = models.DateTimeField(auto_now_add=True)
     updatedAt = models.DateTimeField(auto_now=True)
 
@@ -235,6 +244,19 @@ class InstructorDesignation(models.Model):
     def __str__(self):
         return self.name
     
+    def clean(self):
+        total = (
+            self.instructionHours +
+            self.researchHours +
+            self.extensionHours +
+            self.productionHours +
+            self.consultationHours +
+            self.adminSupervisionHours +
+            self.otherAssignmentHours
+        )
+        if total != self.totalHours:
+            raise ValidationError(f"Total allocated hours ({total}) do not match totalHours ({self.totalHours})")
+    
 
 
 # ---------- Instructor Rank ----------
@@ -272,4 +294,18 @@ class InstructorRank(models.Model):
 
     def __str__(self):
         return self.name
+    
+    def clean(self):
+        total = (
+            self.instructionHours +
+            self.researchHours +
+            self.extensionHours +
+            self.productionHours +
+            self.consultationHours +
+            self.adminSupervisionHours +
+            self.otherAssignmentHours
+        )
+        if total != self.totalHours:
+            raise ValidationError(f"Total allocated hours ({total}) do not match totalHours ({self.totalHours})")
+
 

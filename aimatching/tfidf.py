@@ -1,4 +1,3 @@
-#python manage.py train_match_model
 import os
 import joblib
 from sklearn.pipeline import Pipeline
@@ -6,8 +5,7 @@ from sklearn.svm import LinearSVC
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
-
-from .utils import getTrainingData
+from aimatching.utils import getTrainingData
 
 MODEL_PATH = "aimatching/saved_models/tfidf_svm_model.pkl"
 
@@ -15,8 +13,7 @@ def trainTfidfSvmModel():
     X, y = getTrainingData()
 
     if len(X) < 10:
-        print("⚠️ Not enough training data (need at least 10 samples).")
-        print("⚠️ Model not trained. Check if training data is available.")
+        print("⚠️ Not enough training data. Skipping model training.")
         return None
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -32,7 +29,6 @@ def trainTfidfSvmModel():
     print("=== Evaluation Report ===")
     print(classification_report(y_test, y_pred))
 
-    # Save model
     os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
     joblib.dump(model, MODEL_PATH)
     print(f"✅ Model saved to {MODEL_PATH}")

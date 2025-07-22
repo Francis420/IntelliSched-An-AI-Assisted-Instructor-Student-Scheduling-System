@@ -9,7 +9,8 @@ class InstructorSubjectMatch(models.Model):
     matchId = models.AutoField(primary_key=True)
     instructor = models.ForeignKey('core.Instructor', on_delete=models.CASCADE)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
-    score = models.FloatField(default=0.0)
+    matchScore = models.FloatField()
+    matchLevel = models.IntegerField()
     primaryFactor = models.CharField(max_length=50) 
     experienceScore = models.FloatField()
     teachingScore = models.FloatField()
@@ -17,6 +18,8 @@ class InstructorSubjectMatch(models.Model):
     availabilityScore = models.FloatField()
     notes = models.TextField(null=True, blank=True)
     generatedBy = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    explanation = models.TextField(null=True, blank=True) 
+    modelVersion = models.CharField(max_length=50, null=True, blank=True)
     generatedAt = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -24,7 +27,7 @@ class InstructorSubjectMatch(models.Model):
     
     class Meta:
         unique_together = ('instructor', 'subject')
-        ordering = ['-score']
+        ordering = ['-matchScore']
 
 # ---------- InstructorSubjectMatchHistory ----------
 # This model stores the history of instructor-subject matches, including confidence scores and other metrics.
