@@ -6,11 +6,20 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 from aimatching.utils import getTrainingData
+from collections import Counter
+
 
 MODEL_PATH = "aimatching/saved_models/tfidf_svm_model.pkl"
 
 def trainTfidfSvmModel():
     X, y = getTrainingData()
+
+    print("\n=== Raw Training Samples ===")
+    for i, (text, label) in enumerate(zip(X, y)):
+        print(f"{i+1}. Label: {label} | Text: {text[:80]}...")  # limit to first 80 chars for readability
+    print("============================\n")
+
+    print("\nLabel Distribution:", Counter(y))
 
     if len(X) < 10:
         print("⚠️ Not enough training data. Skipping model training.")

@@ -1,31 +1,53 @@
-from instructors.models import InstructorExperience, InstructorCredentials, InstructorSubjectPreference, TeachingHistory
+from instructors.models import (
+    InstructorExperience,
+    InstructorCredentials,
+    InstructorSubjectPreference,
+    TeachingHistory,
+)
+from scheduling.models import Subject
+
 
 def gatherInstructorText(instructor):
-    text_parts = []
+    lines = []
 
-    experiences = InstructorExperience.objects.filter(instructor=instructor)
-    credentials = InstructorCredentials.objects.filter(instructor=instructor)
-    preferences = InstructorSubjectPreference.objects.filter(instructor=instructor)
-    teaching_history = TeachingHistory.objects.filter(instructor=instructor)
+    # Academic attainment, designation, rank
+    if instructor.academicAttainment:
+        lines.append(f"Academic Attainment: {instructor.academicAttainment.name}")
+    if instructor.designation:
+        lines.append(f"Designation: {instructor.designation.name}")
+    if instructor.rank:
+        lines.append(f"Rank: {instructor.rank.name}")
 
+    # Teaching history
+    for teaching in instructor.teachingHistory.all():
+        subject = teaching.subject
+        topic_str = f" - Topics: {subject.subjectTopics}" if subject.subjectTopics else ""
+        lines.append(f"Taught: {subject.code} - {subject.name}{topic_str} x{teaching.timesTaught}")
+
+    # Experiences
+    from instructors.models import InstructorExperience
+    experiences = InstructorExperience.objects.filter(instructor=instructor, isVerified=True).prefetch_related("relatedSubjects")
     for exp in experiences:
-        text_parts.append(exp.title or "")
-        text_parts.append(exp.description or "")
+        lines.append(f"Experience ({exp.experienceType}): {exp.title} at {exp.organization} - {exp.description}")
+        for subj in exp.relatedSubjects.all():
+            topic_str = f" - Topics: {subj.subjectTopics}" if subj.subjectTopics else ""
+            lines.append(f"Related Subject: {subj.code} - {subj.name}{topic_str}")
 
+    # Credentials
+    from instructors.models import InstructorCredentials
+    credentials = InstructorCredentials.objects.filter(instructor=instructor, isVerified=True).prefetch_related("relatedSubjects")
     for cred in credentials:
-        text_parts.append(cred.title or "")
-        text_parts.append(cred.description or "")
+        lines.append(f"Credential ({cred.type}): {cred.title} - {cred.description} by {cred.issuer}")
+        for subj in cred.relatedSubjects.all():
+            topic_str = f" - Topics: {subj.subjectTopics}" if subj.subjectTopics else ""
+            lines.append(f"Related Subject: {subj.code} - {subj.name}{topic_str}")
 
+    # Subject preferences
+    from instructors.models import InstructorSubjectPreference
+    preferences = InstructorSubjectPreference.objects.filter(instructor=instructor).select_related("subject")
     for pref in preferences:
-        text_parts.append(pref.preferenceType or "")
-        text_parts.append(pref.reason or "")
+        subject = pref.subject
+        topic_str = f" - Topics: {subject.subjectTopics}" if subject.subjectTopics else ""
+        lines.append(f"Preference ({pref.preferenceType}): {subject.code} - {subject.name}{topic_str}")
 
-    for history in teaching_history:
-        if history.subject:
-            text_parts.append(history.subject.name or "")
-            text_parts.append(history.subject.code or "")
-        if history.semester:
-            text_parts.append(history.semester.name or "")
-        text_parts.append(f"Taught {history.timesTaught} times")
-
-    return " ".join(text_parts).strip()
+    return "\n".join(lines)

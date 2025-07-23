@@ -2,11 +2,13 @@ import joblib
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.pipeline import Pipeline
 from sklearn.svm import LinearSVC
-from .utils import getTrainingData
 
 MODEL_PATH = "aimatching/svm_model.joblib"
 
 def trainSVMModel():
+    # 🔁 Local import to avoid circular dependency
+    from .utils import getTrainingData
+
     data, labels = getTrainingData()
     if not data:
         print("No data to train on.")

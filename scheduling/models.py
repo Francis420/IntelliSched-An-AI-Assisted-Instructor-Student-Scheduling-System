@@ -79,8 +79,6 @@ class Semester(models.Model):
 
 
 
-
-
 # ---------- Subject Offering Table ----------
 # This model represents the offering of a subject in a specific semester, including the section code and associated instructor match.
 class SubjectOffering(models.Model):

@@ -187,28 +187,7 @@ class InstructorSubjectPreference(models.Model):
     def __str__(self):
         return f"{self.instructor.instructorId} prefers {self.subject.code} ({self.preferenceType})"
 
-
-# ---------- Instructor Monitoring (Absences) ----------
-# This model tracks instructor absences, both auto-detected and manually reported.
-class InstructorAbsence(models.Model):
-    REPORT_TYPE_CHOICES = [
-        ('auto-detected', 'Auto Detected'),
-        ('manual', 'Manual'),
-    ]
-
-    absenceId = models.AutoField(primary_key=True)
-    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE)
-    subject = models.ForeignKey("scheduling.Subject", on_delete=models.CASCADE)
-    schedule = models.ForeignKey("scheduling.Schedule", on_delete=models.CASCADE)
-    reportType = models.CharField(max_length=20, choices=REPORT_TYPE_CHOICES)
-    reason = models.TextField(blank=True, null=True)
-    dateMissed = models.DateField()
-    reportedAt = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.instructor.instructorId} missed {self.subject.code} on {self.dateMissed}"
     
-
 
 # ---------- Instructor Designation ----------
 # This model defines the designations available for instructors, including their workload allocations.
@@ -222,10 +201,6 @@ class InstructorDesignation(models.Model):
     extensionHours = models.IntegerField(default=0)
     productionHours = models.IntegerField(default=0)
     consultationHours = models.IntegerField(default=0)
-
-    # overloadDoctoral = models.IntegerField(default=6)
-    # overloadMasters = models.IntegerField(default=6)
-    # overloadBaccalaureate = models.IntegerField(default=6)
 
     class Meta:
         ordering = ['designationId']
@@ -261,6 +236,7 @@ class InstructorRank(models.Model):
         return self.name
     
 
+
 # ---------- Instructor Academic Attainment ----------
 # This model defines the academic attainments of instructors and the corresponding allowed overloads.
 class InstructorAcademicAttainment(models.Model):
@@ -279,3 +255,25 @@ class InstructorAcademicAttainment(models.Model):
 
     def __str__(self):
         return self.name
+
+
+
+# ---------- Instructor Monitoring (Absences) ----------
+# This model tracks instructor absences, both auto-detected and manually reported.
+class InstructorAbsence(models.Model):
+    REPORT_TYPE_CHOICES = [
+        ('auto-detected', 'Auto Detected'),
+        ('manual', 'Manual'),
+    ]
+
+    absenceId = models.AutoField(primary_key=True)
+    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE)
+    subject = models.ForeignKey("scheduling.Subject", on_delete=models.CASCADE)
+    schedule = models.ForeignKey("scheduling.Schedule", on_delete=models.CASCADE)
+    reportType = models.CharField(max_length=20, choices=REPORT_TYPE_CHOICES)
+    reason = models.TextField(blank=True, null=True)
+    dateMissed = models.DateField()
+    reportedAt = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.instructor.instructorId} missed {self.subject.code} on {self.dateMissed}"
