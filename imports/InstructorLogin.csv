@@ -1,0 +1,21 @@
+instructorId,username,email,password,firstName,lastName,rank,designation,academicAttainment,employmentType
+2025-100001,ajavier,ajavier@example.com,Pass123!,Anna,Javier,2,1,3,permanent
+2025-100002,rdelacruz,rdelacruz@example.com,Teach3r@,Rico,Dela Cruz,,,2,temporary
+2025-100003,mtorres,mtorres@example.com,Secur3Me$,Maria,Torres,3,3,1,permanent
+2025-100004,jbautista,jbautista@example.com,Hello12@,Juan,Bautista,,,2,temporary
+2025-100005,kyu,kyu@example.com,Pa55word!,Kyla,Yu,4,4,3,permanent
+2025-100006,lperez,lperez@example.com,Chang3Now,Luis,Perez,,,2,temporary
+2025-100007,tamor,tamor@example.com,T3@chMe!,Teresa,Amor,,,1,temporary
+2025-100008,droque,droque@example.com,StrongKey45,Daniel,Roque,3,1,1,permanent
+2025-100009,bmendoza,bmendoza@example.com,Zxcv1234!,Bea,Mendoza,4,3,3,permanent
+2025-100010,egabriel,egabriel@example.com,Code@Teach9,Elvin,Gabriel,,,2,temporary
+2025-100011,sfernando,sfernando@example.com,Dev#2025,Sofia,Fernando,1,2,2,permanent
+2025-100012,cjose,cjose@example.com,App!Secure,Carlo,Jose,,,1,temporary
+2025-100013,mluna,mluna@example.com,H4rdPass#,Monique,Luna,2,1,3,permanent
+2025-100014,ecruz,ecruz@example.com,MyPass321!,Edgar,Cruz,,,1,temporary
+2025-100015,rocampo,rocampo@example.com,TryM3!Pwd,Rosa,Ocampo,1,2,2,permanent
+2025-100016,vdelgado,vdelgado@example.com,CodeNow@12,Victor,Delgado,,,1,temporary
+2025-100017,cmanalo,cmanalo@example.com,TeachUpp@9,Cecille,Manalo,3,3,3,permanent
+2025-100018,gbasa,gbasa@example.com,Pass@456,George,Basa,4,4,3,permanent
+2025-100019,fsantos,fsantos@example.com,Secre+2025,Felicia,Santos,,,2,temporary
+2025-100020,djimenez,djimenez@example.com,T!ghter123,Dante,Jimenez,2,2,3,permanent

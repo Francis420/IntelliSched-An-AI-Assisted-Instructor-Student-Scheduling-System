@@ -1,0 +1,81 @@
+instructorId,title,organization,startDate,endDate,description,experienceType,relatedSubjects,isVerified
+2025-100001,Systems Analyst,DICT Research Unit,2017-02-01,2018-08-25,Worked on enterprise system design and development.,Work Experience,38,TRUE
+2025-100001,IT Specialist,DICT Research Unit,2016-10-01,2019-08-17,Worked on enterprise system design and development.,Work Experience,39,FALSE
+2025-100001,IT Specialist,Byte Solutions Inc.,2017-06-01,2019-05-22,Worked on enterprise system design and development.,Work Experience,28;8,FALSE
+2025-100001,Academic Adviser,TechBridge University,2015-12-01,2018-01-19,Oversaw academic operations and curriculum design.,Administrative Role,7,TRUE
+2025-100002,Lecturer,CyberTech Institute,2015-04-01,2015-12-27,Handled key IT courses and capstone advising.,Academic Position,43,TRUE
+2025-100002,Dean,Innovate State College,2018-03-01,2020-03-20,Handled key IT courses and capstone advising.,Academic Position,4;18;24,TRUE
+2025-100002,Research Associate,TechBridge University,2019-10-01,2020-06-27,Conducted studies and contributed to technical papers.,Research Role,20;22,TRUE
+2025-100002,Project Researcher,Byte Solutions Inc.,2020-06-01,2021-09-24,Conducted studies and contributed to technical papers.,Research Role,20;25,FALSE
+2025-100003,Community Trainer,Byte Solutions Inc.,2020-06-01,2021-09-24,Engaged in outreach and digital literacy training.,Extension Service,23,TRUE
+2025-100003,Project Researcher,Innovate State College,2015-03-01,2016-05-24,Handled key IT courses and capstone advising.,Academic Position,11,TRUE
+2025-100003,Research Associate,Innovate State College,2015-04-01,2016-07-24,Conducted studies and contributed to technical papers.,Research Role,15,TRUE
+2025-100003,Project Researcher,Innovate State College,2016-03-01,2018-10-17,Conducted studies and contributed to technical papers.,Research Role,27;8,TRUE
+2025-100004,Seminar Speaker,CodeLogic Solutions,2020-01-01,2022-05-20,Engaged in outreach and digital literacy training.,Extension Service,20;12;21,FALSE
+2025-100004,Systems Analyst,Byte Solutions Inc.,2017-09-01,2019-02-23,Worked on enterprise system design and development.,Work Experience,7;9;1,TRUE
+2025-100004,Academic Adviser,DICT Research Unit,2016-09-01,2017-10-26,Oversaw academic operations and curriculum design.,Administrative Role,16;20,TRUE
+2025-100004,Seminar Speaker,CodeLogic Solutions,2015-02-01,2017-09-18,Engaged in outreach and digital literacy training.,Extension Service,2;36;39,TRUE
+2025-100005,Coordinator,CodeLogic Solutions,2019-11-01,2022-02-18,Oversaw academic operations and curriculum design.,Administrative Role,6;13,TRUE
+2025-100005,IT Specialist,TechBridge University,2019-08-01,2022-07-16,Worked on enterprise system design and development.,Work Experience,8;4,FALSE
+2025-100005,IT Consultant,Smart Barangay Program,2020-03-01,2021-09-22,Provided expert advice for digital transformation.,Consultancy,13,TRUE
+2025-100005,Academic Adviser,Digital Bayanihan PH,2021-11-01,2022-04-30,Oversaw academic operations and curriculum design.,Administrative Role,36,TRUE
+2025-100006,Systems Analyst,TechBridge University,2017-09-01,2018-07-28,Worked on enterprise system design and development.,Work Experience,21;37,TRUE
+2025-100006,Coordinator,Byte Solutions Inc.,2019-09-01,2020-07-27,Oversaw academic operations and curriculum design.,Administrative Role,12,FALSE
+2025-100006,Seminar Speaker,CyberTech Institute,2020-07-01,2022-05-22,Engaged in outreach and digital literacy training.,Extension Service,40;36,TRUE
+2025-100006,Seminar Speaker,DICT Research Unit,2015-06-01,2016-02-26,Engaged in outreach and digital literacy training.,Extension Service,16;7;30,FALSE
+2025-100007,Dean,TechBridge University,2017-02-01,2017-10-29,Handled key IT courses and capstone advising.,Academic Position,31;13;33,FALSE
+2025-100007,IT Specialist,CodeLogic Solutions,2020-09-01,2022-03-25,Worked on enterprise system design and development.,Work Experience,42;27,TRUE
+2025-100007,Project Researcher,Byte Solutions Inc.,2017-01-01,2017-10-28,Conducted studies and contributed to technical papers.,Research Role,11,FALSE
+2025-100007,Systems Consultant,Innovate State College,2018-12-01,2020-03-25,Provided expert advice for digital transformation.,Consultancy,8;5,TRUE
+2025-100008,Systems Analyst,TechBridge University,2021-09-01,2022-11-25,Worked on enterprise system design and development.,Work Experience,11,FALSE
+2025-100008,Research Assistant,DICT Research Unit,2017-05-01,2020-02-15,Conducted studies and contributed to technical papers.,Research Role,1;24;42,TRUE
+2025-100008,Department Head,Innovate State College,2021-01-01,2023-03-22,Oversaw academic operations and curriculum design.,Administrative Role,39,FALSE
+2025-100008,Lecturer,CodeLogic Solutions,2015-05-01,2017-07-19,Handled key IT courses and capstone advising.,Academic Position,39,TRUE
+2025-100009,Lecturer,Digital Bayanihan PH,2019-03-01,2020-08-22,Handled key IT courses and capstone advising.,Academic Position,31;27;8,FALSE
+2025-100009,IT Consultant,CyberTech Institute,2015-09-01,2018-03-19,Provided expert advice for digital transformation.,Consultancy,13;43;22,FALSE
+2025-100009,IT Consultant,Byte Solutions Inc.,2021-09-01,2022-11-25,Provided expert advice for digital transformation.,Consultancy,16;4;20,TRUE
+2025-100009,Tech Advisor,CyberTech Institute,2020-11-01,2023-04-20,Provided expert advice for digital transformation.,Consultancy,1;23;15,FALSE
+2025-100010,Project Researcher,TechBridge University,2021-08-01,2022-01-28,Conducted studies and contributed to technical papers.,Research Role,10;8,TRUE
+2025-100010,Community Trainer,DICT Research Unit,2020-08-01,2022-05-23,Engaged in outreach and digital literacy training.,Extension Service,43,FALSE
+2025-100010,Tech Advisor,Byte Solutions Inc.,2016-09-01,2019-07-18,Provided expert advice for digital transformation.,Consultancy,34;37,TRUE
+2025-100010,Research Associate,CyberTech Institute,2021-03-01,2023-04-20,Conducted studies and contributed to technical papers.,Research Role,31;9;14,TRUE
+2025-100011,Systems Analyst,Byte Solutions Inc.,2017-05-01,2017-12-27,Worked on enterprise system design and development.,Work Experience,2;32,TRUE
+2025-100011,IT Volunteer,CodeLogic Solutions,2015-08-01,2018-02-16,Engaged in outreach and digital literacy training.,Extension Service,19,TRUE
+2025-100011,Project Researcher,Smart Barangay Program,2019-10-01,2021-09-20,Conducted studies and contributed to technical papers.,Research Role,33;15,TRUE
+2025-100011,Coordinator,Smart Barangay Program,2016-08-01,2017-03-29,Oversaw academic operations and curriculum design.,Administrative Role,13,TRUE
+2025-100012,Research Assistant,CyberTech Institute,2019-02-01,2020-01-27,Conducted studies and contributed to technical papers.,Research Role,43;7,TRUE
+2025-100012,Tech Advisor,CodeLogic Solutions,2018-10-01,2021-07-17,Provided expert advice for digital transformation.,Consultancy,36;9,FALSE
+2025-100012,IT Volunteer,TechBridge University,2015-04-01,2016-11-21,Engaged in outreach and digital literacy training.,Extension Service,27,FALSE
+2025-100012,Department Head,Innovate State College,2019-12-01,2021-11-20,Oversaw academic operations and curriculum design.,Administrative Role,3;23,TRUE
+2025-100013,Community Trainer,CodeLogic Solutions,2019-11-01,2022-01-19,Engaged in outreach and digital literacy training.,Extension Service,27;9;1,FALSE
+2025-100013,Dean,Innovate State College,2018-09-01,2020-05-23,Handled key IT courses and capstone advising.,Academic Position,2;7,TRUE
+2025-100013,Software Engineer,Innovate State College,2019-05-01,2020-08-23,Worked on enterprise system design and development.,Work Experience,39,TRUE
+2025-100013,Software Engineer,Byte Solutions Inc.,2018-09-01,2019-03-30,Worked on enterprise system design and development.,Work Experience,24,TRUE
+2025-100014,Project Researcher,Byte Solutions Inc.,2019-01-01,2021-03-21,Conducted studies and contributed to technical papers.,Research Role,39,TRUE
+2025-100014,IT Volunteer,CodeLogic Solutions,2017-11-01,2020-02-19,Engaged in outreach and digital literacy training.,Extension Service,24,FALSE
+2025-100014,Community Trainer,TechBridge University,2016-01-01,2017-09-22,Engaged in outreach and digital literacy training.,Extension Service,18,FALSE
+2025-100014,Software Engineer,CyberTech Institute,2019-12-01,2022-02-18,Worked on enterprise system design and development.,Work Experience,27,TRUE
+2025-100015,Dean,Innovate State College,2015-11-01,2018-07-18,Handled key IT courses and capstone advising.,Academic Position,31,FALSE
+2025-100015,Dean,Smart Barangay Program,2021-04-01,2023-07-20,Handled key IT courses and capstone advising.,Academic Position,11;24,FALSE
+2025-100015,Systems Consultant,CyberTech Institute,2015-10-01,2018-02-17,Provided expert advice for digital transformation.,Consultancy,26;5,FALSE
+2025-100015,IT Consultant,CodeLogic Solutions,2015-11-01,2018-07-18,Provided expert advice for digital transformation.,Consultancy,43;9;27,FALSE
+2025-100016,Department Head,Byte Solutions Inc.,2020-12-01,2022-01-25,Oversaw academic operations and curriculum design.,Administrative Role,7;21;9,TRUE
+2025-100016,IT Specialist,CyberTech Institute,2021-06-01,2023-08-20,Worked on enterprise system design and development.,Work Experience,16;31;1,TRUE
+2025-100016,Lecturer,Smart Barangay Program,2017-08-01,2019-12-19,Handled key IT courses and capstone advising.,Academic Position,2;22,FALSE
+2025-100016,Coordinator,Innovate State College,2020-04-01,2021-08-24,Oversaw academic operations and curriculum design.,Administrative Role,37;42,TRUE
+2025-100017,Assistant Professor,TechBridge University,2020-05-01,2022-12-17,Handled key IT courses and capstone advising.,Academic Position,13,FALSE
+2025-100017,Tech Advisor,Digital Bayanihan PH,2015-01-01,2017-11-16,Provided expert advice for digital transformation.,Consultancy,26;29;36,FALSE
+2025-100017,Tech Advisor,Innovate State College,2020-09-01,2023-05-19,Provided expert advice for digital transformation.,Consultancy,43;41,FALSE
+2025-100017,Tech Advisor,DICT Research Unit,2020-01-01,2022-09-17,Provided expert advice for digital transformation.,Consultancy,29,TRUE
+2025-100018,Tech Advisor,TechBridge University,2018-01-01,2019-02-25,Provided expert advice for digital transformation.,Consultancy,11;32;19,TRUE
+2025-100018,Coordinator,Innovate State College,2018-07-01,2019-09-24,Oversaw academic operations and curriculum design.,Administrative Role,31,TRUE
+2025-100018,IT Consultant,TechBridge University,2020-02-01,2020-10-28,Provided expert advice for digital transformation.,Consultancy,10;3,TRUE
+2025-100018,Program Chair,DICT Research Unit,2016-07-01,2017-10-24,Handled key IT courses and capstone advising.,Academic Position,27;21;22,FALSE
+2025-100019,Department Head,CyberTech Institute,2018-03-01,2020-02-19,Oversaw academic operations and curriculum design.,Administrative Role,36;22,TRUE
+2025-100019,Department Head,Digital Bayanihan PH,2016-07-01,2019-02-16,Oversaw academic operations and curriculum design.,Administrative Role,13,TRUE
+2025-100019,Coordinator,CyberTech Institute,2018-02-01,2021-01-16,Oversaw academic operations and curriculum design.,Administrative Role,24,TRUE
+2025-100019,Dean,CyberTech Institute,2020-05-01,2022-02-20,Handled key IT courses and capstone advising.,Academic Position,26,TRUE
+2025-100020,IT Specialist,Smart Barangay Program,2020-11-01,2023-04-20,Worked on enterprise system design and development.,Work Experience,36;22,TRUE
+2025-100020,Systems Consultant,CodeLogic Solutions,2021-03-01,2024-02-14,Provided expert advice for digital transformation.,Consultancy,13,TRUE
+2025-100020,Research Associate,CodeLogic Solutions,2019-08-01,2022-07-16,Conducted studies and contributed to technical papers.,Research Role,24,FALSE
+2025-100020,IT Specialist,TechBridge University,2020-03-01,2021-04-25,Worked on enterprise system design and development.,Work Experience,26,FALSE

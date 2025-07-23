@@ -64,7 +64,6 @@ class Subject(models.Model):
 
 
 
-
 # ---------- Semester Table ----------
 # This model represents semesters in the academic calendar, including their name, academic year, and term
 class Semester(models.Model):

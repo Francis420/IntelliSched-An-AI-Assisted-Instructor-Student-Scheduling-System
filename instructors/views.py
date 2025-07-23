@@ -90,7 +90,7 @@ def experienceUpdate(request, experienceId):
         experience.startDate = request.POST.get('startDate')
         experience.endDate = request.POST.get('endDate') or None
         experience.description = request.POST.get('description')
-        experience.experienceType = request.POST.get('experienceType')
+        experience.experienceType = request.POST.get('type')
         relatedSubjectIds = list(map(int, request.POST.getlist('relatedSubjects')))
 
         experience.save()
