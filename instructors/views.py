@@ -460,11 +460,20 @@ def teachingHistoryUpdate(request, teachingId):
 
     if request.method == 'POST':
         history.timesTaught = request.POST.get('timesTaught', 1)
+        history.subject_id = request.POST.get('subject')
+        history.semester_id = request.POST.get('semester')
         history.save()
         messages.success(request, "Teaching history updated successfully.")
         return redirect('teachingHistoryList')
 
-    return render(request, 'instructors/teachingHistory/update.html', {'history': history})
+    subjects = Subject.objects.all()
+    semesters = Semester.objects.all()
+
+    return render(request, 'instructors/teachingHistory/update.html', {
+        'history': history,
+        'subjects': subjects,
+        'semesters': semesters,
+    })
 
 
 @login_required

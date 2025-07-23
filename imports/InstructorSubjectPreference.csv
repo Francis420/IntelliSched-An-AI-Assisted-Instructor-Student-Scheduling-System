@@ -1,0 +1,101 @@
+instructorId,subjectId,preferenceType,reason,createdAt,updatedAt
+2025-100001,12,Prefer,I have industry certifications on networking.,2025-07-23,2025-07-23
+2025-100001,8,Prefer,I've taught data structures in previous semesters.,2025-07-23,2025-07-23
+2025-100001,29,Prefer,Strong background in cybersecurity.,2025-07-23,2025-07-23
+2025-100001,24,Neutral,I align this with professional ethics lectures.,2025-07-23,2025-07-23
+2025-100001,34,Prefer,Handled advanced security before.,2025-07-23,2025-07-23
+2025-100002,2,Prefer,Passionate about introducing students to programming.,2025-07-23,2025-07-23
+2025-100002,6,Neutral,Taught Java-based programming before.,2025-07-23,2025-07-23
+2025-100002,9,Prefer,Object-oriented programming is my specialization.,2025-07-23,2025-07-23
+2025-100002,22,Neutral,Skilled in modern web frameworks.,2025-07-23,2025-07-23
+2025-100002,30,Prefer,I enjoy teaching emerging technologies.,2025-07-23,2025-07-23
+2025-100003,1,Prefer,Regularly handle IT fundamentals.,2025-07-23,2025-07-23
+2025-100003,3,Neutral,I also handle GE electives alongside major subjects.,2025-07-23,2025-07-23
+2025-100003,10,Prefer,I specialize in platform-based systems.,2025-07-23,2025-07-23
+2025-100003,15,Neutral,Taught integrative programming previously.,2025-07-23,2025-07-23
+2025-100003,26,Prefer,Software engineering is aligned with my expertise.,2025-07-23,2025-07-23
+2025-100004,4,Prefer,UX/UI research is my academic focus.,2025-07-23,2025-07-23
+2025-100004,13,Neutral,I’ve created syllabi for this subject before.,2025-07-23,2025-07-23
+2025-100004,18,Prefer,I mentor database-focused thesis projects.,2025-07-23,2025-07-23
+2025-100004,21,Prefer,Expertise in system integration.,2025-07-23,2025-07-23
+2025-100004,36,Prefer,Years of experience in server administration.,2025-07-23,2025-07-23
+2025-100005,11,Prefer,Previously taught web systems and enjoy frontend topics.,2025-07-23,2025-07-23
+2025-100005,14,Avoid,Not comfortable teaching statistics-heavy courses.,2025-07-23,2025-07-23
+2025-100005,23,Prefer,Event-driven programming aligns with my teaching style.,2025-07-23,2025-07-23
+2025-100005,28,Neutral,I can teach electives but not my primary focus.,2025-07-23,2025-07-23
+2025-100005,32,Prefer,Have experience mentoring integrative projects.,2025-07-23,2025-07-23
+2025-100006,5,Avoid,Prefer teaching conceptual over mathematical topics.,2025-07-23,2025-07-23
+2025-100006,16,Prefer,Taught networking fundamentals and routing.,2025-07-23,2025-07-23
+2025-100006,17,Neutral,I can handle GE electives if required.,2025-07-23,2025-07-23
+2025-100006,27,Prefer,Multimedia systems is an area I actively research.,2025-07-23,2025-07-23
+2025-100006,37,Prefer,Have successfully guided several capstone teams.,2025-07-23,2025-07-23
+2025-100007,7,Neutral,Occasionally teach GE electives.,2025-07-23,2025-07-23
+2025-100007,19,Prefer,Good background in systems analysis & project planning.,2025-07-23,2025-07-23
+2025-100007,25,Avoid,Not certified for advanced networking courses.,2025-07-23,2025-07-23
+2025-100007,31,Neutral,Familiar with the material but not a strong preference.,2025-07-23,2025-07-23
+2025-100007,38,Prefer,Handled internship coordination and practicum before.,2025-07-23,2025-07-23
+2025-100008,20,Prefer,Actively conduct research in data analytics.,2025-07-23,2025-07-23
+2025-100008,33,Neutral,I've assisted in Systems Integration 2 classes.,2025-07-23,2025-07-23
+2025-100008,35,Prefer,Capstone supervision is part of my regular load.,2025-07-23,2025-07-23
+2025-100008,22,Neutral,Experience in web technologies but not expert.,2025-07-23,2025-07-23
+2025-100008,6,Avoid,I prefer not to teach early-stage programming.,2025-07-23,2025-07-23
+2025-100009,4,Prefer,HCI is one of my favorite courses to facilitate.,2025-07-23,2025-07-23
+2025-100009,13,Neutral,Familiar with information management concepts.,2025-07-23,2025-07-23
+2025-100009,29,Avoid,I avoid security-related subjects.,2025-07-23,2025-07-23
+2025-100009,10,Prefer,Enjoy teaching about platform-based technologies.,2025-07-23,2025-07-23
+2025-100009,1,Neutral,I can teach intro classes but prefer upper-year ones.,2025-07-23,2025-07-23
+2025-100010,15,Prefer,Enjoy guiding students on integrative projects.,2025-07-23,2025-07-23
+2025-100010,26,Avoid,Prefer not to handle software engineering.,2025-07-23,2025-07-23
+2025-100010,18,Neutral,Comfortable with advanced database topics.,2025-07-23,2025-07-23
+2025-100010,30,Prefer,App development is a personal specialty.,2025-07-23,2025-07-23
+2025-100010,3,Neutral,GE electives are manageable but not my focus.,2025-07-23,2025-07-23
+2025-100011,12,Prefer,Network fundamentals align with my certifications.,2025-07-23,2025-07-23
+2025-100011,34,Prefer,Capable of handling cybersecurity subjects.,2025-07-23,2025-07-23
+2025-100011,2,Avoid,I prefer not to teach beginner programming.,2025-07-23,2025-07-23
+2025-100011,8,Neutral,Taught data structures once before.,2025-07-23,2025-07-23
+2025-100011,17,Prefer,Actively involved in GE curriculum design.,2025-07-23,2025-07-23
+2025-100012,9,Prefer,Skilled in object-oriented programming.,2025-07-23,2025-07-23
+2025-100012,24,Neutral,Social issues are relevant but not my main area.,2025-07-23,2025-07-23
+2025-100012,36,Avoid,System administration is outside my expertise.,2025-07-23,2025-07-23
+2025-100012,21,Prefer,Handled Systems Architecture classes for 3 years.,2025-07-23,2025-07-23
+2025-100012,5,Neutral,Comfortable teaching discrete math occasionally.,2025-07-23,2025-07-23
+2025-100013,11,Prefer,Web technologies are my passion.,2025-07-23,2025-07-23
+2025-100013,6,Neutral,Can teach programming 2 if needed.,2025-07-23,2025-07-23
+2025-100013,27,Avoid,I avoid multimedia-related topics.,2025-07-23,2025-07-23
+2025-100013,22,Prefer,I’ve developed and taught web systems 2 extensively.,2025-07-23,2025-07-23
+2025-100013,14,Neutral,I occasionally handle quantitative methods.,2025-07-23,2025-07-23
+2025-100014,20,Prefer,Data analytics is my research area.,2025-07-23,2025-07-23
+2025-100014,7,Neutral,GE electives are part of my load sometimes.,2025-07-23,2025-07-23
+2025-100014,19,Avoid,Prefer to avoid systems analysis.,2025-07-23,2025-07-23
+2025-100014,28,Prefer,IT electives provide freedom to innovate.,2025-07-23,2025-07-23
+2025-100014,16,Neutral,Routing topics are familiar to me.,2025-07-23,2025-07-23
+2025-100015,32,Prefer,Love working on integration capstone projects.,2025-07-23,2025-07-23
+2025-100015,25,Avoid,I’m not CCNA certified.,2025-07-23,2025-07-23
+2025-100015,23,Neutral,Event-driven programming is manageable.,2025-07-23,2025-07-23
+2025-100015,35,Prefer,Research advising is something I enjoy.,2025-07-23,2025-07-23
+2025-100015,31,Neutral,I have experience but don’t prefer networking.,2025-07-23,2025-07-23
+2025-100016,37,Prefer,Capstone panel member for several years.,2025-07-23,2025-07-23
+2025-100016,33,Avoid,I avoid system architecture discussions.,2025-07-23,2025-07-23
+2025-100016,38,Neutral,I can manage practicum supervision.,2025-07-23,2025-07-23
+2025-100016,26,Prefer,Software engineering is my area of expertise.,2025-07-23,2025-07-23
+2025-100016,18,Neutral,Familiar with database systems.,2025-07-23,2025-07-23
+2025-100017,8,Prefer,I enjoy teaching data structures.,2025-07-23,2025-07-23
+2025-100017,5,Avoid,Discrete math isn’t my strength.,2025-07-23,2025-07-23
+2025-100017,12,Neutral,I can teach intro to networks when needed.,2025-07-23,2025-07-23
+2025-100017,13,Prefer,Information management is aligned with my expertise.,2025-07-23,2025-07-23
+2025-100017,1,Neutral,I’m okay handling introductory IT courses.,2025-07-23,2025-07-23
+2025-100018,2,Prefer,I specialize in introductory programming.,2025-07-23,2025-07-23
+2025-100018,30,Avoid,I’m not up to date with emerging tech.,2025-07-23,2025-07-23
+2025-100018,4,Neutral,I can teach HCI occasionally.,2025-07-23,2025-07-23
+2025-100018,9,Prefer,I like teaching OOP concepts.,2025-07-23,2025-07-23
+2025-100018,21,Neutral,Systems integration is within my reach.,2025-07-23,2025-07-23
+2025-100019,17,Prefer,GE electives help balance my load.,2025-07-23,2025-07-23
+2025-100019,3,Neutral,I assist with GE electives often.,2025-07-23,2025-07-23
+2025-100019,10,Avoid,Not confident with platform technologies.,2025-07-23,2025-07-23
+2025-100019,15,Prefer,I’ve taught integrative programming several times.,2025-07-23,2025-07-23
+2025-100019,36,Neutral,Administration topics are okay for me.,2025-07-23,2025-07-23
+2025-100020,24,Prefer,I emphasize ethics and professionalism.,2025-07-23,2025-07-23
+2025-100020,34,Avoid,I don’t handle security topics.,2025-07-23,2025-07-23
+2025-100020,29,Neutral,I’m capable of handling security 1.,2025-07-23,2025-07-23
+2025-100020,19,Prefer,Systems analysis is my core strength.,2025-07-23,2025-07-23
+2025-100020,6,Neutral,I can support programming 2 classes.,2025-07-23,2025-07-23
