@@ -6,7 +6,6 @@ from sklearn.svm import LinearSVC
 MODEL_PATH = "aimatching/svm_model.joblib"
 
 def trainSVMModel():
-    # 🔁 Local import to avoid circular dependency
     from .utils import getTrainingData
 
     data, labels = getTrainingData()

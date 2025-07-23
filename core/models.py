@@ -84,7 +84,13 @@ class Instructor(models.Model):
     @property
     def activeWorkloadSource(self):
         return self.designation or self.rank
-
+    
+    @property
+    def full_name(self):
+        user = User.objects.filter(userlogin__instructor=self).first()
+        if user:
+            return f"{user.firstName} {user.lastName}"
+        return self.instructorId
 
     def __str__(self):
         return self.instructorId

@@ -34,6 +34,7 @@ class Subject(models.Model):
     labDurationMinutes = models.IntegerField(null=True, blank=True)
     isPriorityForRooms = models.BooleanField(default=False)
     isActive = models.BooleanField(default=True)
+    description = models.TextField(null=True, blank=True)
     subjectTopics = models.TextField(null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
     createdAt = models.DateTimeField(auto_now_add=True)
