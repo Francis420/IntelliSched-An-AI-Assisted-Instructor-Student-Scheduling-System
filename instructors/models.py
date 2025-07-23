@@ -9,9 +9,12 @@ from django.core.exceptions import ValidationError
 # This model tracks the professional experiences of instructors, including work experience, academic positions, and research roles.
 class InstructorExperience(models.Model):
     EXPERIENCE_TYPE_CHOICES = [
-        ('Work Experience', 'Work Experience'),
-        ('Academic Position', 'Academic Position'),
-        ('Research Role', 'Research Role')
+        ('Academic Position', 'Academic Position'),           # Professor, Lecturer, Dean
+        ('Work Experience', 'Work Experience'),               # Industry-related roles
+        ('Research Role', 'Research Role'),                   # Project Researcher, Lab Staff
+        ('Administrative Role', 'Administrative Role'),       # Coordinator, Department Head
+        ('Extension Service', 'Extension Service'),           # Community outreach, seminars
+        ('Consultancy', 'Consultancy'),                       # External expert engagements
     ]
 
     experienceId = models.AutoField(primary_key=True)
@@ -120,10 +123,12 @@ class TeachingHistory(models.Model):
 # This model stores various credentials that instructors have, such as certifications, workshops, and training.
 class InstructorCredentials(models.Model):
     CREDENTIAL_TYPE_CHOICES = [
+        ('License', 'License'),
         ('Certification', 'Certification'),
         ('Workshop', 'Workshop'),
+        ('Seminar', 'Seminar'),
         ('Training', 'Training'),
-        ('License', 'License'),
+        ('Short Course', 'Short Course'), 
     ]
 
     credentialId = models.AutoField(primary_key=True)
@@ -206,88 +211,24 @@ class InstructorAbsence(models.Model):
 
 
 # ---------- Instructor Designation ----------
-# This model defines the designations available for instructors, including their workload allocations and overload caps.
+# This model defines the designations available for instructors, including their workload allocations.
 class InstructorDesignation(models.Model):
-    DESIGNATION_CHOICES = [
-        ('University Professor', 'University Professor'),
-        ('Professor I-VI', 'Professor I-VI'),
-        ('Associate Professor I-V', 'Associate Professor I-V'),
-        ('Assistant Professor I-IV', 'Assistant Professor I-IV'),
-        ('Instructor I-III', 'Instructor I-III'),
-        ('Vice President', 'Vice President'),
-        ('Campus Director', 'Campus Director'),
-        ('Dean', 'Dean'),
-        ('Director', 'Director'),
-        ('Head', 'Head'),
-        ('Chairperson/Coordinator', 'Chairperson/Coordinator'),
-    ]
-
     designationId = models.AutoField(primary_key=True)
-    name = models.CharField(max_length=100, choices=DESIGNATION_CHOICES, unique=True)
+    name = models.CharField(max_length=255, unique=True)
 
-    # Workload allocations (in hours per week)
-    instructionHours = models.IntegerField(default=0)
-    researchHours = models.IntegerField(default=0)
-    extensionHours = models.IntegerField(default=0)
-    productionHours = models.IntegerField(default=0)
-    consultationHours = models.IntegerField(default=0)
     adminSupervisionHours = models.IntegerField(default=0)
-    otherAssignmentHours = models.IntegerField(default=0)
-
-    # Overload caps based on highest educational attainment
-    overloadDoctoral = models.IntegerField(default=6)
-    overloadMasters = models.IntegerField(default=6)
-    overloadBaccalaureate = models.IntegerField(default=6)
-
-    totalHours = models.IntegerField(default=40)
-
-    def __str__(self):
-        return self.name
-    
-    def clean(self):
-        total = (
-            self.instructionHours +
-            self.researchHours +
-            self.extensionHours +
-            self.productionHours +
-            self.consultationHours +
-            self.adminSupervisionHours +
-            self.otherAssignmentHours
-        )
-        if total != self.totalHours:
-            raise ValidationError(f"Total allocated hours ({total}) do not match totalHours ({self.totalHours})")
-    
-
-
-# ---------- Instructor Rank ----------
-# This model defines the ranks available for instructors, including their workload allocations and overload caps.
-class InstructorRank(models.Model):
-    RANK_CHOICES = [
-        ('University Professor', 'University Professor'),
-        ('Professor I-VI', 'Professor I-VI'),
-        ('Associate Professor I-V', 'Associate Professor I-V'),
-        ('Assistant Professor I-IV', 'Assistant Professor I-IV'),
-        ('Instructor I-III', 'Instructor I-III'),
-    ]
-
-    rankId = models.AutoField(primary_key=True)
-    name = models.CharField(max_length=100, choices=RANK_CHOICES, unique=True)
-
     instructionHours = models.IntegerField(default=0)
     researchHours = models.IntegerField(default=0)
     extensionHours = models.IntegerField(default=0)
     productionHours = models.IntegerField(default=0)
     consultationHours = models.IntegerField(default=0)
-    otherAssignmentHours = models.IntegerField(default=0)
 
-    overloadDoctoral = models.IntegerField(default=9)
-    overloadMasters = models.IntegerField(default=6)
-    overloadBaccalaureate = models.IntegerField(default=6)
-
-    totalHours = models.IntegerField(default=40)
+    # overloadDoctoral = models.IntegerField(default=6)
+    # overloadMasters = models.IntegerField(default=6)
+    # overloadBaccalaureate = models.IntegerField(default=6)
 
     class Meta:
-        ordering = ['name']
+        ordering = ['designationId']
         indexes = [
             models.Index(fields=['name']),
         ]
@@ -295,17 +236,46 @@ class InstructorRank(models.Model):
     def __str__(self):
         return self.name
     
-    def clean(self):
-        total = (
-            self.instructionHours +
-            self.researchHours +
-            self.extensionHours +
-            self.productionHours +
-            self.consultationHours +
-            self.adminSupervisionHours +
-            self.otherAssignmentHours
-        )
-        if total != self.totalHours:
-            raise ValidationError(f"Total allocated hours ({total}) do not match totalHours ({self.totalHours})")
 
 
+# ---------- Instructor Rank ----------
+# This model defines the ranks available for instructors, including their workload allocations.
+class InstructorRank(models.Model):
+    rankId = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=255, unique=True)
+
+    instructionHours = models.IntegerField(default=0)
+    researchHours = models.IntegerField(default=0)
+    extensionHours = models.IntegerField(default=0)
+    productionHours = models.IntegerField(default=0)
+    consultationHours = models.IntegerField(default=0)
+    classAdviserHours = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['rankId']
+        indexes = [
+            models.Index(fields=['name']),
+        ]
+
+    def __str__(self):
+        return self.name
+    
+
+# ---------- Instructor Academic Attainment ----------
+# This model defines the academic attainments of instructors and the corresponding allowed overloads.
+class InstructorAcademicAttainment(models.Model):
+    attainmentId = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=50)
+    suffix = models.CharField(max_length=10, blank=True, null=True)
+
+    overloadUnitsHasDesignation = models.PositiveIntegerField()
+    overloadUnitsNoDesignation = models.PositiveIntegerField() 
+
+    class Meta:
+        ordering = ['attainmentId']
+        indexes = [
+            models.Index(fields=['name']),
+        ]
+
+    def __str__(self):
+        return self.name

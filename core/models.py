@@ -68,11 +68,12 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 
 # ---------- Instructor Table ----------
-# This model represents instructors in the system, including their ID, rank, designation, and employment type.
+# This model represents instructors in the system, including their ID, rank, designation, academic attainment and employment type.
 class Instructor(models.Model):
     instructorId = models.CharField(primary_key=True, max_length=20)  # e.g., "2025-123456"
     rank = models.ForeignKey("instructors.InstructorRank", on_delete=models.SET_NULL, null=True, blank=True)
     designation = models.ForeignKey("instructors.InstructorDesignation", on_delete=models.SET_NULL, null=True, blank=True)
+    academicAttainment = models.ForeignKey("instructors.InstructorAcademicAttainment", on_delete=models.SET_NULL, null=True, blank=True)
     employmentType = models.CharField(max_length=20, choices=[
         ('permanent', 'Permanent'),
         ('temporary', 'Temporary')
