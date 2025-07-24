@@ -76,24 +76,20 @@ class Command(BaseCommand):
         # Step 1: Prepare subject texts
         subject_data = []
         subject_ids = []
-        subject_map = {}
         for subject in subjects:
             text = f"{subject.code} {subject.name}"
             subject_data.append(text)
             subject_ids.append(subject.subjectId)
-            subject_map[subject.subjectId] = subject
 
         vectorizer = TfidfVectorizer()
         subject_vectors = vectorizer.fit_transform(subject_data)
 
-        # Store scores for ranking
         subject_match_scores = {subj.subjectId: [] for subj in subjects}
 
-        print("Processing instructors...\n")
+        # Step 2: Loop through instructors
         for instructor in Instructor.objects.all():
-            print(f"Processing {instructor.instructorId} ({instructor.full_name})")
+            print(f"Processing {instructor.instructorId} - {instructor.full_name}")
 
-            # Combine background info
             experiences = InstructorExperience.objects.filter(instructor=instructor)
             teachings = TeachingHistory.objects.filter(instructor=instructor)
             credentials = InstructorCredentials.objects.filter(instructor=instructor)
@@ -117,43 +113,71 @@ class Command(BaseCommand):
                 continue  # Skip empty profiles
 
             instructor_vec = vectorizer.transform([combined_text])
-            scores = (subject_vectors * instructor_vec.T).toarray().flatten()
 
-            for i, score in enumerate(scores):
-                subject_id = subject_ids[i]
-                subject_match_scores[subject_id].append((instructor, score))
-
-            # Optional: Use classifier to predict "Prefer" label
+            # Step 3: Train simple classifier
             clf = LogisticRegression()
             X = subject_vectors
             y = [1 if subj_id in preferences.values_list('subject__subjectId', flat=True) else 0 for subj_id in subject_ids]
-            if len(set(y)) >= 2:
-                clf.fit(X, y)
-                predictions = clf.predict(subject_vectors)
 
-                for i, pred in enumerate(predictions):
-                    if pred == 1:
-                        subj_id = subject_ids[i]
-                        already_exists = InstructorSubjectPreference.objects.filter(
-                            instructor=instructor, subject__subjectId=subj_id
-                        ).exists()
+            if len(set(y)) < 2:
+                continue  # Skip if not enough variation
 
-                        if not already_exists:
-                            InstructorSubjectPreference.objects.create(
-                                instructor=instructor,
-                                subject_id=subj_id,
-                                preferenceType='Prefer',
-                                reason='Recommended based on credentials and experience.',
-                                createdAt=timezone.now(),
-                                updatedAt=timezone.now(),
-                            )
+            clf.fit(X, y)
+            predictions = clf.predict_proba(subject_vectors)[:, 1]  # Probability of being a match
 
-        # Final Output: Top 5 per subject
+            for i, prob in enumerate(predictions):
+                subj_id = subject_ids[i]
+                subject_match_scores[subj_id].append((instructor, prob))
+
+        # Final Output: Top 5 per subject with explanations
         print("\n=== Top 5 Instructors per Subject ===\n")
         for subject in subjects:
             print(f"{subject.code} {subject.name}:")
-            matches = sorted(subject_match_scores[subject.subjectId], key=itemgetter(1), reverse=True)[:5]
-            for inst, score in matches:
+
+            matches = sorted(subject_match_scores[subject.subjectId], key=itemgetter(1), reverse=True)
+
+            # Apply weighting based on timesTaught
+            adjusted_matches = []
+            for inst, raw_score in matches:
+                teach_record = TeachingHistory.objects.filter(instructor=inst, subject=subject).first()
+                times_taught = teach_record.timesTaught if teach_record else 0
+
+                # Weight: +1% score boost per subject repetition (cap at +10%)
+                weight_boost = min(times_taught * 0.01, 0.10)
+                adjusted_score = raw_score + weight_boost
+                adjusted_matches.append((inst, adjusted_score, times_taught))
+
+            # Sort again using adjusted score
+            adjusted_matches.sort(key=lambda x: x[1], reverse=True)
+            top_matches = adjusted_matches[:5]
+
+            for inst, score, times_taught in top_matches:
+                reasons = []
+
+                if times_taught >= 3:
+                    reasons.append(f"Frequently taught this subject ({times_taught} times)")
+                elif times_taught > 0:
+                    reasons.append(f"Taught before ({times_taught} time{'s' if times_taught > 1 else ''})")
+
+                for exp in inst.experiences:
+                    if subject.code.lower() in exp.description.lower() or subject.name.lower() in exp.description.lower():
+                        reasons.append("Relevant work/academic experience")
+                        break
+
+                for cred in inst.instructorcredentials_set.all():
+                    if subject.code.lower() in cred.title.lower() or subject.name.lower() in cred.title.lower():
+                        reasons.append("Has credentials related to this subject")
+                        break
+
+                if inst.subjectPreferences.filter(subject=subject, preferenceType='Prefer').exists():
+                    reasons.append("Marked as preferred before")
+
+                reason_str = ", ".join(set(reasons)) if reasons else "Similarity-based suggestion"
+
                 print(f" - {inst.instructorId} ({inst.full_name}) → {score:.4f}")
+                print(f"   Reason: {reason_str}")
+
+
+
 
 
