@@ -18,7 +18,7 @@ class InstructorExperience(models.Model):
     ]
 
     experienceId = models.AutoField(primary_key=True)
-    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE)
+    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE, related_name='experiences')
     title = models.CharField(max_length=100)
     organization = models.CharField(max_length=100)
     startDate = models.DateField()
@@ -102,7 +102,7 @@ class InstructorCredentials(models.Model):
     ]
 
     credentialId = models.AutoField(primary_key=True)
-    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE)
+    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE, related_name='credentials')
     type = models.CharField(max_length=30, choices=CREDENTIAL_TYPE_CHOICES)
     title = models.CharField(max_length=100)
     description = models.TextField()
@@ -134,7 +134,7 @@ class InstructorSubjectPreference(models.Model):
     ]
 
     preferenceId = models.AutoField(primary_key=True)
-    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE)
+    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE, related_name='preferences')
     subject = models.ForeignKey("scheduling.Subject", on_delete=models.CASCADE)
     preferenceType = models.CharField(max_length=20, choices=PREFERENCE_TYPE_CHOICES)
     reason = models.TextField(blank=True, null=True)

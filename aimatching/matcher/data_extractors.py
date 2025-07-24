@@ -1,38 +1,45 @@
 def get_teaching_text(instructor):
-    parts = []
-    for history in instructor.teachingHistory.all():
-        if history.subject:
-            parts.append(history.subject.name)
-            parts.append(history.subject.description or "")
-            parts.append(history.subject.subjectTopics or "")
-    return " ".join(parts)
+    histories = instructor.teachingHistory.select_related('subject').all()
+    return " ".join([
+        f"{h.subject.code} {h.subject.name} "
+        f"{h.subject.description or ''} {h.subject.subjectTopics or ''} "
+        f"Taught {h.timesTaught} time{'s' if h.timesTaught != 1 else ''}"
+        for h in histories if h.subject
+    ])
 
 def get_credentials_text(instructor):
-    parts = []
-    for cred in instructor.instructorcredentials_set.filter(isVerified=True):
-        parts.append(cred.title)
-        parts.append(cred.type)
-        parts.append(cred.description or "")
-        parts.append(cred.issuer)
-        for subj in cred.relatedSubjects.all():
-            parts.append(subj.name)
-            parts.append(subj.subjectTopics or "")
-            parts.append(subj.description or "")
-    return " ".join(parts)
+    credentials = instructor.credentials.prefetch_related('relatedSubjects').all()
+    return " ".join([
+        f"{c.type} - {c.title} ({c.issuer}, {c.dateEarned}) "
+        f"{c.description or ''} "
+        f"{'Verified' if c.isVerified else 'Unverified'} "
+        f"{' '.join([s.code for s in c.relatedSubjects.all()])}"
+        for c in credentials
+    ])
+
 
 def get_experience_text(instructor):
-    parts = []
-    for exp in instructor.experiences.all():
-        parts.append(exp.title)
-        parts.append(exp.description or "")
-    return " ".join(parts)
+    experiences = instructor.experiences.prefetch_related('relatedSubjects').all()
+    return " ".join([
+        f"{e.experienceType}: {e.title} at {e.organization}, "
+        f"{'(Verified)' if e.isVerified else '(Unverified)'} "
+        f"{e.description or ''} "
+        f"{' '.join([s.code for s in e.relatedSubjects.all()])}"
+        for e in experiences
+    ])
+
 
 def get_preference_text(instructor):
-    parts = []
-    for pref in instructor.subjectPreferences.all():
-        if pref.subject:
-            parts.append(pref.subject.name)
-            parts.append(pref.subject.subjectTopics or "")
-            parts.append(pref.subject.description or "")
-        parts.append(pref.reason or "")
-    return " ".join(parts)
+    preferences = instructor.preferences.select_related('subject').all()
+    return " ".join([
+        f"{p.subject.code} {p.subject.name} {p.reason or ''} {p.preferenceType}"
+        for p in preferences
+    ])
+
+
+def get_subject_text(subject):
+    """
+    Returns a combined string of the subject's code, name, description, and topics.
+    """
+    return f"{subject.code} {subject.name} {subject.description or ''} {subject.subjectTopics or ''}"
+

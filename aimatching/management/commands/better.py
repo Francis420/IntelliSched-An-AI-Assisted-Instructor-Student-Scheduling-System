@@ -1,74 +1,20 @@
-# from aimatching.matcher.semantic_matcher import match_instructors_to_subject
-# from core.models import Instructor
-# from scheduling.models import Subject
-# from django.core.management.base import BaseCommand
-# import numpy as np
-
-# class Command(BaseCommand):
-#     help = 'Run improved instructor-subject matching with normalized scores.'
-
-#     def handle(self, *args, **kwargs):
-#         subject = Subject.objects.get(code="IT 429")
-#         instructors = Instructor.objects.all()
-
-#         matches = match_instructors_to_subject(subject, instructors)
-
-#         # Extract raw component scores
-#         raw_teaching = np.array([b['teaching'] for _, _, b in matches])
-#         raw_credentials = np.array([b['credentials'] for _, _, b in matches])
-#         raw_experience = np.array([b['experience'] for _, _, b in matches])
-#         raw_preference = np.array([b['preference'] for _, _, b in matches])
-
-#         def min_max_normalize(arr):
-#             min_val = np.min(arr)
-#             max_val = np.max(arr)
-#             return (arr - min_val) / (max_val - min_val) if max_val > min_val else np.zeros_like(arr)
-
-#         # Normalize each component
-#         teaching_norm = min_max_normalize(raw_teaching)
-#         credentials_norm = min_max_normalize(raw_credentials)
-#         experience_norm = min_max_normalize(raw_experience)
-#         preference_norm = min_max_normalize(raw_preference)
-
-#         # Replace breakdown scores with normalized values + recalculate total
-#         normalized_matches = []
-#         for i, (instructor, _, breakdown) in enumerate(matches):
-#             breakdown_norm = {
-#                 'teaching': float(teaching_norm[i]),
-#                 'credentials': float(credentials_norm[i]),
-#                 'experience': float(experience_norm[i]),
-#                 'preference': float(preference_norm[i]),
-#             }
-#             total_score = np.mean(list(breakdown_norm.values()))
-#             normalized_matches.append((instructor, total_score, breakdown_norm))
-
-#         # Sort by normalized total score
-#         normalized_matches.sort(key=lambda x: x[1], reverse=True)
-
-#         self.stdout.write(f"Top normalized matches for subject: {subject.code} - {subject.name}\n")
-
-#         for instructor, score, breakdown in normalized_matches[:10]:
-#             self.stdout.write(f"{instructor.instructorId} - {instructor}")
-#             self.stdout.write(f"  Teaching History:     {breakdown['teaching']:.2f}")
-#             self.stdout.write(f"  Credentials:          {breakdown['credentials']:.2f}")
-#             self.stdout.write(f"  Experience:           {breakdown['experience']:.2f}")
-#             self.stdout.write(f"  Subject Preference:   {breakdown['preference']:.2f}")
-#             self.stdout.write(f"  ➤ Total Compatibility: {score:.2f}")
-#             self.stdout.write("-" * 50)
-
 from django.core.management.base import BaseCommand
-from instructors.models import (
-    Instructor, InstructorSubjectPreference,
-    InstructorExperience, TeachingHistory, InstructorCredentials,
-)
+from instructors.models import Instructor, InstructorSubjectPreference
 from scheduling.models import Subject
+from instructors.models import TeachingHistory
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from django.utils import timezone
 from operator import itemgetter
+from aimatching.matcher.data_extractors import (
+    get_teaching_text,
+    get_credentials_text,
+    get_experience_text,
+    get_preference_text,
+)
 
 class Command(BaseCommand):
-    help = 'Generate better subject preferences using instructor background'
+    help = 'Generates a better match model for instructors and subjects with explanations.'
 
     def handle(self, *args, **options):
         subjects = list(Subject.objects.all())
@@ -77,8 +23,8 @@ class Command(BaseCommand):
         subject_data = []
         subject_ids = []
         for subject in subjects:
-            text = f"{subject.code} {subject.name}"
-            subject_data.append(text)
+            text = f"{subject.name}\n{subject.description or ''}\n{subject.subjectTopics or ''}"
+            subject_data.append(text.strip())
             subject_ids.append(subject.subjectId)
 
         vectorizer = TfidfVectorizer()
@@ -90,26 +36,14 @@ class Command(BaseCommand):
         for instructor in Instructor.objects.all():
             print(f"Processing {instructor.instructorId} - {instructor.full_name}")
 
-            experiences = InstructorExperience.objects.filter(instructor=instructor)
-            teachings = TeachingHistory.objects.filter(instructor=instructor)
-            credentials = InstructorCredentials.objects.filter(instructor=instructor)
-            preferences = InstructorSubjectPreference.objects.filter(instructor=instructor)
+            teaching_text = get_teaching_text(instructor)
+            experience_text = get_experience_text(instructor)
+            credentials_text = get_credentials_text(instructor)
+            preference_text = get_preference_text(instructor)
 
-            combined_text = ""
+            combined_text = f"{teaching_text} {experience_text} {credentials_text} {preference_text}".strip()
 
-            for exp in experiences:
-                combined_text += f"{exp.title} {exp.description} "
-
-            for teach in teachings:
-                combined_text += f"{teach.subject.code} {teach.subject.name} "
-
-            for cred in credentials:
-                combined_text += f"{cred.title} {cred.issuer} "
-
-            for pref in preferences:
-                combined_text += f"{pref.subject.code} {pref.subject.name} {pref.preferenceType} "
-
-            if not combined_text.strip():
+            if not combined_text:
                 continue  # Skip empty profiles
 
             instructor_vec = vectorizer.transform([combined_text])
@@ -117,7 +51,11 @@ class Command(BaseCommand):
             # Step 3: Train simple classifier
             clf = LogisticRegression()
             X = subject_vectors
-            y = [1 if subj_id in preferences.values_list('subject__subjectId', flat=True) else 0 for subj_id in subject_ids]
+            y = [
+                1 if subj_id in instructor.preferences.values_list('subject__subjectId', flat=True)
+                else 0
+                for subj_id in subject_ids
+            ]
 
             if len(set(y)) < 2:
                 continue  # Skip if not enough variation
@@ -159,25 +97,20 @@ class Command(BaseCommand):
                 elif times_taught > 0:
                     reasons.append(f"Taught before ({times_taught} time{'s' if times_taught > 1 else ''})")
 
-                for exp in inst.experiences:
+                for exp in inst.experiences.all():
                     if subject.code.lower() in exp.description.lower() or subject.name.lower() in exp.description.lower():
                         reasons.append("Relevant work/academic experience")
                         break
 
-                for cred in inst.instructorcredentials_set.all():
+                for cred in inst.credentials.all():
                     if subject.code.lower() in cred.title.lower() or subject.name.lower() in cred.title.lower():
                         reasons.append("Has credentials related to this subject")
                         break
 
-                if inst.subjectPreferences.filter(subject=subject, preferenceType='Prefer').exists():
+                if inst.preferences.filter(subject=subject, preferenceType='Prefer').exists():
                     reasons.append("Marked as preferred before")
 
                 reason_str = ", ".join(set(reasons)) if reasons else "Similarity-based suggestion"
 
                 print(f" - {inst.instructorId} ({inst.full_name}) → {score:.4f}")
                 print(f"   Reason: {reason_str}")
-
-
-
-
-
