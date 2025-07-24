@@ -56,37 +56,7 @@ class InstructorExperience(models.Model):
 
 
 
-# ---------- Instructor Availability ---------- 35 still needs a better ui and implementation
-# This model tracks the availability of instructors for scheduling purposes.
-class InstructorAvailability(models.Model):
-    DAY_CHOICES = [
-        ('Monday', 'Monday'), ('Tuesday', 'Tuesday'), ('Wednesday', 'Wednesday'),
-        ('Thursday', 'Thursday'), ('Friday', 'Friday'), ('Saturday', 'Saturday'),
-        ('Sunday', 'Sunday'),
-    ]
 
-    availabilityId = models.AutoField(primary_key=True)
-    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE)
-    dayOfWeek = models.CharField(max_length=10, choices=DAY_CHOICES)
-    startTime = models.TimeField()
-    endTime = models.TimeField()
-    createdAt = models.DateTimeField(auto_now_add=True)
-    updatedAt = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        unique_together = ('instructor', 'dayOfWeek', 'startTime', 'endTime')
-        indexes = [
-            models.Index(fields=['instructor', 'dayOfWeek']),
-        ]
-        ordering = ['instructor', 'dayOfWeek', 'startTime']
-
-    def clean(self):
-        from django.core.exceptions import ValidationError
-        if self.startTime >= self.endTime:
-            raise ValidationError("Start time must be before end time.")
-
-    def __str__(self):
-        return f"{self.instructor.instructorId} - {self.dayOfWeek} {self.startTime}-{self.endTime}"
 
 
 
@@ -277,3 +247,37 @@ class InstructorAbsence(models.Model):
 
     def __str__(self):
         return f"{self.instructor.instructorId} missed {self.subject.code} on {self.dateMissed}"
+    
+
+
+# ---------- Instructor Availability ---------- 35 still needs a better ui and implementation
+# This model tracks the availability of instructors for scheduling purposes.
+class InstructorAvailability(models.Model):
+    DAY_CHOICES = [
+        ('Monday', 'Monday'), ('Tuesday', 'Tuesday'), ('Wednesday', 'Wednesday'),
+        ('Thursday', 'Thursday'), ('Friday', 'Friday'), ('Saturday', 'Saturday'),
+        ('Sunday', 'Sunday'),
+    ]
+
+    availabilityId = models.AutoField(primary_key=True)
+    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE)
+    dayOfWeek = models.CharField(max_length=10, choices=DAY_CHOICES)
+    startTime = models.TimeField()
+    endTime = models.TimeField()
+    createdAt = models.DateTimeField(auto_now_add=True)
+    updatedAt = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('instructor', 'dayOfWeek', 'startTime', 'endTime')
+        indexes = [
+            models.Index(fields=['instructor', 'dayOfWeek']),
+        ]
+        ordering = ['instructor', 'dayOfWeek', 'startTime']
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.startTime >= self.endTime:
+            raise ValidationError("Start time must be before end time.")
+
+    def __str__(self):
+        return f"{self.instructor.instructorId} - {self.dayOfWeek} {self.startTime}-{self.endTime}"

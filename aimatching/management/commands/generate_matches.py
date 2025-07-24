@@ -192,9 +192,10 @@ class Command(BaseCommand):
             ranked_instructors = self.rank_instructors_for_subject(subject, model, vectorizer)
             
             for i, (instructor, score, _) in enumerate(ranked_instructors[:10], 1):
-                explanation = explain_match(instructor, subject, model, vectorizer)  # ✅ <- this line updated
+                explanation = explain_match(instructor, subject, model, vectorizer)
                 print(f"{i}. {instructor.instructorId} - {instructor.full_name} (Score: {score:.2f})")
-                print(f"   {explanation}")
+                print(f"{explanation}")
+
 
 
 

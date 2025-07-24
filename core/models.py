@@ -91,6 +91,18 @@ class Instructor(models.Model):
         if user:
             return f"{user.firstName} {user.lastName}"
         return self.instructorId
+    
+    @property
+    def academicAttainments(self):
+        return self.instructoracademicattainment_set.all()
+
+    @property
+    def experiences(self):
+        return self.instructorexperience_set.all() # how do they tag?
+
+    @property
+    def subjectPreferences(self):
+        return self.instructorsubjectpreference_set.all()
 
     def __str__(self):
         return self.instructorId
