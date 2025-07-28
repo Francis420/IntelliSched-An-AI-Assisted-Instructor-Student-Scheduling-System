@@ -49,6 +49,11 @@ INTERNAL_IPS = ['127.0.0.1']
 
 NPM_BIN_PATH = "C:/Program Files/nodejs/npm.cmd"
 
+from pathlib import Path
+
+LLAMA_CPP_PATH = str(BASE_DIR / "aimatching" / "models" / "llama-run.exe")
+MISTRAL_MODEL_PATH = str(BASE_DIR / "aimatching" / "models" / "mistral-7b-instruct-v0.1.Q6_K.gguf")
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

@@ -38,8 +38,12 @@ def get_preference_text(instructor):
 
 
 def get_subject_text(subject):
-    """
-    Returns a combined string of the subject's code, name, description, and topics.
-    """
     return f"{subject.code} {subject.name} {subject.description or ''} {subject.subjectTopics or ''}"
 
+def build_instructor_text_profile(instructor):
+    return " ".join([
+        get_teaching_text(instructor),
+        get_experience_text(instructor),
+        get_credentials_text(instructor),
+        get_preference_text(instructor),
+    ])

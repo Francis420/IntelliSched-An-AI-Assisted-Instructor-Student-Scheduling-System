@@ -1,56 +1,34 @@
 from .embedding_utils import get_embedding
-from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
-
 from .data_extractors import (
     get_teaching_text,
     get_experience_text,
     get_credentials_text,
     get_preference_text,
 )
+import subprocess
+import re
+from django.conf import settings
 
-def explain_match(subject_text, instructor, score=None):
-    """
-    Generate a natural explanation for a subject–instructor match.
-    `subject_text` is raw preprocessed text from the subject.
-    `instructor` is an Instructor instance.
-    """
-    explanation = ""
+def generate_mistral_explanation(prompt: str) -> str:
+    try:
+        llama_cpp_path = settings.BASE_DIR / "aimatching" / "models" / "llama-run.exe"
+        mistral_model_path = settings.BASE_DIR / "aimatching" / "models" / "mistral-7b-instruct-v0.1.Q6_K.gguf"
 
-    # Score-based reasoning
-    if score is not None:
-        if score >= 0.80:
-            explanation += "✅ Strong match — the instructor has highly relevant experience.\n"
-        elif score >= 0.60:
-            explanation += "🟡 Moderate match — some overlapping skills and background.\n"
-        elif score >= 0.40:
-            explanation += "⚠️ Weak match — partial relevance based on background.\n"
-        else:
-            explanation += "❌ Poor match — very limited alignment found.\n"
+        result = subprocess.run(
+            [
+                str(llama_cpp_path),
+                str(mistral_model_path),
+                prompt
+            ],
+            capture_output=True,
+            text=True,
+            check=True
+        )
 
-    # ✅ Build instructor profile text using extractors
-    full_instructor_text = " ".join([
-        get_teaching_text(instructor),
-        get_experience_text(instructor),
-        get_credentials_text(instructor),
-        get_preference_text(instructor),
-    ])
-
-    # Keyword overlap (very naive)
-    subject_keywords = extract_keywords(subject_text)
-    instructor_keywords = extract_keywords(full_instructor_text)
-
-    shared = subject_keywords.intersection(instructor_keywords)
-    if shared:
-        explanation += f"Overlapping concepts: {', '.join(shared)}\n"
-
-    return explanation.strip()
-
-
-def extract_keywords(text):
-    """
-    Naive keyword extractor — can be replaced with spaCy, RAKE, etc.
-    """
-    import re
-    tokens = re.findall(r'\b\w{4,}\b', text.lower())  # 4+ character words
-    return set(tokens)
+        cleaned_output = re.sub(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])', '', result.stdout)
+        return cleaned_output.strip()
+    except subprocess.CalledProcessError as e:
+        return f"⚠️ Mistral error: {e.stderr.strip()}"
+    except Exception as e:
+        return f"⚠️ Unexpected error: {str(e)}"

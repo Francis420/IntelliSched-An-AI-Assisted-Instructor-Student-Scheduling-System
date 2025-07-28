@@ -1,5 +1,5 @@
-from .embedding_utils import get_embedding
 from sklearn.metrics.pairwise import cosine_similarity
+from .embedding_utils import get_embedding, INSTRUCTIONS
 from .data_extractors import (
     get_teaching_text,
     get_credentials_text,
@@ -21,29 +21,29 @@ def match_instructors_to_subject(subject, instructors, weights=None):
     if not subject_text.strip():
         return []
 
-    subject_vec = get_embedding(subject_text, "Represent this IT subject")
+    subject_vec = get_embedding(subject_text, INSTRUCTIONS["subject"])
 
     results = []
     for instructor in instructors:
         breakdown = {}
 
         teaching_text = get_teaching_text(instructor)
-        cred_text = get_credentials_text(instructor)
-        exp_text = get_experience_text(instructor)
-        pref_text = get_preference_text(instructor)
+        credentials_text = get_credentials_text(instructor)
+        experience_text = get_experience_text(instructor)
+        preference_text = get_preference_text(instructor)
 
-        if not any([teaching_text, cred_text, exp_text, pref_text]):
+        if not any([teaching_text, credentials_text, experience_text, preference_text]):
             continue
 
-        teaching_vec = get_embedding(teaching_text, "Represent this instructor's teaching history")
-        cred_vec = get_embedding(cred_text, "Represent this instructor's credentials")
-        exp_vec = get_embedding(exp_text, "Represent this instructor's experience")
-        pref_vec = get_embedding(pref_text, "Represent this instructor's subject preference")
+        teaching_vec = get_embedding(teaching_text, INSTRUCTIONS["teaching"])
+        credentials_vec = get_embedding(credentials_text, INSTRUCTIONS["credentials"])
+        experience_vec = get_embedding(experience_text, INSTRUCTIONS["experience"])
+        preference_vec = get_embedding(preference_text, INSTRUCTIONS["preference"])
 
-        breakdown["teaching"] = cosine_similarity([subject_vec], [teaching_vec])[0][0]
-        breakdown["credentials"] = cosine_similarity([subject_vec], [cred_vec])[0][0]
-        breakdown["experience"] = cosine_similarity([subject_vec], [exp_vec])[0][0]
-        breakdown["preference"] = cosine_similarity([subject_vec], [pref_vec])[0][0]
+        breakdown["teaching"] = cosine_similarity(subject_vec, teaching_vec)[0][0]
+        breakdown["credentials"] = cosine_similarity(subject_vec, credentials_vec)[0][0]
+        breakdown["experience"] = cosine_similarity(subject_vec, experience_vec)[0][0]
+        breakdown["preference"] = cosine_similarity(subject_vec, preference_vec)[0][0]
 
         total_score = (
             weights["teaching"] * breakdown["teaching"] +
