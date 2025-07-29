@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-xl mx-auto mt-6 p-6 bg-white shadow rounded-xl">
+  <h2 class="text-2xl font-bold mb-4">Edit Matching Config for {{ semester.name }}</h2>
+
+  <form method="post" oninput="updateTotal()">
+    {% csrf_token %}
+
+    <div class="mb-4">
+      <label class="block font-semibold">Teaching Weight</label>
+      <input type="number" step="0.05" min="0" max="1" name="teachingWeight"
+             id="teachingWeight" value="{{ config.teachingWeight }}" 
+             class="w-full border rounded p-2">
+    </div>
+
+    <div class="mb-4">
+      <label class="block font-semibold">Credentials Weight</label>
+      <input type="number" step="0.05" min="0" max="1" name="credentialsWeight"
+             id="credentialsWeight" value="{{ config.credentialsWeight }}" 
+             class="w-full border rounded p-2">
+    </div>
+
+    <div class="mb-4">
+      <label class="block font-semibold">Experience Weight</label>
+      <input type="number" step="0.05" min="0" max="1" name="experienceWeight"
+             id="experienceWeight" value="{{ config.experienceWeight }}" 
+             class="w-full border rounded p-2">
+    </div>
+
+    <div class="mb-4">
+      <label class="block font-semibold">Preference Weight</label>
+      <input type="number" step="0.05" min="0" max="1" name="preferenceWeight"
+             id="preferenceWeight" value="{{ config.preferenceWeight }}" 
+             class="w-full border rounded p-2">
+    </div>
+
+    <div class="mb-4 font-semibold">
+      Total: <span id="totalDisplay" class="text-blue-600">0.00</span> 
+      <span id="totalWarning" class="text-red-600 font-bold hidden">
+        ⚠️ Must equal 1.00
+      </span>
+    </div>
+
+    <button id="saveBtn" type="submit" 
+            class="bg-green-600 text-white px-4 py-2 rounded-lg w-full">
+      💾 Save Configuration
+    </button>
+  </form>
+</div>
+
+<script>
+function updateTotal() {
+  const teaching = parseFloat(document.getElementById("teachingWeight").value) || 0;
+  const credentials = parseFloat(document.getElementById("credentialsWeight").value) || 0;
+  const experience = parseFloat(document.getElementById("experienceWeight").value) || 0;
+  const preference = parseFloat(document.getElementById("preferenceWeight").value) || 0;
+  
+  const total = teaching + credentials + experience + preference;
+  document.getElementById("totalDisplay").innerText = total.toFixed(2);
+
+  const warning = document.getElementById("totalWarning");
+  const saveBtn = document.getElementById("saveBtn");
+
+  if (Math.abs(total - 1.0) > 0.01) {
+    warning.classList.remove("hidden");
+    saveBtn.disabled = true;
+    saveBtn.classList.add("bg-gray-400", "cursor-not-allowed");
+    saveBtn.classList.remove("bg-green-600");
+  } else {
+    warning.classList.add("hidden");
+    saveBtn.disabled = false;
+    saveBtn.classList.remove("bg-gray-400", "cursor-not-allowed");
+    saveBtn.classList.add("bg-green-600");
+  }
+}
+
+updateTotal();
+</script>
+{% endblock %}

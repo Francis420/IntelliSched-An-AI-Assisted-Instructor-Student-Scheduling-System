@@ -65,6 +65,10 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def get_roles(self):
         return [role.name for role in self.roles.all()]
+    
+    @property
+    def id(self):
+        return self.userId
 
 
 # ---------- Instructor Table ----------

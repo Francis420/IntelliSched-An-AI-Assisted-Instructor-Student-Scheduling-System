@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-7xl mx-auto p-6 bg-white shadow rounded-xl">
+
+  <h2 class="text-2xl font-bold mb-4">Matching Results for Batch {{ batchId }}</h2>
+
+  <!-- Filters -->
+  <form method="get" class="flex gap-4 mb-4">
+    <select name="subject" class="border rounded p-2">
+      <option value="">All Subjects</option>
+      {% for match in matches.paginator.object_list %}
+        <option value="{{ match.subject.id }}" {% if subject_id == match.subject.id|stringformat:"s" %}selected{% endif %}>
+          {{ match.subject.code }} - {{ match.subject.name }}
+        </option>
+      {% endfor %}
+    </select>
+
+    <select name="instructor" class="border rounded p-2">
+      <option value="">All Instructors</option>
+      {% for match in matches.paginator.object_list %}
+        <option value="{{ match.instructor.id }}" {% if instructor_id == match.instructor.id|stringformat:"s" %}selected{% endif %}>
+          {{ match.instructor.user.first_name }} {{ match.instructor.user.last_name }}
+        </option>
+      {% endfor %}
+    </select>
+
+    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Filter</button>
+  </form>
+
+  <!-- Results Table -->
+  <div class="overflow-x-auto">
+    <table class="min-w-full border">
+      <thead>
+        <tr class="bg-gray-100">
+          <th class="px-4 py-2 border">Instructor</th>
+          <th class="px-4 py-2 border">Subject</th>
+          {% for col, label in [
+              ('teaching', 'Teaching'),
+              ('credentials', 'Credentials'),
+              ('experience', 'Experience'),
+              ('preference', 'Preference'),
+              ('total', 'Total')
+          ] %}
+          <th class="px-4 py-2 border">
+            <a href="?sort={{ col }}&dir={% if sort_by == col and direction == 'asc' %}desc{% else %}asc{% endif %}&subject={{ subject_id }}&instructor={{ instructor_id }}">
+              {{ label }}
+              {% if sort_by == col %}
+                {% if direction == 'asc' %}▲{% else %}▼{% endif %}
+              {% endif %}
+            </a>
+          </th>
+          {% endfor %}
+          <th class="px-4 py-2 border">Primary Factor</th>
+          <th class="px-4 py-2 border">Explanation</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for match in matches %}
+        <tr>
+          <td class="px-4 py-2 border">{{ match.instructor.user.get_full_name }}</td>
+          <td class="px-4 py-2 border">{{ match.subject.code }}</td>
+          <td class="px-4 py-2 border">{{ match.latestHistory.teachingScore|floatformat:2 }}</td>
+          <td class="px-4 py-2 border">{{ match.latestHistory.credentialScore|floatformat:2 }}</td>
+          <td class="px-4 py-2 border">{{ match.latestHistory.experienceScore|floatformat:2 }}</td>
+          <td class="px-4 py-2 border">{{ match.latestHistory.preferenceScore|floatformat:2 }}</td>
+          <td class="px-4 py-2 border font-bold">{{ match.latestHistory.confidenceScore|floatformat:2 }}</td>
+          <td class="px-4 py-2 border">{{ match.latestHistory.primaryFactor }}</td>
+          <td class="px-4 py-2 border">{{ match.latestHistory.explanation }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9" class="px-4 py-2 text-center">No matches found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <div class="mt-4 flex justify-center">
+    {% if matches.has_previous %}
+      <a href="?page={{ matches.previous_page_number }}&sort={{ sort_by }}&dir={{ direction }}&subject={{ subject_id }}&instructor={{ instructor_id }}"
+         class="px-3 py-1 border rounded bg-gray-200">Previous</a>
+    {% endif %}
+    <span class="px-4 py-2">Page {{ matches.number }} of {{ matches.paginator.num_pages }}</span>
+    {% if matches.has_next %}
+      <a href="?page={{ matches.next_page_number }}&sort={{ sort_by }}&dir={{ direction }}&subject={{ subject_id }}&instructor={{ instructor_id }}"
+         class="px-3 py-1 border rounded bg-gray-200">Next</a>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

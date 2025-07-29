@@ -27,20 +27,28 @@
             {% if 'deptHead' in request.user.get_roles %}
             <!-- Department Head Section -->
             <div class="pt-4 border-t border-gray-200 space-y-1">
-            <span class="text-xs text-gray-500 uppercase tracking-wide px-4">Department Head</span>
-            <a href="{% url 'deptHeadDashboard' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📊 Dashboard</a>
-            <a href="{% url 'instructorAccountList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">👨‍🏫 Instructor Accounts</a>
-            <a href="{% url 'studentAccountList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🧑‍🎓 Student Accounts</a>
+              <span class="text-xs text-gray-500 uppercase tracking-wide px-4">Department Head</span>
+              <a href="{% url 'deptHeadDashboard' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📊 Dashboard</a>
+              <a href="{% url 'instructorAccountList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">👨‍🏫 Instructor Accounts</a>
+              <a href="{% url 'studentAccountList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🧑‍🎓 Student Accounts</a>
             </div>
 
             <!-- Scheduling Section -->
             <div class="pt-4 border-t border-gray-200 space-y-1">
-            <span class="text-xs text-gray-500 uppercase tracking-wide px-4">Scheduling</span>
-            <a href="{% url 'curriculumList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📘 Curriculums</a>
-            <a href="{% url 'semesterList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🗓️ Semesters</a>
-            <a href="{% url 'subjectList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📚 Subjects</a>
-            <a href="{% url 'roomList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🏫 Rooms</a>
-            <a href="{% url 'genedScheduleList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">⚙️ GenEd Schedules</a>
+              <span class="text-xs text-gray-500 uppercase tracking-wide px-4">Scheduling</span>
+              <a href="{% url 'curriculumList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📘 Curriculums</a>
+              <a href="{% url 'semesterList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🗓️ Semesters</a>
+              <a href="{% url 'subjectList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📚 Subjects</a>
+              <a href="{% url 'roomList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🏫 Rooms</a>
+              <a href="{% url 'genedScheduleList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">⚙️ GenEd Schedules</a>
+            </div>
+
+            <!-- AI Matching Section -->
+            <div class="pt-4 border-t border-gray-200 space-y-1">
+              <span class="text-xs text-gray-500 uppercase tracking-wide px-4">AI Matching</span>
+              <a href="{% url 'matchingDashboard' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🤖 Dashboard</a>
+              <a href="{% url 'configList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">⚙️ Configurations</a>
+              <a href="{% url 'matchingStart' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🚀 Start Matching</a>
             </div>
             {% endif %}
 

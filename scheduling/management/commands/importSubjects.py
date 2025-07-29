@@ -20,7 +20,11 @@ class Command(BaseCommand):
                         try:
                             curriculum = Curriculum.objects.get(pk=curriculum_id)
                         except Curriculum.DoesNotExist:
-                            self.stderr.write(self.style.ERROR(f"Curriculum ID {curriculum_id} not found. Skipping row."))
+                            self.stderr.write(
+                                self.style.ERROR(
+                                    f"Curriculum ID {curriculum_id} not found. Skipping row."
+                                )
+                            )
                             continue
 
                         subject, created = Subject.objects.update_or_create(
@@ -35,12 +39,19 @@ class Command(BaseCommand):
                                 'yearLevel': int(row['yearLevel']),
                                 'hasLab': row['hasLab'].strip().lower() == 'true',
                                 'labDurationMinutes': int(row['labDurationMinutes']) if row['labDurationMinutes'].strip() else None,
+                                'description': row.get('description', '').strip() if row.get('description') else None,
+                                'subjectTopics': row.get('subjectTopics', '').strip() if row.get('subjectTopics') else None,
                             }
                         )
+
                         action = "Created" if created else "Updated"
-                        self.stdout.write(self.style.SUCCESS(f"{action} subject: {subject.code} - {subject.name}"))
+                        self.stdout.write(
+                            self.style.SUCCESS(f"{action} subject: {subject.code} - {subject.name}")
+                        )
                     except Exception as e:
-                        self.stderr.write(self.style.ERROR(f"Error processing row: {row}. Error: {str(e)}"))
+                        self.stderr.write(
+                            self.style.ERROR(f"Error processing row: {row}. Error: {str(e)}")
+                        )
 
         except FileNotFoundError:
             self.stderr.write(self.style.ERROR(f"File not found: {csv_file}"))

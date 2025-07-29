@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-2xl mx-auto p-6 bg-white shadow-md rounded-xl text-center">
+    <h2 class="text-2xl font-bold mb-6">Matching Progress</h2>
+
+    <!-- Progress bar -->
+    <div class="w-full bg-gray-200 rounded-full h-6 mb-4">
+        <div id="progress-fill" class="bg-blue-600 h-6 rounded-full text-white text-sm flex items-center justify-center"
+             style="width: 0%;">
+            0%
+        </div>
+    </div>
+
+    <!-- Progress details -->
+    <p id="progress-details" class="text-gray-700">Waiting for updates...</p>
+    <p id="progress-status" class="mt-2 font-semibold text-blue-700"></p>
+</div>
+
+<script>
+    const batchId = "{{ batchId }}";
+    const socket = new WebSocket(
+        (window.location.protocol === "https:" ? "wss://" : "ws://") + 
+        window.location.host + "/ws/progress/" + batchId + "/"
+    );
+
+    socket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+
+        const percentage = data.percentage.toFixed(2);
+        const completed = data.completedTasks;
+        const total = data.totalTasks;
+        const status = data.status;
+
+        // Update progress bar
+        const fill = document.getElementById("progress-fill");
+        fill.style.width = percentage + "%";
+        fill.textContent = percentage + "%";
+
+        // Update details
+        document.getElementById("progress-details").textContent = 
+            `Completed ${completed} of ${total} tasks`;
+        document.getElementById("progress-status").textContent = 
+            `Status: ${status}`;
+    };
+
+    socket.onclose = function() {
+        document.getElementById("progress-status").textContent = "⚠️ Connection closed";
+    };
+</script>
+{% endblock %}

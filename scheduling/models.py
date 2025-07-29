@@ -79,21 +79,6 @@ class Semester(models.Model):
         return f"{self.name}"
 
 
-
-# ---------- Subject Offering Table ----------
-# This model represents the offering of a subject in a specific semester, including the section code and associated instructor match.
-class SubjectOffering(models.Model):
-    offerId = models.AutoField(primary_key=True)
-    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
-    match = models.ForeignKey("aimatching.InstructorSubjectMatch", on_delete=models.CASCADE)
-    semester = models.ForeignKey(Semester, on_delete=models.CASCADE)
-    sectionCode = models.CharField(max_length=10)
-    createdAt = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.subject.code} - {self.sectionCode}"
-
-
 # ---------- Section Table ---------- 50 check notes
 # This model represents sections of subjects in a specific semester, linking to the subject and semester models.
 class Section(models.Model):
@@ -128,7 +113,7 @@ class Room(models.Model):
 # This model represents the schedule of classes, linking subject offerings, instructors, sections, rooms, and semesters.
 class Schedule(models.Model):
     scheduleId = models.AutoField(primary_key=True)
-    offer = models.ForeignKey(SubjectOffering, on_delete=models.CASCADE)
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
     instructor = models.ForeignKey('core.Instructor', on_delete=models.CASCADE)
     section = models.ForeignKey(Section, on_delete=models.CASCADE)
     room = models.ForeignKey(Room, on_delete=models.SET_NULL, null=True, blank=True)

@@ -2,7 +2,6 @@ from django.contrib import admin
 from .models import (
     Subject, 
     Semester, 
-    SubjectOffering, 
     Section, 
     Room, 
     Schedule, 
@@ -15,7 +14,6 @@ from .models import (
 
 admin.site.register(Subject)
 admin.site.register(Semester)
-admin.site.register(SubjectOffering)
 admin.site.register(Section)
 admin.site.register(Room)
 admin.site.register(Schedule)

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Matching Configurations{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto bg-white shadow rounded-lg p-6">
+  <h2 class="text-2xl font-semibold mb-4">Matching Configurations</h2>
+
+  {% if configs %}
+    <table class="min-w-full border text-sm text-gray-700">
+      <thead class="bg-gray-100">
+        <tr>
+          <th class="px-4 py-2 text-left">Semester</th>
+          <th class="px-4 py-2">Teaching</th>
+          <th class="px-4 py-2">Credentials</th>
+          <th class="px-4 py-2">Experience</th>
+          <th class="px-4 py-2">Preference</th>
+          <th class="px-4 py-2">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for config in configs %}
+        <tr class="border-t">
+          <td class="px-4 py-2">{{ config.semester.name }}</td>
+          <td class="px-4 py-2">{{ config.teachingWeight }}</td>
+          <td class="px-4 py-2">{{ config.credentialsWeight }}</td>
+          <td class="px-4 py-2">{{ config.experienceWeight }}</td>
+          <td class="px-4 py-2">{{ config.preferenceWeight }}</td>
+          <td class="px-4 py-2">
+            <a href="{% url 'configUpdate' config.semester.semesterId %}"
+               class="text-blue-600 hover:underline">Edit</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="text-gray-500">No configurations yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

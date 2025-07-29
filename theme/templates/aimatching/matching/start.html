@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Start Matching{% endblock %}
+{% block content %}
+
+<div class="max-w-lg mx-auto bg-white p-6 rounded-xl shadow">
+    <h2 class="text-2xl font-bold mb-4">🚀 Start Instructor-Subject Matching</h2>
+
+    <form method="post" action="{% url 'matchingRun' %}" class="space-y-4">
+        {% csrf_token %}
+
+        <label class="block mb-2 font-semibold">Select Active Semester</label>
+        <select name="semesterId" class="w-full border rounded-lg px-3 py-2 focus:ring focus:ring-blue-200">
+            {% for sem in semesters %}
+                <option value="{{ sem.semesterId }}">{{ sem.name }} ({{ sem.academicYear }} - {{ sem.term }})</option>
+            {% endfor %}
+        </select>
+
+        <button type="submit" 
+            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow">
+            🚀 Start Matching
+        </button>
+    </form>
+</div>
+
+{% endblock %}

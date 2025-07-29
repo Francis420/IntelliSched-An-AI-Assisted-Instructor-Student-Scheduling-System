@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-7xl mx-auto p-6 bg-white shadow rounded-xl">
+
+  <h2 class="text-2xl font-bold mb-6">Top Recommended Instructors per Subject</h2>
+
+  {% for subject in subjects %}
+  <div class="mb-6 border rounded-lg p-4 bg-gray-50">
+    <h3 class="text-xl font-semibold mb-3">{{ subject.code }} - {{ subject.name }}</h3>
+    <table class="min-w-full border text-sm">
+      <thead>
+        <tr class="bg-gray-200">
+          <th class="px-3 py-2 border">Rank</th>
+          <th class="px-3 py-2 border">Instructor</th>
+          <th class="px-3 py-2 border">Total Score</th>
+          <th class="px-3 py-2 border">Primary Factor</th>
+          <th class="px-3 py-2 border">Explanation</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for match in subject.top_matches %}
+        <tr>
+          <td class="px-3 py-2 border">{{ forloop.counter }}</td>
+          <td class="px-3 py-2 border">{{ match.instructor.user.get_full_name }}</td>
+          <td class="px-3 py-2 border font-bold text-green-700">{{ match.latestHistory.confidenceScore|floatformat:2 }}</td>
+          <td class="px-3 py-2 border">{{ match.latestHistory.primaryFactor }}</td>
+          <td class="px-3 py-2 border">{{ match.latestHistory.explanation|truncatechars:80 }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="px-3 py-2 text-center">No recommended matches yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="mt-2 text-right">
+      <a href="{% url 'matchingResults' batchId=batchId %}?subject={{ subject.id }}"
+         class="text-blue-600 hover:underline">View all instructors →</a>
+    </div>
+  </div>
+  {% endfor %}
+
+</div>
+{% endblock %}

@@ -2,60 +2,94 @@ from django.db import models
 from core.models import User
 from scheduling.models import Subject
 
-# ---------- Instructor Matching (AI Result) ----------
-# This model stores the results of AI-based instructor matching for subjects, including confidence scores and other metrics.
-# It links instructors to subjects based on various factors like experience, teaching ability, and availability.
+
 class InstructorSubjectMatch(models.Model):
     matchId = models.AutoField(primary_key=True)
     instructor = models.ForeignKey('core.Instructor', on_delete=models.CASCADE)
-    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
-    matchScore = models.FloatField()
-    matchLevel = models.IntegerField()
-    experienceScore = models.FloatField()
-    teachingScore = models.FloatField()
-    credentialScore = models.FloatField()
-    availabilityScore = models.FloatField()
-    primaryFactor = models.CharField(max_length=50)
-    notes = models.TextField(null=True, blank=True)
-    explanation = models.TextField(null=True, blank=True)
-    previousMatchScore = models.FloatField(null=True, blank=True)
-    scoreChange = models.FloatField(null=True, blank=True)
-    matchReason = models.CharField(max_length=100, null=True, blank=True)
+    subject = models.ForeignKey('scheduling.Subject', on_delete=models.CASCADE)
+    latestHistory = models.OneToOneField(
+        'InstructorSubjectMatchHistory',
+        on_delete=models.CASCADE,
+        related_name='current_match',
+        null=True, blank=True
+    )
     isRecommended = models.BooleanField(default=True)
-    batchId = models.CharField(max_length=100)
     isLatest = models.BooleanField(default=True)
+    batchId = models.CharField(max_length=100)
     modelVersion = models.CharField(max_length=50, null=True, blank=True)
     generatedBy = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     generatedAt = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Match {self.matchId} - {self.instructor.instructorId} -> {self.subject.code}"
-    
+        return f"Latest Match {self.instructor.instructorId} -> {self.subject.code}"
+
     class Meta:
         ordering = ['-generatedAt']
 
 
-# ---------- InstructorSubjectMatchHistory ----------
-# This model stores the history of instructor-subject matches, including confidence scores and other metrics.
-# It allows tracking changes over time and provides insights into the matching process.
 class InstructorSubjectMatchHistory(models.Model):
-    matchId = models.AutoField(primary_key=True)
+    historyId = models.AutoField(primary_key=True)
     instructor = models.ForeignKey('core.Instructor', on_delete=models.CASCADE)
-    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
+    subject = models.ForeignKey('scheduling.Subject', on_delete=models.CASCADE)
     confidenceScore = models.FloatField()
-    previousMatchScore = models.FloatField(null=True, blank=True)
-    scoreChange = models.FloatField(null=True, blank=True)  # current - previous
-    primaryFactor = models.CharField(max_length=50)
     experienceScore = models.FloatField()
     teachingScore = models.FloatField()
     credentialScore = models.FloatField()
-    availabilityScore = models.FloatField()
-    explanation = models.TextField(null=True, blank=True)  # NEW: Add explanation for that run
-    modelVersion = models.CharField(max_length=50, null=True, blank=True)  # NEW: version of embedding/model used
-    batchId = models.CharField(max_length=100)  # Run grouping ID (e.g., UUID)
+    preferenceScore = models.FloatField(default=0.0)
+    primaryFactor = models.CharField(max_length=50)
+    previousMatchScore = models.FloatField(null=True, blank=True)
+    scoreChange = models.FloatField(null=True, blank=True)
+    explanation = models.TextField(null=True, blank=True)
+    modelVersion = models.CharField(max_length=50, null=True, blank=True)
+    batchId = models.CharField(max_length=100)
     generatedBy = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     generatedAt = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"[History] {self.instructor.instructorId} - {self.subject.code} @ {self.generatedAt.strftime('%Y-%m-%d %H:%M')}"
+        return f"[History] {self.instructor.instructorId} - {self.subject.code} (Rank {self.rank})"
+    
+
+class MatchingConfig(models.Model):
+    configId = models.AutoField(primary_key=True)
+    semester = models.OneToOneField('scheduling.Semester', on_delete=models.CASCADE)
+    teachingWeight = models.FloatField(default=0.2)
+    credentialsWeight = models.FloatField(default=0.3)
+    experienceWeight = models.FloatField(default=0.3)
+    preferenceWeight = models.FloatField(default=0.2)
+    createdAt = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"MatchingConfig for {self.semester.name}"
+
+    
+
+class MatchingRun(models.Model):
+    runId = models.AutoField(primary_key=True)
+    semester = models.ForeignKey('scheduling.Semester', on_delete=models.CASCADE)
+    batchId = models.CharField(max_length=100, unique=True)
+    totalSubjects = models.IntegerField()
+    totalInstructors = models.IntegerField()
+    generatedBy = models.ForeignKey('core.User', on_delete=models.SET_NULL, null=True, blank=True)
+    generatedAt = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Run {self.batchId} ({self.semester.name})"
+
+    def get_results(self):
+        return InstructorSubjectMatch.objects.filter(batchId=self.batchId).select_related(
+            "instructor", "subject", "latestHistory"
+        ).order_by("subject__code", "latestHistory__rank")
+    
+class MatchingProgress(models.Model):
+    batchId = models.CharField(max_length=100, primary_key=True)
+    semester = models.ForeignKey('scheduling.Semester', on_delete=models.CASCADE)
+    totalTasks = models.IntegerField(default=0)
+    completedTasks = models.IntegerField(default=0)
+    status = models.CharField(max_length=20, default="running")  # running, completed, failed
+    generated_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
+    startedAt = models.DateTimeField(auto_now_add=True)
+    finishedAt = models.DateTimeField(null=True, blank=True)
+
+    def progress_percent(self):
+        return (self.completedTasks / self.totalTasks) * 100 if self.totalTasks else 0
 

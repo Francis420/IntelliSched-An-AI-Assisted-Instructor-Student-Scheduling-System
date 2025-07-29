@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     'tailwind',
     'theme', 
     'django_browser_reload',
+    'channels',
 
     'core',
     'students',
@@ -37,6 +38,21 @@ INSTALLED_APPS = [
     'authapi',
     'aimatching',       
 ]
+
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+
+
+ASGI_APPLICATION = "Intellisched.asgi.application"
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
+    },
+}
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
