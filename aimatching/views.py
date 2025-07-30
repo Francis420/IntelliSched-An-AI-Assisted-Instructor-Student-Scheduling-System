@@ -60,7 +60,6 @@ def matchingDashboard(request):
 
     subjects = Subject.objects.filter(defaultTerm=default_term, isActive=True)
 
-    # ✅ filter by search
     if subject_query:
         subjects = subjects.filter(
             Q(name__icontains=subject_query) | Q(code__icontains=subject_query)

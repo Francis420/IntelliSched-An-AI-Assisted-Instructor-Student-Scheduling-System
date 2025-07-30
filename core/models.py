@@ -126,6 +126,13 @@ class Student(models.Model):
     studentId = models.CharField(primary_key=True, max_length=20)  # e.g., "2025-123456"
     createdAt = models.DateTimeField(auto_now_add=True)
 
+    @property
+    def full_name(self):
+        user = self.userlogin_set.select_related("user").first()
+        if user and user.user:
+            return f"{user.user.firstName} {user.user.lastName}"
+        return self.studentId
+
     def __str__(self):
         return self.studentId
 

@@ -1,0 +1,49 @@
+<div class="overflow-x-auto">
+  <table class="min-w-full bg-white border border-gray-200 rounded-lg shadow-sm text-sm">
+    <thead class="bg-gray-100 text-gray-700 uppercase tracking-wider text-xs">
+      <tr>
+        <th class="px-4 py-3 border-b">Instructor ID</th>
+        <th class="px-4 py-3 border-b">Full Name</th>
+        <th class="px-4 py-3 border-b">Email</th>
+        <th class="px-4 py-3 border-b">Employment Type</th>
+        <th class="px-4 py-3 border-b">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for login in instructorLogins %}
+      <tr class="hover:bg-gray-50">
+        <td class="px-4 py-3 border-b">{{ login.instructor.instructorId }}</td>
+        <td class="px-4 py-3 border-b">{{ login.instructor_display_name }}</td>
+        <td class="px-4 py-3 border-b">{{ login.user.email }}</td>
+        <td class="px-4 py-3 border-b">{{ login.instructor.employmentType }}</td>
+        <td class="px-4 py-3 border-b space-x-2">
+          <a href="{% url 'instructorAccountUpdate' login.user.userId %}"
+             class="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded-md transition text-xs font-medium">
+            Update
+          </a>
+          <a href="{% url 'instructorAccountDelete' login.user.userId %}"
+             onclick="return confirm('Are you sure you want to delete this instructor account?')"
+             class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md transition text-xs font-medium">
+            Delete
+          </a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="5" class="text-center py-6 text-gray-500">No instructor accounts found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Pagination -->
+<div class="mt-4 flex justify-center">
+  {% if instructorLogins.has_previous %}
+    <a href="#" class="px-3 py-1 border rounded bg-gray-200 live-page-link" data-page="{{ instructorLogins.previous_page_number }}">Previous</a>
+  {% endif %}
+  <span class="px-4 py-2">Page {{ instructorLogins.number }} of {{ instructorLogins.paginator.num_pages }}</span>
+  {% if instructorLogins.has_next %}
+    <a href="#" class="px-3 py-1 border rounded bg-gray-200 live-page-link" data-page="{{ instructorLogins.next_page_number }}">Next</a>
+  {% endif %}
+</div>

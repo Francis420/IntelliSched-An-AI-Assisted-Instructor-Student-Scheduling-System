@@ -1,0 +1,46 @@
+{% if subjects %}
+<div class="overflow-x-auto">
+  <table class="min-w-full bg-white border rounded-lg text-sm">
+    <thead class="bg-gray-100">
+      <tr>
+        <th class="px-4 py-3 border-b">Code</th>
+        <th class="px-4 py-3 border-b">Title</th>
+        <th class="px-4 py-3 border-b">Units</th>
+        <th class="px-4 py-3 border-b">Year Level</th>
+        <th class="px-4 py-3 border-b">Semester</th>
+        <th class="px-4 py-3 border-b text-center">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for subject in subjects %}
+      <tr class="hover:bg-gray-50">
+        <td class="px-4 py-3 border-b">{{ subject.code }}</td>
+        <td class="px-4 py-3 border-b">{{ subject.name }}</td>
+        <td class="px-4 py-3 border-b">{{ subject.units }}</td>
+        <td class="px-4 py-3 border-b">{{ subject.get_yearLevel_display }}</td>
+        <td class="px-4 py-3 border-b">{{ subject.get_defaultTerm_display }}</td>
+        <td class="px-4 py-3 border-b text-center">
+          <a href="{% url 'subjectUpdate' subject.code %}"
+             class="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded-md text-xs font-medium">
+            Update
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Pagination -->
+<div class="mt-4 flex justify-center">
+  {% if subjects.has_previous %}
+    <a href="#" class="px-3 py-1 border rounded bg-gray-200 live-page-link" data-page="{{ subjects.previous_page_number }}">Previous</a>
+  {% endif %}
+  <span class="px-4 py-2">Page {{ subjects.number }} of {{ subjects.paginator.num_pages }}</span>
+  {% if subjects.has_next %}
+    <a href="#" class="px-3 py-1 border rounded bg-gray-200 live-page-link" data-page="{{ subjects.next_page_number }}">Next</a>
+  {% endif %}
+</div>
+{% else %}
+<p class="text-gray-500 mt-4">No subjects found for the selected curriculum.</p>
+{% endif %}

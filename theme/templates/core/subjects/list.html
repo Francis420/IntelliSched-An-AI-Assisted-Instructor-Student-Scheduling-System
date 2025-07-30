@@ -1,16 +1,13 @@
 {% extends 'base.html' %}
-
 {% block content %}
 <div class="max-w-6xl mx-auto mt-10 px-4 sm:px-6 lg:px-8">
   <h2 class="text-2xl font-bold text-gray-800 mb-6">Subjects</h2>
 
   <!-- Curriculum Selector -->
-  <form method="get" class="mb-6">
-    <label for="curriculumSelect" class="block text-sm font-medium text-gray-700 mb-1">
-      Select Curriculum:
-    </label>
-    <select id="curriculumSelect" name="curriculumId" onchange="this.form.submit()"
-            class="w-full border border-gray-300 rounded-md px-3 py-2 shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+  <form id="curriculumForm" method="get" class="mb-4">
+    <select id="curriculumSelect" name="curriculumId"
+      class="w-full border rounded-md px-3 py-2"
+      onchange="fetchSubjects(1)">
       {% for curriculum in curriculums %}
         <option value="{{ curriculum.curriculumId }}"
           {% if curriculum.curriculumId == selectedCurriculumId %}selected{% endif %}>
@@ -20,51 +17,54 @@
     </select>
   </form>
 
-  <!-- Add Subject Button -->
-  {% if selectedCurriculumId %}
-    <div class="mb-4 text-right">
-      <a href="{% url 'subjectCreate' %}?curriculumId={{ selectedCurriculumId }}"
-         class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition">
-        + Add Subject
-      </a>
-    </div>
-  {% endif %}
+  <!-- Search -->
+  <input type="text" id="subjectSearch" 
+         class="border rounded px-3 py-2 w-full mb-4"
+         placeholder="Search subjects..."
+         value="{{ query|default:'' }}">
 
-  <!-- Subject Table -->
-  {% if subjects %}
-    <div class="overflow-x-auto">
-      <table class="min-w-full bg-white border border-gray-200 rounded-lg shadow-sm text-sm">
-        <thead class="bg-gray-100 text-gray-700 uppercase tracking-wider text-xs">
-          <tr>
-            <th class="px-4 py-3 border-b">Code</th>
-            <th class="px-4 py-3 border-b">Title</th>
-            <th class="px-4 py-3 border-b">Units</th>
-            <th class="px-4 py-3 border-b">Year Level</th>
-            <th class="px-4 py-3 border-b">Semester</th>
-            <th class="px-4 py-3 border-b text-center">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for subject in subjects %}
-            <tr class="hover:bg-gray-50">
-              <td class="px-4 py-3 border-b">{{ subject.code }}</td>
-              <td class="px-4 py-3 border-b">{{ subject.name }}</td>
-              <td class="px-4 py-3 border-b">{{ subject.units }}</td>
-              <td class="px-4 py-3 border-b">{{ subject.get_yearLevel_display }}</td>
-              <td class="px-4 py-3 border-b">{{ subject.get_defaultTerm_display }}</td>
-              <td class="px-4 py-3 border-b text-center">
-                <a href="{% url 'subjectUpdate' subject.code %}"
-                   class="inline-block bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded-md transition text-xs font-medium">
-                  Update
-                </a>
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% else %}
-    <p class="text-gray-500 mt-4">No subjects found for the selected curriculum.</p>
-  {% endif %}
+  <!-- Add Subject Button -->
+  <div class="mb-4 text-right">
+    <a href="{% url 'subjectCreate' %}?curriculumId={{ selectedCurriculumId }}"
+       class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition">
+      + Add Subject
+    </a>
+  </div>
+
+  <!-- Results Container -->
+  <div id="subjectsContainer">
+    {% include "core/subjects/_list_table.html" %}
+  </div>
 </div>
+
+<script>
+function fetchSubjects(page = 1) {
+  const q = document.getElementById("subjectSearch").value;
+  const curriculumId = document.getElementById("curriculumSelect").value;
+
+  const url = new URL(window.location);
+  url.searchParams.set("q", q);
+  url.searchParams.set("page", page);
+  url.searchParams.set("curriculumId", curriculumId);
+  window.history.replaceState({}, "", url);
+
+  fetch(`{% url 'subjectListLive' %}?q=${encodeURIComponent(q)}&page=${page}&curriculumId=${curriculumId}`)
+    .then(response => response.json())
+    .then(data => {
+      document.getElementById("subjectsContainer").innerHTML = data.html;
+      document.querySelectorAll(".live-page-link").forEach(link => {
+        link.addEventListener("click", function(e) {
+          e.preventDefault();
+          fetchSubjects(this.dataset.page);
+        });
+      });
+    });
+}
+
+let timeout = null;
+document.getElementById("subjectSearch").addEventListener("input", () => {
+  clearTimeout(timeout);
+  timeout = setTimeout(() => fetchSubjects(1), 300);
+});
+</script>
 {% endblock %}

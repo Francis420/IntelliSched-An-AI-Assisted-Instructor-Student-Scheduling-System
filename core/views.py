@@ -20,6 +20,9 @@ from django.contrib.auth.hashers import make_password
 from django.db import IntegrityError
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
+from django.core.paginator import Paginator
+from django.template.loader import render_to_string
+from django.db.models import Q
 
 
 
@@ -48,10 +51,13 @@ def checkInstructorIdAvailability(request):
 
 
 # ---------- Subjects ----------
+@login_required
+@has_role('deptHead')
 def subjectList(request):
     curriculums = Curriculum.objects.order_by('-createdAt')
-    
     curriculum_id = request.GET.get('curriculumId')
+    query = request.GET.get("q", "").strip()
+    page = int(request.GET.get("page", 1))
 
     if not curriculum_id and curriculums.exists():
         selected_curriculum = curriculums.first()
@@ -60,10 +66,62 @@ def subjectList(request):
 
     subjects = Subject.objects.filter(curriculum=selected_curriculum)
 
+    if query:
+        subjects = subjects.filter(
+            Q(name__icontains=query) |
+            Q(code__icontains=query) |
+            Q(description__icontains=query) |
+            Q(subjectTopics__icontains=query)
+        )
+
+    paginator = Paginator(subjects, 10)
+    page_obj = paginator.get_page(page)
+
     return render(request, 'core/subjects/list.html', {
-        'subjects': subjects,
+        'subjects': page_obj,
         'curriculums': curriculums,
         'selectedCurriculumId': selected_curriculum.curriculumId,
+        'query': query,
+    })
+
+
+@login_required
+@has_role('deptHead')
+def subjectListLive(request):
+    curriculums = Curriculum.objects.order_by('-createdAt')
+    curriculum_id = request.GET.get('curriculumId')
+    query = request.GET.get("q", "").strip()
+    page = int(request.GET.get("page", 1))
+
+    if not curriculum_id and curriculums.exists():
+        selected_curriculum = curriculums.first()
+    else:
+        selected_curriculum = get_object_or_404(Curriculum, pk=curriculum_id)
+
+    subjects = Subject.objects.filter(curriculum=selected_curriculum)
+
+    if query:
+        subjects = subjects.filter(
+            Q(name__icontains=query) |
+            Q(code__icontains=query) |
+            Q(description__icontains=query) |
+            Q(subjectTopics__icontains=query)
+        )
+
+    paginator = Paginator(subjects, 10)
+    page_obj = paginator.get_page(page)
+
+    html = render_to_string("core/subjects/_list_table.html", {
+        "subjects": page_obj,
+        "selectedCurriculumId": selected_curriculum.curriculumId,
+    }, request=request)
+
+    return JsonResponse({
+        "html": html,
+        "page": page_obj.number,
+        "num_pages": paginator.num_pages,
+        "has_next": page_obj.has_next(),
+        "has_previous": page_obj.has_previous(),
     })
 
 
@@ -165,14 +223,69 @@ def subjectDelete(request, subjectCode):
 @login_required
 @has_role('deptHead')
 def instructorAccountList(request):
+    query = request.GET.get("q", "").strip()
+    page = int(request.GET.get("page", 1))
+
     instructor_logins = UserLogin.objects.select_related('user', 'instructor') \
         .filter(user__roles__name='instructor', instructor__isnull=False) \
         .distinct()
 
-    context = {
-        'instructorLogins': instructor_logins
-    }
-    return render(request, 'core/instructors/list.html', context)
+    # Attach readable names
+    for login in instructor_logins:
+        login.instructor_display_name = login.instructor.full_name
+
+    if query:
+        instructor_logins = [
+            l for l in instructor_logins
+            if query.lower() in l.instructor_display_name.lower()
+            or query.lower() in l.user.email.lower()
+            or query.lower() in l.instructor.instructorId.lower()
+        ]
+
+    paginator = Paginator(instructor_logins, 10)
+    page_obj = paginator.get_page(page)
+
+    return render(request, "core/instructors/list.html", {
+        "instructorLogins": page_obj,
+        "query": query
+    })
+
+
+@login_required
+@has_role('deptHead')
+def instructorAccountListLive(request):
+    query = request.GET.get("q", "").strip()
+    page = int(request.GET.get("page", 1))
+
+    instructor_logins = UserLogin.objects.select_related('user', 'instructor') \
+        .filter(user__roles__name='instructor', instructor__isnull=False) \
+        .distinct()
+
+    for login in instructor_logins:
+        login.instructor_display_name = login.instructor.full_name
+
+    if query:
+        instructor_logins = [
+            l for l in instructor_logins
+            if query.lower() in l.instructor_display_name.lower()
+            or query.lower() in l.user.email.lower()
+            or query.lower() in l.instructor.instructorId.lower()
+        ]
+
+    paginator = Paginator(instructor_logins, 10)
+    page_obj = paginator.get_page(page)
+
+    html = render_to_string("core/instructors/_list_table.html", {
+        "instructorLogins": page_obj
+    }, request=request)
+
+    return JsonResponse({
+        "html": html,
+        "page": page_obj.number,
+        "num_pages": paginator.num_pages,
+        "has_next": page_obj.has_next(),
+        "has_previous": page_obj.has_previous(),
+    })
 
 
 @login_required
@@ -288,16 +401,71 @@ def instructorAccountDelete(request, userId):
 # ---------- Student Accounts ----------
 @login_required
 @has_role('deptHead')
-@login_required
 def studentAccountList(request):
+    query = request.GET.get("q", "").strip()
+    page = int(request.GET.get("page", 1))
+
     student_logins = UserLogin.objects.select_related('user', 'student') \
         .filter(user__roles__name='student', student__isnull=False) \
         .distinct()
 
-    context = {
-        'studentLogins': student_logins
-    }
-    return render(request, 'core/students/list.html', context)
+    # Attach readable names
+    for login in student_logins:
+        login.student_display_name = login.student.full_name
+
+    if query:
+        student_logins = [
+            l for l in student_logins
+            if query.lower() in l.student_display_name.lower()
+            or query.lower() in l.user.email.lower()
+            or query.lower() in l.student.studentId.lower()
+        ]
+
+    paginator = Paginator(student_logins, 10)
+    page_obj = paginator.get_page(page)
+
+    return render(request, "core/students/list.html", {
+        "studentLogins": page_obj,
+        "query": query
+    })
+
+
+@login_required
+@has_role('deptHead')
+def studentAccountListLive(request):
+    query = request.GET.get("q", "").strip()
+    page = int(request.GET.get("page", 1))
+
+    student_logins = UserLogin.objects.select_related('user', 'student') \
+        .filter(user__roles__name='student', student__isnull=False) \
+        .distinct()
+
+    for login in student_logins:
+        login.student_display_name = login.student.full_name
+
+    if query:
+        student_logins = [
+            l for l in student_logins
+            if query.lower() in l.student_display_name.lower()
+            or query.lower() in l.user.email.lower()
+            or query.lower() in l.student.studentId.lower()
+        ]
+
+    paginator = Paginator(student_logins, 10)
+    page_obj = paginator.get_page(page)
+
+    html = render_to_string("core/students/_list_table.html", {
+        "studentLogins": page_obj
+    }, request=request)
+
+    return JsonResponse({
+        "html": html,
+        "page": page_obj.number,
+        "num_pages": paginator.num_pages,
+        "has_next": page_obj.has_next(),
+        "has_previous": page_obj.has_previous(),
+    })
+
 
 @transaction.atomic
 def studentAccountCreate(request):

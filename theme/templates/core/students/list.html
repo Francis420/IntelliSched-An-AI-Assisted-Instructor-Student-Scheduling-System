@@ -4,45 +4,41 @@
 <div class="max-w-6xl mx-auto mt-10 px-4 sm:px-6 lg:px-8">
   <h2 class="text-2xl font-bold text-gray-800 mb-6">Student Accounts</h2>
 
-  <a href="{% url 'studentAccountCreate' %}"
-     class="inline-block mb-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition">
-    + Create New Student Account
-  </a>
+  <input type="text" id="student-search" 
+         class="border rounded p-2 w-full mb-4"
+         placeholder="Search by Name, Student ID, or Email..."
+         value="{{ query|default:'' }}">
 
-  <div class="overflow-x-auto">
-    <table class="min-w-full bg-white border border-gray-200 rounded-lg shadow-sm text-sm">
-      <thead class="bg-gray-100 text-gray-700 uppercase tracking-wider text-xs">
-        <tr>
-          <th class="px-4 py-3 border-b">Username</th>
-          <th class="px-4 py-3 border-b">Student ID</th>
-          <th class="px-4 py-3 border-b">Name</th>
-          <th class="px-4 py-3 border-b">Email</th>
-          <th class="px-4 py-3 border-b">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for login in studentLogins %}
-        <tr class="hover:bg-gray-50">
-          <td class="px-4 py-3 border-b">{{ login.user.username }}</td>
-          <td class="px-4 py-3 border-b">{{ login.student.studentId }}</td>
-          <td class="px-4 py-3 border-b">
-            {{ login.user.lastName }}, {{ login.user.firstName }} {{ login.user.middleInitial }}
-          </td>
-          <td class="px-4 py-3 border-b">{{ login.user.email }}</td>
-          <td class="px-4 py-3 border-b space-x-2">
-            <a href="{% url 'studentAccountUpdate' login.user.userId %}"
-               class="inline-block bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded-md transition text-xs font-medium">
-              Edit
-            </a>
-          </td>
-        </tr>
-        {% empty %}
-        <tr>
-          <td colspan="5" class="text-center py-6 text-gray-500">No student accounts found.</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  <div id="results-container">
+    {% include "core/students/_list_table.html" %}
   </div>
 </div>
+
+<script>
+function fetchStudents(page = 1) {
+  const query = document.getElementById("student-search").value;
+  const url = new URL(window.location);
+  url.searchParams.set("q", query);
+  url.searchParams.set("page", page);
+  window.history.replaceState({}, "", url);
+
+  fetch(`{% url 'studentAccountListLive' %}?q=${encodeURIComponent(query)}&page=${page}`)
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById("results-container").innerHTML = data.html;
+      document.querySelectorAll(".live-page-link").forEach(link => {
+        link.addEventListener("click", function(e) {
+          e.preventDefault();
+          fetchStudents(this.dataset.page);
+        });
+      });
+    });
+}
+
+let timeout = null;
+document.getElementById("student-search").addEventListener("input", () => {
+  clearTimeout(timeout);
+  timeout = setTimeout(() => fetchStudents(1), 300);
+});
+</script>
 {% endblock %}
