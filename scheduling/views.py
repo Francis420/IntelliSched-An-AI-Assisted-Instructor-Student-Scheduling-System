@@ -15,14 +15,66 @@ from core.models import (
     UserLogin,
 )
 from django.db import transaction
+from django.http import JsonResponse
+from django.template.loader import render_to_string
+from django.core.paginator import Paginator
+from django.db.models import Q
 
 
 # ---------- Rooms ----------
 @login_required
 @has_role('deptHead')
 def roomList(request):
-    rooms = Room.objects.all().order_by('roomCode')
-    return render(request, 'scheduling/rooms/list.html', {'rooms': rooms})
+    query = request.GET.get("q", "").strip()
+    page = int(request.GET.get("page", 1))
+
+    rooms = Room.objects.all().order_by("roomCode")
+
+    if query:
+        rooms = rooms.filter(
+            Q(roomCode__icontains=query) |
+            Q(building__icontains=query) |
+            Q(type__icontains=query) |
+            Q(notes__icontains=query)
+        )
+
+    paginator = Paginator(rooms, 10)
+    page_obj = paginator.get_page(page)
+
+    return render(request, "scheduling/rooms/list.html", {
+        "rooms": page_obj,
+        "query": query,
+    })
+
+
+@login_required
+@has_role('deptHead')
+def roomListLive(request):
+    query = request.GET.get("q", "").strip()
+    page = int(request.GET.get("page", 1))
+
+    rooms = Room.objects.all().order_by("roomCode")
+
+    if query:
+        rooms = rooms.filter(
+            Q(roomCode__icontains=query) |
+            Q(building__icontains=query) |
+            Q(type__icontains=query) |
+            Q(notes__icontains=query)
+        )
+
+    paginator = Paginator(rooms, 10)
+    page_obj = paginator.get_page(page)
+
+    html = render_to_string("scheduling/rooms/_table.html", {
+        "rooms": page_obj,
+    }, request=request)
+
+    return JsonResponse({
+        "html": html,
+        "page": page_obj.number,
+        "num_pages": paginator.num_pages,
+    })
 
 
 @login_required
@@ -92,8 +144,64 @@ def roomDelete(request, roomId):
 @login_required
 @has_role('deptHead')
 def genedScheduleList(request):
-    schedules = GenEdSchedule.objects.select_related('semester').order_by('semester__name', 'code', 'sectionCode')
-    return render(request, 'scheduling/genEdSchedules/list.html', {'schedules': schedules})
+    query = request.GET.get("q", "").strip()
+    page = int(request.GET.get("page", 1))
+
+    schedules = GenEdSchedule.objects.select_related("semester").order_by(
+        "semester__name", "code", "sectionCode"
+    )
+
+    if query:
+        schedules = schedules.filter(
+            Q(semester__name__icontains=query) |
+            Q(code__icontains=query) |
+            Q(subjectName__icontains=query) |
+            Q(sectionCode__icontains=query) |
+            Q(instructorName__icontains=query) |
+            Q(dayOfWeek__icontains=query)
+        )
+
+    paginator = Paginator(schedules, 10)
+    page_obj = paginator.get_page(page)
+
+    return render(request, "scheduling/genEdSchedules/list.html", {
+        "schedules": page_obj,
+        "query": query,
+    })
+
+
+@login_required
+@has_role('deptHead')
+def genedScheduleListLive(request):
+    query = request.GET.get("q", "").strip()
+    page = int(request.GET.get("page", 1))
+
+    schedules = GenEdSchedule.objects.select_related("semester").order_by(
+        "semester__name", "code", "sectionCode"
+    )
+
+    if query:
+        schedules = schedules.filter(
+            Q(semester__name__icontains=query) |
+            Q(code__icontains=query) |
+            Q(subjectName__icontains=query) |
+            Q(sectionCode__icontains=query) |
+            Q(instructorName__icontains=query) |
+            Q(dayOfWeek__icontains=query)
+        )
+
+    paginator = Paginator(schedules, 10)
+    page_obj = paginator.get_page(page)
+
+    html = render_to_string("scheduling/genEdSchedules/_table.html", {
+        "schedules": page_obj,
+    }, request=request)
+
+    return JsonResponse({
+        "html": html,
+        "page": page_obj.number,
+        "num_pages": paginator.num_pages,
+    })
 
 
 @login_required
@@ -273,8 +381,56 @@ def enrollmentDelete(request, enrollmentId):
 @login_required
 @has_role('deptHead')
 def semesterList(request):
-    semesters = Semester.objects.all().order_by('-createdAt')
-    return render(request, 'scheduling/semesters/list.html', {'semesters': semesters})
+    query = request.GET.get("q", "").strip()
+    page = int(request.GET.get("page", 1))
+
+    semesters = Semester.objects.all().order_by("-createdAt")
+
+    if query:
+        semesters = semesters.filter(
+            Q(name__icontains=query) |
+            Q(term__icontains=query) |
+            Q(academicYear__icontains=query)
+        )
+
+    paginator = Paginator(semesters, 10)
+    page_obj = paginator.get_page(page)
+
+    return render(request, "scheduling/semesters/list.html", {
+        "semesters": page_obj,
+        "query": query,
+    })
+
+
+@login_required
+@has_role('deptHead')
+def semesterListLive(request):
+    query = request.GET.get("q", "").strip()
+    page = int(request.GET.get("page", 1))
+
+    semesters = Semester.objects.all().order_by("-createdAt")
+
+    if query:
+        semesters = semesters.filter(
+            Q(name__icontains=query) |
+            Q(term__icontains=query) |
+            Q(academicYear__icontains=query)
+        )
+
+    paginator = Paginator(semesters, 10)
+    page_obj = paginator.get_page(page)
+
+    html = render_to_string("scheduling/semesters/_table.html", {
+        "semesters": page_obj,
+    }, request=request)
+
+    return JsonResponse({
+        "html": html,
+        "page": page_obj.number,
+        "num_pages": paginator.num_pages,
+        "has_next": page_obj.has_next(),
+        "has_previous": page_obj.has_previous(),
+    })
 
 @login_required
 @has_role('deptHead')
@@ -349,8 +505,57 @@ def semesterDelete(request, semesterId):
 @login_required
 @has_role('deptHead')
 def curriculumList(request):
-    curriculums = Curriculum.objects.all().order_by('-createdAt')
-    return render(request, 'scheduling/curriculums/list.html', {'curriculums': curriculums})
+    query = request.GET.get("q", "").strip()
+    page = int(request.GET.get("page", 1))
+
+    curriculums = Curriculum.objects.all().order_by("-createdAt")
+
+    if query:
+        curriculums = curriculums.filter(
+            Q(name__icontains=query) |
+            Q(effectiveSy__icontains=query) |
+            Q(description__icontains=query)
+        )
+
+    paginator = Paginator(curriculums, 10)
+    page_obj = paginator.get_page(page)
+
+    return render(request, "scheduling/curriculums/list.html", {
+        "curriculums": page_obj,
+        "query": query,
+    })
+
+
+@login_required
+@has_role('deptHead')
+def curriculumListLive(request):
+    query = request.GET.get("q", "").strip()
+    page = int(request.GET.get("page", 1))
+
+    curriculums = Curriculum.objects.all().order_by("-createdAt")
+
+    if query:
+        curriculums = curriculums.filter(
+            Q(name__icontains=query) |
+            Q(effectiveSy__icontains=query) |
+            Q(description__icontains=query)
+        )
+
+    paginator = Paginator(curriculums, 10)
+    page_obj = paginator.get_page(page)
+
+    html = render_to_string("scheduling/curriculums/_table.html", {
+        "curriculums": page_obj,
+    }, request=request)
+
+    return JsonResponse({
+        "html": html,
+        "page": page_obj.number,
+        "num_pages": paginator.num_pages,
+        "has_next": page_obj.has_next(),
+        "has_previous": page_obj.has_previous(),
+    })
+
 
 
 @login_required

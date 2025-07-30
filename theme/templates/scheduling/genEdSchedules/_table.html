@@ -1,0 +1,44 @@
+{% if schedules %}
+<div class="overflow-x-auto">
+  <table class="min-w-full bg-white border border-gray-200 rounded-lg shadow-sm text-sm">
+    <thead class="bg-gray-100 text-gray-700 uppercase tracking-wider text-xs">
+      <tr>
+        <th class="px-4 py-3 border-b">Semester</th>
+        <th class="px-4 py-3 border-b">Code</th>
+        <th class="px-4 py-3 border-b">Subject Name</th>
+        <th class="px-4 py-3 border-b">Section</th>
+        <th class="px-4 py-3 border-b">Instructor</th>
+        <th class="px-4 py-3 border-b">Day</th>
+        <th class="px-4 py-3 border-b">Time</th>
+        <th class="px-4 py-3 border-b text-center">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for schedule in schedules %}
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-3 border-b">{{ schedule.semester.name|default:"—" }}</td>
+          <td class="px-4 py-3 border-b">{{ schedule.code }}</td>
+          <td class="px-4 py-3 border-b">{{ schedule.subjectName }}</td>
+          <td class="px-4 py-3 border-b">{{ schedule.sectionCode }}</td>
+          <td class="px-4 py-3 border-b">{{ schedule.instructorName|default:"—" }}</td>
+          <td class="px-4 py-3 border-b">{{ schedule.dayOfWeek }}</td>
+          <td class="px-4 py-3 border-b">{{ schedule.startTime }} - {{ schedule.endTime }}</td>
+          <td class="px-4 py-3 border-b text-center space-x-2">
+            <a href="{% url 'genedScheduleUpdate' schedule.genedScheduleId %}"
+               class="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded-md transition text-xs font-medium">
+              Update
+            </a>
+            <a href="{% url 'genedScheduleDelete' schedule.genedScheduleId %}"
+               onclick="return confirm('Are you sure you want to delete this schedule?');"
+               class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md transition text-xs font-medium">
+              Delete
+            </a>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="text-gray-500 mt-4">No GenEd schedules found.</p>
+{% endif %}

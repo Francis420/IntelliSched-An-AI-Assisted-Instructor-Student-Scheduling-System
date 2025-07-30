@@ -1,0 +1,41 @@
+<div class="overflow-x-auto">
+  <table class="min-w-full divide-y divide-gray-200">
+    <thead class="bg-gray-100">
+      <tr>
+        <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Subject</th>
+        <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Semester</th>
+        <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Times Taught</th>
+        <th class="px-4 py-2 text-center text-sm font-medium text-gray-700">Actions</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-200">
+      {% if histories %}
+        {% for record in histories %}
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-2">{{ record.subject.code }} - {{ record.subject.name }}</td>
+          <td class="px-4 py-2">{{ record.semester.name }}</td>
+          <td class="px-4 py-2">{{ record.timesTaught }}</td>
+          <td class="px-4 py-2 text-center space-x-2">
+            <a href="{% url 'teachingHistoryUpdate' record.teachingId %}"
+               class="inline-block bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded-md transition text-xs font-medium">
+              Update
+            </a>
+            <form action="{% url 'teachingHistoryDelete' record.teachingId %}" method="post" class="inline-block"
+                  onsubmit="return confirm('Are you sure you want to delete this record?');">
+              {% csrf_token %}
+              <button type="submit"
+                      class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md transition text-xs font-medium">
+                Delete
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr>
+          <td colspan="4" class="px-4 py-4 text-center text-gray-500">No teaching history found.</td>
+        </tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>

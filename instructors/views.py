@@ -14,6 +14,10 @@ from authapi.views import has_role
 from django.utils.timezone import now
 from scheduling.models import Subject
 from django.utils.dateparse import parse_time
+from django.http import JsonResponse
+from django.template.loader import render_to_string
+from django.core.paginator import Paginator
+from django.db.models import Q
 
 
 # ---------- Instructor Experience ----------
@@ -26,12 +30,70 @@ def experienceList(request):
         return redirect('home')
 
     instructor = login.instructor
+    query = request.GET.get("q", "").strip()
+    page = int(request.GET.get("page", 1))
+
     experiences = InstructorExperience.objects.filter(
         instructor=instructor
-    ).prefetch_related('relatedSubjects').order_by('-startDate')
+    ).prefetch_related("relatedSubjects").order_by("-startDate")
 
-    return render(request, 'instructors/experiences/list.html', {
-        'experiences': experiences
+    if query:
+        experiences = experiences.filter(
+            Q(title__icontains=query) |
+            Q(organization__icontains=query) |
+            Q(description__icontains=query) |
+            Q(experienceType__icontains=query) |
+            Q(relatedSubjects__name__icontains=query) |
+            Q(relatedSubjects__code__icontains=query)
+        ).distinct()
+
+    paginator = Paginator(experiences, 10)
+    page_obj = paginator.get_page(page)
+
+    return render(request, "instructors/experiences/list.html", {
+        "experiences": page_obj,
+        "query": query,
+    })
+
+
+@login_required
+@has_role('instructor')
+def experienceListLive(request):
+    login = UserLogin.objects.filter(user=request.user).first()
+    if not login or not login.instructor:
+        return JsonResponse({"error": "Instructor not found"}, status=400)
+
+    instructor = login.instructor
+    query = request.GET.get("q", "").strip()
+    page = int(request.GET.get("page", 1))
+
+    experiences = InstructorExperience.objects.filter(
+        instructor=instructor
+    ).prefetch_related("relatedSubjects").order_by("-startDate")
+
+    if query:
+        experiences = experiences.filter(
+            Q(title__icontains=query) |
+            Q(organization__icontains=query) |
+            Q(description__icontains=query) |
+            Q(experienceType__icontains=query) |
+            Q(relatedSubjects__name__icontains=query) |
+            Q(relatedSubjects__code__icontains=query)
+        ).distinct()
+
+    paginator = Paginator(experiences, 10)
+    page_obj = paginator.get_page(page)
+
+    html = render_to_string("instructors/experiences/_cards.html", {
+        "experiences": page_obj,
+    }, request=request)
+
+    return JsonResponse({
+        "html": html,
+        "page": page_obj.number,
+        "num_pages": paginator.num_pages,
+        "has_next": page_obj.has_next(),
+        "has_previous": page_obj.has_previous(),
     })
 
 
@@ -136,8 +198,61 @@ def availabilityList(request):
         return redirect('home')
 
     instructor = login.instructor
-    availabilities = InstructorAvailability.objects.filter(instructor=instructor).order_by('dayOfWeek', 'startTime')
-    return render(request, 'instructors/availability/list.html', {'availabilities': availabilities})
+    query = request.GET.get("q", "").strip()
+    page = int(request.GET.get("page", 1))
+
+    availabilities = InstructorAvailability.objects.filter(instructor=instructor)
+
+    if query:
+        availabilities = availabilities.filter(
+            Q(dayOfWeek__icontains=query) |
+            Q(startTime__icontains=query) |
+            Q(endTime__icontains=query)
+        )
+
+    paginator = Paginator(availabilities, 10)
+    page_obj = paginator.get_page(page)
+
+    return render(request, "instructors/availability/list.html", {
+        "availabilities": page_obj,
+        "query": query,
+    })
+
+
+@login_required
+@has_role('instructor')
+def availabilityListLive(request):
+    login = UserLogin.objects.filter(user=request.user).first()
+    if not login or not login.instructor:
+        return JsonResponse({"error": "Instructor not found"}, status=400)
+
+    instructor = login.instructor
+    query = request.GET.get("q", "").strip()
+    page = int(request.GET.get("page", 1))
+
+    availabilities = InstructorAvailability.objects.filter(instructor=instructor)
+
+    if query:
+        availabilities = availabilities.filter(
+            Q(dayOfWeek__icontains=query) |
+            Q(startTime__icontains=query) |
+            Q(endTime__icontains=query)
+        )
+
+    paginator = Paginator(availabilities, 10)
+    page_obj = paginator.get_page(page)
+
+    html = render_to_string("instructors/availability/_cards.html", {
+        "availabilities": page_obj,
+    }, request=request)
+
+    return JsonResponse({
+        "html": html,
+        "page": page_obj.number,
+        "num_pages": paginator.num_pages,
+        "has_next": page_obj.has_next(),
+        "has_previous": page_obj.has_previous(),
+    })
 
 
 @login_required
@@ -219,8 +334,71 @@ def credentialList(request):
         return redirect('home')
 
     instructor = login.instructor
-    credentials = InstructorCredentials.objects.filter(instructor=instructor).order_by('-dateEarned')
-    return render(request, 'instructors/credentials/list.html', {'credentials': credentials})
+    query = request.GET.get("q", "").strip()
+    page = int(request.GET.get("page", 1))
+
+    credentials = InstructorCredentials.objects.filter(
+        instructor=instructor
+    ).prefetch_related("relatedSubjects").order_by("-dateEarned")
+
+    if query:
+        credentials = credentials.filter(
+            Q(title__icontains=query) |
+            Q(type__icontains=query) |
+            Q(description__icontains=query) |
+            Q(issuer__icontains=query) |
+            Q(relatedSubjects__code__icontains=query) |
+            Q(relatedSubjects__name__icontains=query)
+        ).distinct()
+
+    paginator = Paginator(credentials, 10)
+    page_obj = paginator.get_page(page)
+
+    return render(request, "instructors/credentials/list.html", {
+        "credentials": page_obj,
+        "query": query,
+    })
+
+
+@login_required
+@has_role('instructor')
+def credentialListLive(request):
+    login = UserLogin.objects.filter(user=request.user).first()
+    if not login or not login.instructor:
+        return JsonResponse({"error": "Instructor not found"}, status=400)
+
+    instructor = login.instructor
+    query = request.GET.get("q", "").strip()
+    page = int(request.GET.get("page", 1))
+
+    credentials = InstructorCredentials.objects.filter(
+        instructor=instructor
+    ).prefetch_related("relatedSubjects").order_by("-dateEarned")
+
+    if query:
+        credentials = credentials.filter(
+            Q(title__icontains=query) |
+            Q(type__icontains=query) |
+            Q(description__icontains=query) |
+            Q(issuer__icontains=query) |
+            Q(relatedSubjects__code__icontains=query) |
+            Q(relatedSubjects__name__icontains=query)
+        ).distinct()
+
+    paginator = Paginator(credentials, 10)
+    page_obj = paginator.get_page(page)
+
+    html = render_to_string("instructors/credentials/_table.html", {
+        "credentials": page_obj,
+    }, request=request)
+
+    return JsonResponse({
+        "html": html,
+        "page": page_obj.number,
+        "num_pages": paginator.num_pages,
+        "has_next": page_obj.has_next(),
+        "has_previous": page_obj.has_previous(),
+    })
 
 
 @login_required
@@ -239,7 +417,7 @@ def credentialCreate(request):
         type = request.POST.get('type')
         title = request.POST.get('title')
         description = request.POST.get('description')
-        relatedSubjectIds = request.POST.getlist('relatedSubjects')  # ✅ this is valid in view
+        relatedSubjectIds = request.POST.getlist('relatedSubjects')
         isVerified = request.POST.get('isVerified') == 'on'
         documentUrl = request.POST.get('documentUrl')
         dateEarned = request.POST.get('dateEarned')
@@ -309,6 +487,7 @@ def credentialDelete(request, credentialId):
     messages.success(request, "Credential deleted successfully.")
     return redirect('credentialList')
 
+
 # ---------- Instructor Preferences ----------
 @login_required
 @has_role('instructor')
@@ -318,8 +497,69 @@ def preferenceList(request):
         messages.error(request, "Instructor account not found.")
         return redirect('home')
 
-    preferences = InstructorSubjectPreference.objects.filter(instructor=login.instructor)
-    return render(request, 'instructors/preferences/list.html', {'preferences': preferences})
+    instructor = login.instructor
+    query = request.GET.get("q", "").strip()
+    page = int(request.GET.get("page", 1))
+
+    preferences = InstructorSubjectPreference.objects.filter(
+        instructor=instructor
+    ).select_related("subject").order_by("subject__code")
+
+    if query:
+        preferences = preferences.filter(
+            Q(subject__code__icontains=query) |
+            Q(subject__name__icontains=query) |
+            Q(preferenceType__icontains=query) |
+            Q(reason__icontains=query)
+        )
+
+    paginator = Paginator(preferences, 10)
+    page_obj = paginator.get_page(page)
+
+    return render(request, "instructors/preferences/list.html", {
+        "preferences": page_obj,
+        "query": query,
+    })
+
+
+@login_required
+@has_role('instructor')
+def preferenceListLive(request):
+    login = UserLogin.objects.filter(user=request.user).first()
+    if not login or not login.instructor:
+        return JsonResponse({"error": "Instructor not found"}, status=400)
+
+    instructor = login.instructor
+    query = request.GET.get("q", "").strip()
+    page = int(request.GET.get("page", 1))
+
+    preferences = InstructorSubjectPreference.objects.filter(
+        instructor=instructor
+    ).select_related("subject").order_by("subject__code")
+
+    if query:
+        preferences = preferences.filter(
+            Q(subject__code__icontains=query) |
+            Q(subject__name__icontains=query) |
+            Q(preferenceType__icontains=query) |
+            Q(reason__icontains=query)
+        )
+
+    paginator = Paginator(preferences, 10)
+    page_obj = paginator.get_page(page)
+
+    html = render_to_string("instructors/preferences/_table.html", {
+        "preferences": page_obj,
+    }, request=request)
+
+    return JsonResponse({
+        "html": html,
+        "page": page_obj.number,
+        "num_pages": paginator.num_pages,
+        "has_next": page_obj.has_next(),
+        "has_previous": page_obj.has_previous(),
+    })
+
 
 
 @login_required
@@ -406,8 +646,66 @@ def teachingHistoryList(request):
         messages.error(request, "Instructor account not found.")
         return redirect('home')
 
-    histories = TeachingHistory.objects.filter(instructor=login.instructor).select_related('subject', 'semester').order_by('-createdAt')
-    return render(request, 'instructors/teachingHistory/list.html', {'histories': histories})
+    instructor = login.instructor
+    query = request.GET.get("q", "").strip()
+    page = int(request.GET.get("page", 1))
+
+    histories = TeachingHistory.objects.filter(
+        instructor=instructor
+    ).select_related("subject", "semester").order_by("-createdAt")
+
+    if query:
+        histories = histories.filter(
+            Q(subject__code__icontains=query) |
+            Q(subject__name__icontains=query) |
+            Q(semester__name__icontains=query)
+        )
+
+    paginator = Paginator(histories, 10)
+    page_obj = paginator.get_page(page)
+
+    return render(request, "instructors/teachingHistory/list.html", {
+        "histories": page_obj,
+        "query": query,
+    })
+
+
+@login_required
+@has_role('instructor')
+def teachingHistoryListLive(request):
+    login = UserLogin.objects.filter(user=request.user).first()
+    if not login or not login.instructor:
+        return JsonResponse({"error": "Instructor not found"}, status=400)
+
+    instructor = login.instructor
+    query = request.GET.get("q", "").strip()
+    page = int(request.GET.get("page", 1))
+
+    histories = TeachingHistory.objects.filter(
+        instructor=instructor
+    ).select_related("subject", "semester").order_by("-createdAt")
+
+    if query:
+        histories = histories.filter(
+            Q(subject__code__icontains=query) |
+            Q(subject__name__icontains=query) |
+            Q(semester__name__icontains=query)
+        )
+
+    paginator = Paginator(histories, 10)
+    page_obj = paginator.get_page(page)
+
+    html = render_to_string("instructors/teachingHistory/_table.html", {
+        "histories": page_obj,
+    }, request=request)
+
+    return JsonResponse({
+        "html": html,
+        "page": page_obj.number,
+        "num_pages": paginator.num_pages,
+        "has_next": page_obj.has_next(),
+        "has_previous": page_obj.has_previous(),
+    })
 
 
 @login_required

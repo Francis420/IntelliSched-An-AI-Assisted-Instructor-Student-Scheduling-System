@@ -1,0 +1,35 @@
+<div class="overflow-x-auto">
+  <table class="min-w-full table-auto text-sm text-left text-gray-600 border rounded-lg">
+    <thead class="bg-gray-100 text-gray-700 uppercase text-xs">
+      <tr>
+        <th class="px-4 py-3">Subject</th>
+        <th class="px-4 py-3">Preference</th>
+        <th class="px-4 py-3">Reason</th>
+        <th class="px-4 py-3">Actions</th>
+      </tr>
+    </thead>
+    <tbody class="bg-white divide-y divide-gray-200">
+      {% if preferences %}
+        {% for p in preferences %}
+        <tr>
+          <td class="px-4 py-3">{{ p.subject.code }} - {{ p.subject.name }}</td>
+          <td class="px-4 py-3">{{ p.preferenceType }}</td>
+          <td class="px-4 py-3">{{ p.reason|default:"—" }}</td>
+          <td class="px-4 py-3 space-x-2">
+            <a href="{% url 'preferenceUpdate' p.preferenceId %}" class="inline-block px-3 py-1 bg-yellow-400 text-white text-xs font-medium rounded hover:bg-yellow-500 transition">
+              Update
+            </a>
+            <a href="{% url 'preferenceDelete' p.preferenceId %}" class="inline-block px-3 py-1 bg-red-500 text-white text-xs font-medium rounded hover:bg-red-600 transition">
+              Delete
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr>
+          <td colspan="4" class="text-center py-6 text-gray-500">No preferences found.</td>
+        </tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>

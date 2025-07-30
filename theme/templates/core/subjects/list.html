@@ -25,7 +25,8 @@
 
   <!-- Add Subject Button -->
   <div class="mb-4 text-right">
-    <a href="{% url 'subjectCreate' %}?curriculumId={{ selectedCurriculumId }}"
+    <a id="addSubjectBtn"
+       href="{% url 'subjectCreate' %}?curriculumId={{ selectedCurriculumId }}"
        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition">
       + Add Subject
     </a>
@@ -38,9 +39,20 @@
 </div>
 
 <script>
+const searchInput = document.getElementById("subjectSearch");
+const curriculumSelect = document.getElementById("curriculumSelect");
+
+// Restore search query from localStorage
+if (localStorage.getItem("subjectSearch")) {
+  searchInput.value = localStorage.getItem("subjectSearch");
+}
+
 function fetchSubjects(page = 1) {
-  const q = document.getElementById("subjectSearch").value;
-  const curriculumId = document.getElementById("curriculumSelect").value;
+  const q = searchInput.value;
+  const curriculumId = curriculumSelect.value;
+
+  // Save query for persistence
+  localStorage.setItem("subjectSearch", q);
 
   const url = new URL(window.location);
   url.searchParams.set("q", q);
@@ -52,6 +64,9 @@ function fetchSubjects(page = 1) {
     .then(response => response.json())
     .then(data => {
       document.getElementById("subjectsContainer").innerHTML = data.html;
+      document.getElementById("addSubjectBtn").href = `{% url 'subjectCreate' %}?curriculumId=${curriculumId}`;
+
+      // Rebind pagination links
       document.querySelectorAll(".live-page-link").forEach(link => {
         link.addEventListener("click", function(e) {
           e.preventDefault();
@@ -61,10 +76,21 @@ function fetchSubjects(page = 1) {
     });
 }
 
+// Debounce search
 let timeout = null;
-document.getElementById("subjectSearch").addEventListener("input", () => {
+searchInput.addEventListener("input", () => {
   clearTimeout(timeout);
   timeout = setTimeout(() => fetchSubjects(1), 300);
 });
+
+// Fetch on curriculum change
+curriculumSelect.addEventListener("change", () => {
+  fetchSubjects(1);
+});
+
+// Initial load if localStorage had a query
+if (searchInput.value) {
+  fetchSubjects(1);
+}
 </script>
 {% endblock %}

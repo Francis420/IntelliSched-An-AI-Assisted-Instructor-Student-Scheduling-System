@@ -54,12 +54,6 @@ class InstructorExperience(models.Model):
             raise ValidationError("End date cannot be before start date.")
 
 
-
-
-
-
-
-
 # ---------- Teaching History ---------- 60
 # This model tracks the history of subjects taught by instructors, including the number of times taught.
 # It will help in analyzing teaching patterns and subject expertise.
