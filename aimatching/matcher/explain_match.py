@@ -7,7 +7,6 @@ def generate_mistral_explanation(subject, instructor, full_name, scores, weighte
     try:
         subject_text = get_subject_text(subject)
 
-        # Evidence
         exp_text = get_experience_text(instructor)
         cred_text = get_credentials_text(instructor)
 

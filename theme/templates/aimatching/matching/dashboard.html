@@ -22,12 +22,18 @@
         <tr>
           <td class="px-3 py-2 border">{{ forloop.counter }}</td>
           <td class="px-3 py-2 border">{{ match.instructor.user.get_full_name }}</td>
-          <td class="px-3 py-2 border font-bold text-green-700">{{ match.latestHistory.confidenceScore|floatformat:2 }}</td>
+          <td class="px-3 py-2 border font-bold text-green-700">
+            {{ match.latestHistory.confidenceScore|floatformat:2 }}
+          </td>
           <td class="px-3 py-2 border">{{ match.latestHistory.primaryFactor }}</td>
           <td class="px-3 py-2 border">{{ match.latestHistory.explanation|truncatechars:80 }}</td>
         </tr>
         {% empty %}
-        <tr><td colspan="5" class="px-3 py-2 text-center">No recommended matches yet.</td></tr>
+        <tr>
+          <td colspan="5" class="px-3 py-2 text-center">
+            No recommended matches yet.
+          </td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>

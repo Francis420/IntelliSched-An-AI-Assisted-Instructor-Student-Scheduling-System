@@ -4,88 +4,65 @@
 
   <h2 class="text-2xl font-bold mb-4">Matching Results for Batch {{ batchId }}</h2>
 
-  <!-- Filters -->
-  <form method="get" class="flex gap-4 mb-4">
-    <select name="subject" class="border rounded p-2">
-      <option value="">All Subjects</option>
-      {% for match in matches.paginator.object_list %}
-        <option value="{{ match.subject.id }}" {% if subject_id == match.subject.id|stringformat:"s" %}selected{% endif %}>
-          {{ match.subject.code }} - {{ match.subject.name }}
-        </option>
-      {% endfor %}
-    </select>
-
-    <select name="instructor" class="border rounded p-2">
-      <option value="">All Instructors</option>
-      {% for match in matches.paginator.object_list %}
-        <option value="{{ match.instructor.id }}" {% if instructor_id == match.instructor.id|stringformat:"s" %}selected{% endif %}>
-          {{ match.instructor.user.first_name }} {{ match.instructor.user.last_name }}
-        </option>
-      {% endfor %}
-    </select>
-
-    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Filter</button>
-  </form>
-
-  <!-- Results Table -->
-  <div class="overflow-x-auto">
-    <table class="min-w-full border">
-      <thead>
-        <tr class="bg-gray-100">
-          <th class="px-4 py-2 border">Instructor</th>
-          <th class="px-4 py-2 border">Subject</th>
-          {% for col, label in [
-              ('teaching', 'Teaching'),
-              ('credentials', 'Credentials'),
-              ('experience', 'Experience'),
-              ('preference', 'Preference'),
-              ('total', 'Total')
-          ] %}
-          <th class="px-4 py-2 border">
-            <a href="?sort={{ col }}&dir={% if sort_by == col and direction == 'asc' %}desc{% else %}asc{% endif %}&subject={{ subject_id }}&instructor={{ instructor_id }}">
-              {{ label }}
-              {% if sort_by == col %}
-                {% if direction == 'asc' %}▲{% else %}▼{% endif %}
-              {% endif %}
-            </a>
-          </th>
-          {% endfor %}
-          <th class="px-4 py-2 border">Primary Factor</th>
-          <th class="px-4 py-2 border">Explanation</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for match in matches %}
-        <tr>
-          <td class="px-4 py-2 border">{{ match.instructor.user.get_full_name }}</td>
-          <td class="px-4 py-2 border">{{ match.subject.code }}</td>
-          <td class="px-4 py-2 border">{{ match.latestHistory.teachingScore|floatformat:2 }}</td>
-          <td class="px-4 py-2 border">{{ match.latestHistory.credentialScore|floatformat:2 }}</td>
-          <td class="px-4 py-2 border">{{ match.latestHistory.experienceScore|floatformat:2 }}</td>
-          <td class="px-4 py-2 border">{{ match.latestHistory.preferenceScore|floatformat:2 }}</td>
-          <td class="px-4 py-2 border font-bold">{{ match.latestHistory.confidenceScore|floatformat:2 }}</td>
-          <td class="px-4 py-2 border">{{ match.latestHistory.primaryFactor }}</td>
-          <td class="px-4 py-2 border">{{ match.latestHistory.explanation }}</td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="9" class="px-4 py-2 text-center">No matches found.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  <!-- Search Filters -->
+  <div class="flex gap-4 mb-4">
+    <input type="text" id="instructor-search" class="border rounded p-2 flex-1"
+       placeholder="Search Instructor..." value="{{ instructor_query|default:'' }}">
+  <input type="text" id="subject-search" class="border rounded p-2 flex-1"
+        placeholder="Search Subject..." value="{{ subject_query|default:'' }}">
   </div>
 
-  <!-- Pagination -->
-  <div class="mt-4 flex justify-center">
-    {% if matches.has_previous %}
-      <a href="?page={{ matches.previous_page_number }}&sort={{ sort_by }}&dir={{ direction }}&subject={{ subject_id }}&instructor={{ instructor_id }}"
-         class="px-3 py-1 border rounded bg-gray-200">Previous</a>
-    {% endif %}
-    <span class="px-4 py-2">Page {{ matches.number }} of {{ matches.paginator.num_pages }}</span>
-    {% if matches.has_next %}
-      <a href="?page={{ matches.next_page_number }}&sort={{ sort_by }}&dir={{ direction }}&subject={{ subject_id }}&instructor={{ instructor_id }}"
-         class="px-3 py-1 border rounded bg-gray-200">Next</a>
-    {% endif %}
+  <div id="results-container">
+    {% include "aimatching/matching/_results_table.html" %}
   </div>
 
 </div>
+
+<script>
+function fetchResults(page = 1) {
+  const subject = document.getElementById("subject-search").value;
+  const instructor = document.getElementById("instructor-search").value;
+
+  const url = new URL(window.location);
+  url.searchParams.set("subject", subject);
+  url.searchParams.set("instructor", instructor);
+  url.searchParams.set("page", page);
+  window.history.replaceState({}, "", url);
+
+  fetch(`{% url 'matchingResultsLive' batchId=batchId %}?subject=${encodeURIComponent(subject)}&instructor=${encodeURIComponent(instructor)}&page=${page}`)
+    .then(response => response.json())
+    .then(data => {
+      document.getElementById("results-container").innerHTML = data.html;
+      document.querySelectorAll(".live-page-link").forEach(link => {
+        link.addEventListener("click", function(e) {
+          e.preventDefault();
+          fetchResults(this.dataset.page);
+        });
+      });
+    });
+}
+
+function changeSort(col) {
+  const url = new URL(window.location);
+  let currentSort = url.searchParams.get("sort") || "total";
+  let dir = url.searchParams.get("dir") || "desc";
+  if (currentSort === col) {
+    dir = dir === "asc" ? "desc" : "asc";
+  } else {
+    dir = "asc";
+  }
+  url.searchParams.set("sort", col);
+  url.searchParams.set("dir", dir);
+  window.history.replaceState({}, "", url);
+  fetchResults(1);
+}
+
+let timeout = null;
+document.querySelectorAll("#subject-search, #instructor-search").forEach(input => {
+  input.addEventListener("input", () => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => fetchResults(1), 300);
+  });
+});
+</script>
 {% endblock %}

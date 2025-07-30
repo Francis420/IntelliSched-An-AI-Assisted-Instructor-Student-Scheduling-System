@@ -1,5 +1,4 @@
 from django.db import transaction
-
 from scheduling.models import Semester, Subject
 from core.models import Instructor
 from aimatching.matcher.data_extractors import (
@@ -19,21 +18,17 @@ from aimatching.models import (
 )
 
 
-
-
-# Load CrossEncoder once globally
 cross_encoder = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-12-v2")
-
 
 def run_matching(semester_id, batch_id, generated_by=None):
     from aimatching.tasks import notify_progress
     semester = Semester.objects.get(pk=semester_id)
 
-    # ✅ Map semester.term → Subject.defaultTerm
+    # Map semester.term → Subject.defaultTerm
     term_map = {"1st": 0, "2nd": 1, "Midyear": 2}
     term_value = term_map.get(semester.term)
 
-    # ✅ Get subjects active for this semester
+    # Get subjects active for this semester
     subjects = Subject.objects.filter(defaultTerm=term_value, isActive=True)
     instructors = Instructor.objects.all()
 

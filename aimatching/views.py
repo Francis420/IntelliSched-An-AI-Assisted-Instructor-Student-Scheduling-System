@@ -11,6 +11,14 @@ from django.http import JsonResponse
 from django.core.paginator import Paginator
 from core.models import User
 from aimatching.tasks import run_matching_task
+from django.core.cache import cache
+from django.db import models
+from django.template.loader import render_to_string
+from django.db.models import Window, F, Q, OuterRef, Subquery, IntegerField, Value
+from django.db.models.functions import Rank
+from django.db.models.functions import Concat
+
+
 
 
 # ---------- MATCHING ----------
@@ -183,62 +191,119 @@ def matchingProgressPage(request, batchId):
 
 @login_required
 @has_role('deptHead')
-def matchingResults(request, batchId):
-    subject_id = request.GET.get('subject')
-    instructor_id = request.GET.get('instructor')
-    sort_by = request.GET.get('sort', 'total')  # default sort by total confidence
-    direction = request.GET.get('dir', 'desc')  # asc or desc
+def matchingResultsLive(request, batchId):
+    return _matching_results_common(request, batchId, live=True)
 
-    # Get the semester for this batch
+
+@login_required
+@has_role('deptHead')
+def matchingResults(request, batchId):
+    return _matching_results_common(request, batchId, live=False)
+
+
+def _matching_results_common(request, batchId, live=False):
+    subject_query = request.GET.get('subject', '').strip()
+    instructor_query = request.GET.get('instructor', '').strip()
+    sort_by = request.GET.get('sort', 'rank')
+    direction = request.GET.get('dir', 'asc')
+    page = int(request.GET.get('page', 1))
+
     progress = get_object_or_404(MatchingProgress, batchId=batchId)
     semester = progress.semester
 
-    # Map semester term -> subject defaultTerm
     term_map = {'1st': 0, '2nd': 1, 'Midyear': 2}
     valid_subjects = Subject.objects.filter(
         defaultTerm=term_map[semester.term],
         isActive=True
     ).values_list("subjectId", flat=True)
 
-    matches = InstructorSubjectMatch.objects.filter(
+    cache_key_base = f"ranked_matches:{batchId}:{semester.term}"
+    ranked_matches = cache.get(cache_key_base)
+
+    if not ranked_matches:
+        qs = InstructorSubjectMatch.objects.filter(
+            batchId=batchId,
+            subject_id__in=valid_subjects
+        ).select_related('instructor', 'subject', 'latestHistory')
+
+        qs = qs.annotate(
+            fixed_rank=Window(
+                expression=Rank(),
+                partition_by=[F("subject_id")],
+                order_by=F("latestHistory__confidenceScore").desc()
+            )
+        )
+
+        ranked_matches = list(
+            qs.values("matchId", "subject_id", "fixed_rank")
+        )
+        cache.set(cache_key_base, ranked_matches, timeout=300)
+
+    rank_map = {r["matchId"]: r["fixed_rank"] for r in ranked_matches}
+
+    qs = InstructorSubjectMatch.objects.filter(
         batchId=batchId,
         subject_id__in=valid_subjects
-    ).select_related(
-        'instructor', 'subject', 'latestHistory'
+    ).select_related('instructor', 'subject', 'latestHistory')
+
+    if subject_query:
+        qs = qs.filter(
+            Q(subject__name__icontains=subject_query) |
+            Q(subject__code__icontains=subject_query)
+        )
+    qs = qs.annotate(
+        full_name=Concat(
+            F("instructor__userlogin__user__firstName"),
+            Value(" "),
+            F("instructor__userlogin__user__lastName")
+        )
     )
 
-    if subject_id:
-        matches = matches.filter(subject_id=subject_id)
-    if instructor_id:
-        matches = matches.filter(instructor_id=instructor_id)
+    if instructor_query:
+        qs = qs.filter(full_name__icontains=instructor_query)
 
-    # Map sort options to model fields
+    results = []
+    for obj in qs:
+        obj.fixed_rank = rank_map.get(obj.matchId, None)
+        results.append(obj)
+
     sort_map = {
-        "teaching": "latestHistory__teachingScore",
-        "credentials": "latestHistory__credentialScore",
-        "experience": "latestHistory__experienceScore",
-        "preference": "latestHistory__preferenceScore",
-        "total": "latestHistory__confidenceScore",
+        "rank": lambda x: (x.fixed_rank if x.fixed_rank is not None else 9999),
+        "teaching": lambda x: x.latestHistory.teachingScore if x.latestHistory else 0,
+        "credentials": lambda x: x.latestHistory.credentialScore if x.latestHistory else 0,
+        "experience": lambda x: x.latestHistory.experienceScore if x.latestHistory else 0,
+        "preference": lambda x: x.latestHistory.preferenceScore if x.latestHistory else 0,
+        "total": lambda x: x.latestHistory.confidenceScore if x.latestHistory else 0,
     }
 
-    sort_field = sort_map.get(sort_by, "latestHistory__confidenceScore")
-    if direction == "desc":
-        sort_field = "-" + sort_field
-    matches = matches.order_by(sort_field)
+    key_func = sort_map.get(sort_by, sort_map["rank"])
+    results = sorted(results, key=key_func, reverse=(direction == "desc"))
 
-    paginator = Paginator(matches, 10)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    paginator = Paginator(results, 10)
+    page_obj = paginator.get_page(page)
 
-    return render(request, 'aimatching/matching/results.html', {
+    context = {
         "matches": page_obj,
         "batchId": batchId,
-        "subject_id": subject_id,
-        "instructor_id": instructor_id,
+        "semester": semester,
+        "columns": [
+            ("teaching", "Teaching"),
+            ("credentials", "Credentials"),
+            ("experience", "Experience"),
+            ("preference", "Preference"),
+            ("total", "Total Confidence Score"),
+        ],
         "sort_by": sort_by,
         "direction": direction,
-        "semester": semester,
-    })
+        "subject_query": subject_query,
+        "instructor_query": instructor_query,
+    }
+
+    if live:
+        html = render_to_string("aimatching/matching/_results_table.html", context, request=request)
+        return JsonResponse({"html": html, "cached": True})
+    else:
+        return render(request, 'aimatching/matching/results.html', context)
 
 
 # ---------- CONFIG ----------

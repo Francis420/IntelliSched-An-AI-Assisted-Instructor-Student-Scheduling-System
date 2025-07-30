@@ -1,0 +1,52 @@
+<div class="overflow-x-auto">
+  <table class="min-w-full border">
+    <thead>
+    <tr class="bg-gray-100">
+        <th class="px-4 py-2 border">Rank</th>
+        <th class="px-4 py-2 border">Instructor Name</th>
+        <th class="px-4 py-2 border">Subject Code</th>
+        {% for col, label in columns %}
+        <th class="px-4 py-2 border">
+            <a href="#" onclick="changeSort('{{ col }}')">
+            {{ label }}
+            {% if sort_by == col %}
+                {% if direction == 'asc' %}▲{% else %}▼{% endif %}
+            {% endif %}
+            </a>
+        </th>
+        {% endfor %}
+        <th class="px-4 py-2 border">Primary Factor</th>
+        <th class="px-4 py-2 border">Explanation</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for match in matches %}
+    <tr>
+        <td class="px-4 py-2 border font-semibold">{{ match.fixed_rank }}</td>
+        <td class="px-4 py-2 border">{{ match.instructor.full_name }}</td>
+        <td class="px-4 py-2 border">{{ match.subject.code }} - {{ match.subject.name }}</td>
+        <td class="px-4 py-2 border">{{ match.latestHistory.teachingScore|floatformat:2 }}</td>
+        <td class="px-4 py-2 border">{{ match.latestHistory.credentialScore|floatformat:2 }}</td>
+        <td class="px-4 py-2 border">{{ match.latestHistory.experienceScore|floatformat:2 }}</td>
+        <td class="px-4 py-2 border">{{ match.latestHistory.preferenceScore|floatformat:2 }}</td>
+        <td class="px-4 py-2 border font-bold">{{ match.latestHistory.confidenceScore|floatformat:2 }}</td>
+        <td class="px-4 py-2 border">{{ match.latestHistory.primaryFactor }}</td>
+        <td class="px-4 py-2 border">{{ match.latestHistory.explanation }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="11" class="px-4 py-2 text-center">No matches found.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Pagination -->
+<div class="mt-4 flex justify-center">
+  {% if matches.has_previous %}
+    <a href="#" class="px-3 py-1 border rounded bg-gray-200 live-page-link" data-page="{{ matches.previous_page_number }}">Previous</a>
+  {% endif %}
+  <span class="px-4 py-2">Page {{ matches.number }} of {{ matches.paginator.num_pages }}</span>
+  {% if matches.has_next %}
+    <a href="#" class="px-3 py-1 border rounded bg-gray-200 live-page-link" data-page="{{ matches.next_page_number }}">Next</a>
+  {% endif %}
+</div>

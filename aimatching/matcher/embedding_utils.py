@@ -13,7 +13,7 @@ INSTRUCTIONS = {
     "credentials": "Embed this instructor's academic and professional qualifications for teaching IT",
     "experience": "Embed this instructor's relevant work experience for teaching an IT subject",
     "preference": "Embed this instructor's preferred IT subjects to teach"
-} #make this editable in the admin panel
+}
 
 def get_model():
     global _model

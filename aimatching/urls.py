@@ -13,4 +13,5 @@ urlpatterns = [
     path('matching/progress/<uuid:batchId>/', views.matchingProgressPage, name='matchingProgressPage'),
     path('matching/progress/data/<uuid:batchId>/', views.matchingProgress, name='matchingProgress'),
     path('matching/results/<str:batchId>/', views.matchingResults, name="matchingResults"),
+    path('matching/results/<str:batchId>/live/',views.matchingResultsLive, name='matchingResultsLive'),
 ]
