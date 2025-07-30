@@ -6,7 +6,6 @@ from .models import (
     Room, 
     Schedule, 
     ScheduleControl, 
-    Enrollment, 
     GenEdSchedule,  
     )
 
@@ -18,7 +17,6 @@ admin.site.register(Section)
 admin.site.register(Room)
 admin.site.register(Schedule)
 admin.site.register(ScheduleControl)
-admin.site.register(Enrollment)
 admin.site.register(GenEdSchedule)
 
 
