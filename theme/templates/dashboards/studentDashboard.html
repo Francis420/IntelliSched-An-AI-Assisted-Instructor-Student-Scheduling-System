@@ -3,10 +3,9 @@
 
 {% block content %}
 <div class="max-w-6xl mx-auto mt-10 px-4 sm:px-6 lg:px-8">
-  <!-- Header -->
   <div class="bg-white p-8 rounded-2xl shadow mb-8">
     <h1 class="text-3xl font-bold text-gray-800">
-      Welcome, {{ student.user.firstName }}!
+      Welcome, {{ request.user.firstName|default:"Student" }}!
     </h1>
     <p class="mt-4 text-gray-600 text-lg">
       Here’s your academic overview. Use the sidebar to manage your subjects and schedules.

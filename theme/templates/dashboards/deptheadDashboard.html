@@ -5,7 +5,9 @@
 <div class="max-w-6xl mx-auto mt-10 px-4 sm:px-6 lg:px-8">
   <!-- Header -->
   <div class="bg-white p-8 rounded-2xl shadow mb-8">
-    <h1 class="text-3xl font-bold text-gray-800">Welcome, Department Head!</h1>
+    <h1 class="text-3xl font-bold text-gray-800">
+      Welcome, {{ request.user.firstName|default:"Department Head" }}!
+    </h1>
     <p class="mt-4 text-gray-600 text-lg">
       This is your dashboard. Use the sidebar to navigate through subjects, instructors, students, and scheduling tools.
     </p>
