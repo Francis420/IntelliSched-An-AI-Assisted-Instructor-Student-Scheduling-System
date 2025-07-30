@@ -107,6 +107,14 @@ class Instructor(models.Model):
     @property
     def subjectPreferences(self):
         return self.instructorsubjectpreference_set.all()
+    
+    @property
+    def full_name(self):
+        user = self.userlogin_set.select_related("user").first()
+        if user and user.user:
+            return f"{user.user.firstName} {user.user.lastName}"
+        return self.instructorId
+
 
     def __str__(self):
         return self.instructorId

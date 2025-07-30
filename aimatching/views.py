@@ -30,8 +30,13 @@ def matchingDashboard(request):
 
     batchId = request.GET.get('batchId')
     semester_id = request.GET.get('semester')
+    subject_query = request.GET.get('subject', '').strip()
 
-    semester = get_object_or_404(Semester, pk=semester_id) if semester_id else Semester.objects.filter(isActive=True).first()
+    semester = (
+        get_object_or_404(Semester, pk=semester_id)
+        if semester_id
+        else Semester.objects.filter(isActive=True).first()
+    )
 
     if not semester:
         messages.error(request, "❌ No active semester found.")
@@ -55,25 +60,39 @@ def matchingDashboard(request):
 
     subjects = Subject.objects.filter(defaultTerm=default_term, isActive=True)
 
-    print(f"[DEBUG] Semester: {semester.name} | Subjects found: {subjects.count()}")
+    # ✅ filter by search
+    if subject_query:
+        subjects = subjects.filter(
+            Q(name__icontains=subject_query) | Q(code__icontains=subject_query)
+        )
 
     for subject in subjects:
-        matches = InstructorSubjectMatch.objects.filter(
-            batchId=batchId,
-            subject=subject,
-            isLatest=True,   # keep only latest to avoid stale data
-        ).select_related('instructor', 'latestHistory') \
-         .order_by('-latestHistory__confidenceScore')[:5]
+        matches = (
+            InstructorSubjectMatch.objects.filter(
+                batchId=batchId,
+                subject=subject,
+                isLatest=True,
+            )
+            .select_related('instructor', 'latestHistory')
+            .order_by('-latestHistory__confidenceScore')[:5]
+        )
+
+        # Attach readable names using Instructor.full_name property
+        for m in matches:
+            m.instructor_display_name = m.instructor.full_name
 
         subject.top_matches = matches
-        print(f"[DEBUG] Subject {subject.code} - Matches loaded: {matches.count()}")
 
-    return render(request, 'aimatching/matching/dashboard.html', {
-        "subjects": subjects,
-        "batchId": batchId,
-        "semester": semester,
-    })
-
+    return render(
+        request,
+        'aimatching/matching/dashboard.html',
+        {
+            "subjects": subjects,
+            "batchId": batchId,
+            "semester": semester,
+            "subject_query": subject_query,
+        },
+    )
 
 
 @login_required

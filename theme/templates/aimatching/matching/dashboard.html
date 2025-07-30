@@ -4,45 +4,98 @@
 
   <h2 class="text-2xl font-bold mb-6">Top Recommended Instructors per Subject</h2>
 
-  {% for subject in subjects %}
-  <div class="mb-6 border rounded-lg p-4 bg-gray-50">
-    <h3 class="text-xl font-semibold mb-3">{{ subject.code }} - {{ subject.name }}</h3>
-    <table class="min-w-full border text-sm">
-      <thead>
-        <tr class="bg-gray-200">
-          <th class="px-3 py-2 border">Rank</th>
-          <th class="px-3 py-2 border">Instructor</th>
-          <th class="px-3 py-2 border">Total Score</th>
-          <th class="px-3 py-2 border">Primary Factor</th>
-          <th class="px-3 py-2 border">Explanation</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for match in subject.top_matches %}
-        <tr>
-          <td class="px-3 py-2 border">{{ forloop.counter }}</td>
-          <td class="px-3 py-2 border">{{ match.instructor.user.get_full_name }}</td>
-          <td class="px-3 py-2 border font-bold text-green-700">
-            {{ match.latestHistory.confidenceScore|floatformat:2 }}
-          </td>
-          <td class="px-3 py-2 border">{{ match.latestHistory.primaryFactor }}</td>
-          <td class="px-3 py-2 border">{{ match.latestHistory.explanation|truncatechars:80 }}</td>
-        </tr>
-        {% empty %}
-        <tr>
-          <td colspan="5" class="px-3 py-2 text-center">
-            No recommended matches yet.
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    <div class="mt-2 text-right">
-      <a href="{% url 'matchingResults' batchId=batchId %}?subject={{ subject.id }}"
-         class="text-blue-600 hover:underline">View all instructors →</a>
+  <!-- 🔍 Search + View All -->
+  <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center space-x-2 w-full max-w-lg">
+      <input type="text" 
+             id="subjectSearch" 
+             placeholder="Search subjects..." 
+             class="border px-4 py-2 rounded-lg w-full">
     </div>
+    <a href="{% url 'matchingResults' batchId=batchId %}" 
+       class="ml-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+       id="viewAllBtn">
+      View All
+    </a>
   </div>
-  {% endfor %}
 
+  <!-- Results -->
+  <div id="subjectsContainer">
+    {% for subject in subjects %}
+    <div class="mb-6 border rounded-lg p-4 bg-gray-50 subject-card"
+         data-name="{{ subject.name|lower }}"
+         data-code="{{ subject.code|lower }}">
+      <h3 class="text-xl font-semibold mb-3">{{ subject.code }} - {{ subject.name }}</h3>
+      <table class="min-w-full border text-sm">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="px-3 py-2 border">Rank</th>
+            <th class="px-3 py-2 border">Instructor</th>
+            <th class="px-3 py-2 border">Total Score</th>
+            <th class="px-3 py-2 border">Primary Factor</th>
+            <th class="px-3 py-2 border">Explanation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for match in subject.top_matches %}
+          <tr>
+            <td class="px-3 py-2 border">{{ forloop.counter }}</td>
+            <td class="px-3 py-2 border">{{ match.instructor.full_name }}</td>
+            <td class="px-3 py-2 border font-bold text-green-700">
+              {{ match.latestHistory.confidenceScore|floatformat:2 }}
+            </td>
+            <td class="px-3 py-2 border">{{ match.latestHistory.primaryFactor }}</td>
+            <td class="px-3 py-2 border">{{ match.latestHistory.explanation|truncatechars:80 }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="px-3 py-2 text-center">
+              No recommended matches yet.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% empty %}
+    <p class="text-gray-600">No subjects found.</p>
+    {% endfor %}
+  </div>
 </div>
+
+<script>
+  const searchInput = document.getElementById('subjectSearch');
+  const subjectCards = document.querySelectorAll('.subject-card');
+  const viewAllBtn = document.getElementById('viewAllBtn');
+  let typingTimer;
+
+  // Restore saved search from localStorage
+  if (localStorage.getItem("subjectSearchQuery")) {
+    searchInput.value = localStorage.getItem("subjectSearchQuery");
+    filterSubjects(searchInput.value);
+  }
+
+  searchInput.addEventListener('keyup', () => {
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => {
+      const query = searchInput.value;
+      localStorage.setItem("subjectSearchQuery", query); // save search
+      filterSubjects(query);
+    }, 300); // debounce
+  });
+
+  // Reset search when clicking "View All"
+  viewAllBtn.addEventListener('click', () => {
+    localStorage.removeItem("subjectSearchQuery");
+  });
+
+  function filterSubjects(query) {
+    const q = query.toLowerCase();
+    subjectCards.forEach(card => {
+      const name = card.dataset.name;
+      const code = card.dataset.code;
+      card.style.display = (name.includes(q) || code.includes(q)) ? 'block' : 'none';
+    });
+  }
+</script>
 {% endblock %}
