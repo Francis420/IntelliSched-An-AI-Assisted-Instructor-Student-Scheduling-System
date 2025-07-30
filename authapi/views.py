@@ -5,13 +5,17 @@ from django.contrib.auth.decorators import login_required
 from rest_framework.authtoken.models import Token
 from django.core.exceptions import PermissionDenied
 from functools import wraps
-from core.models import User, UserLogin
+from core.models import User, UserLogin, Student, Role, Instructor
 from django.urls import reverse
-
 from django.contrib.auth import authenticate, login 
 from instructors.models import InstructorExperience, InstructorCredentials, InstructorAvailability, InstructorSubjectPreference, TeachingHistory
 from itertools import chain
 from operator import attrgetter
+from scheduling.models import Curriculum, Semester, Subject, Room
+from aimatching.models import MatchingRun
+from operator import itemgetter
+from students.models import Enrollment, Attendance
+
 
 def has_role(required_role):
     def decorator(view_func):
@@ -81,11 +85,75 @@ def logoutView(request):
     return redirect('login')
 
 
-
 @login_required
 @has_role('deptHead')
 def deptHeadDashboard(request):
-    return render(request, 'dashboards/deptHeadDashboard.html')
+    # Counts for cards
+    curriculum_count = Curriculum.objects.count()
+    semester_count = Semester.objects.count()
+    subject_count = Subject.objects.count()
+    instructor_count = Instructor.objects.count()
+    student_count = Student.objects.count()
+    room_count = Room.objects.count()
+    matching_runs = MatchingRun.objects.count()
+
+    # Recent activities: normalize timestamp key
+    activities = []
+
+    for obj in Curriculum.objects.order_by('-createdAt')[:3]:
+        activities.append({
+            "title": f"Curriculum: {obj.name}",
+            "description": obj.description or "Curriculum added/updated",
+            "timestamp": obj.createdAt,
+            "link": reverse("curriculumUpdate", args=[obj.curriculumId]),
+        })
+
+    for obj in Semester.objects.order_by('-createdAt')[:3]:
+        activities.append({
+            "title": f"Semester: {obj.name}",
+            "description": f"Academic Year: {obj.academicYear}",
+            "timestamp": obj.createdAt,
+            "link": reverse("semesterUpdate", args=[obj.semesterId]),
+        })
+
+    for obj in Subject.objects.order_by('-createdAt')[:3]:
+        activities.append({
+            "title": f"Subject: {obj.name}",
+            "description": obj.description or "Subject created/updated",
+            "timestamp": obj.createdAt,
+            "link": reverse("subjectUpdate", args=[obj.code]),
+        })
+
+    for obj in Room.objects.order_by('-createdAt')[:3]:
+        activities.append({
+            "title": f"Room: {obj.roomCode}",
+            "description": f"Building: {obj.building}",
+            "timestamp": obj.createdAt,
+            "link": reverse("roomUpdate", args=[obj.roomId]),
+        })
+
+    for obj in MatchingRun.objects.order_by('-generatedAt')[:3]:
+        activities.append({
+            "title": f"AI Matching Run ({obj.semester.name})",
+            "description": f"{obj.totalSubjects} subjects, {obj.totalInstructors} instructors",
+            "timestamp": obj.generatedAt,
+            "link": reverse("matchingResults", args=[obj.batchId]),
+        })
+
+    # Sort everything by timestamp desc
+    recent_activities = sorted(activities, key=itemgetter("timestamp"), reverse=True)[:5]
+
+    context = {
+        "curriculum_count": curriculum_count,
+        "semester_count": semester_count,
+        "subject_count": subject_count,
+        "instructor_count": instructor_count,
+        "student_count": student_count,
+        "room_count": room_count,
+        "matching_runs": matching_runs,
+        "recent_activities": recent_activities,
+    }
+    return render(request, "dashboards/deptHeadDashboard.html", context)
 
 
 @login_required
@@ -165,4 +233,25 @@ def instructorDashboard(request):
 @login_required
 @has_role('student')
 def studentDashboard(request):
-    return render(request, 'dashboards/studentDashboard.html')
+    # Get student from UserLogin
+    user_login = get_object_or_404(UserLogin, user=request.user)
+    student = user_login.student
+
+    # Enrollments
+    enrollments = Enrollment.objects.filter(student=student).select_related(
+        "schedule__subject", "schedule__instructor", "schedule__section"
+    ).order_by("-enrollmentDate")
+
+    # Attendance summary (latest 5 records)
+    attendance_records = Attendance.objects.filter(student=student).select_related(
+        "schedule__subject"
+    ).order_by("-date")[:5]
+
+    context = {
+        "student": student,
+        "enrollment_count": enrollments.count(),
+        "recent_enrollments": enrollments[:5],
+        "attendance_records": attendance_records,
+    }
+    return render(request, "dashboards/studentDashboard.html", context)
+

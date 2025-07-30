@@ -49,11 +49,13 @@
       </div>
     </div>
 
+    {% if not request.user.is_authenticated %}
     <div class="mt-10 text-center">
       <a href="{% url 'login' %}" class="inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition">
         Get Started
       </a>
     </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

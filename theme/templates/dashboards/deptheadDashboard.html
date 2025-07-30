@@ -3,9 +3,70 @@
 
 {% block content %}
 <div class="max-w-6xl mx-auto mt-10 px-4 sm:px-6 lg:px-8">
-  <div class="bg-white p-8 rounded-2xl shadow">
+  <!-- Header -->
+  <div class="bg-white p-8 rounded-2xl shadow mb-8">
     <h1 class="text-3xl font-bold text-gray-800">Welcome, Department Head!</h1>
-    <p class="mt-4 text-gray-600 text-lg">This is your dashboard. Use the sidebar to navigate through subjects, instructors, students, and scheduling tools.</p>
+    <p class="mt-4 text-gray-600 text-lg">
+      This is your dashboard. Use the sidebar to navigate through subjects, instructors, students, and scheduling tools.
+    </p>
+  </div>
+
+  <!-- Overview Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <a href="{% url 'curriculumList' %}" class="bg-blue-600 text-white p-6 rounded-2xl shadow hover:bg-blue-700 transition">
+      <h2 class="text-xl font-semibold">Curriculum{{ curriculum_count|pluralize }}</h2>
+      <p class="mt-2 text-sm text-blue-100">{{ curriculum_count }} total</p>
+    </a>
+
+    <a href="{% url 'semesterList' %}" class="bg-green-600 text-white p-6 rounded-2xl shadow hover:bg-green-700 transition">
+      <h2 class="text-xl font-semibold">Semester{{ semester_count|pluralize }}</h2>
+      <p class="mt-2 text-sm text-green-100">{{ semester_count }} created</p>
+    </a>
+
+    <a href="{% url 'subjectList' %}" class="bg-purple-600 text-white p-6 rounded-2xl shadow hover:bg-purple-700 transition">
+      <h2 class="text-xl font-semibold">Subject{{ subject_count|pluralize }}</h2>
+      <p class="mt-2 text-sm text-purple-100">{{ subject_count }} offered</p>
+    </a>
+
+    <a href="{% url 'instructorAccountList' %}" class="bg-teal-600 text-white p-6 rounded-2xl shadow hover:bg-teal-700 transition">
+      <h2 class="text-xl font-semibold">Instructor{{ instructor_count|pluralize }}</h2>
+      <p class="mt-2 text-sm text-teal-100">{{ instructor_count }} registered</p>
+    </a>
+
+    <a href="{% url 'studentAccountList' %}" class="bg-orange-600 text-white p-6 rounded-2xl shadow hover:bg-orange-700 transition">
+      <h2 class="text-xl font-semibold">Student{{ student_count|pluralize }}</h2>
+      <p class="mt-2 text-sm text-orange-100">{{ student_count }} enrolled</p>
+    </a>
+
+    <a href="{% url 'roomList' %}" class="bg-red-600 text-white p-6 rounded-2xl shadow hover:bg-red-700 transition">
+      <h2 class="text-xl font-semibold">Room{{ room_count|pluralize }}</h2>
+      <p class="mt-2 text-sm text-red-100">{{ room_count }} available</p>
+    </a>
+
+    <a href="{% url 'matchingDashboard' %}" class="bg-indigo-600 text-white p-6 rounded-2xl shadow hover:bg-indigo-700 transition">
+      <h2 class="text-xl font-semibold">AI Matching Run{{ matching_runs|pluralize }}</h2>
+      <p class="mt-2 text-sm text-indigo-100">{{ matching_runs }} run{{ matching_runs|pluralize }}</p>
+    </a>
+  </div>
+
+  <!-- Recent Activities -->
+  <div class="mt-10 bg-white p-6 rounded-2xl shadow">
+    <h2 class="text-2xl font-semibold text-gray-800 mb-4">Recent Updates</h2>
+    {% if recent_activities %}
+      <ul class="divide-y divide-gray-200">
+        {% for activity in recent_activities %}
+          <li class="py-3">
+            <a href="{{ activity.link }}" class="block hover:bg-gray-50 p-2 rounded-lg transition">
+              <span class="font-medium text-gray-700">{{ activity.title }}</span>
+              <p class="text-sm text-gray-500">{{ activity.description }}</p>
+              <p class="text-xs text-gray-400">{{ activity.timestamp|date:"M d, Y H:i" }}</p>
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-gray-500">No recent activities yet.</p>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

@@ -1650,6 +1650,16 @@ select {
   color: rgb(204 251 241 / var(--tw-text-opacity, 1));
 }
 
+.text-indigo-100 {
+  --tw-text-opacity: 1;
+  color: rgb(224 231 255 / var(--tw-text-opacity, 1));
+}
+
+.text-red-100 {
+  --tw-text-opacity: 1;
+  color: rgb(254 226 226 / var(--tw-text-opacity, 1));
+}
+
 .underline {
   text-decoration-line: underline;
 }
