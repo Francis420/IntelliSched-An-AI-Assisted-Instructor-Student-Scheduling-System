@@ -2,10 +2,69 @@
 {% block title %}Instructor Dashboard{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto mt-10 px-4 sm:px-6 lg:px-8">
-  <div class="bg-white p-8 rounded-2xl shadow">
-    <h1 class="text-3xl font-bold text-gray-800">Welcome, Instructor!</h1>
-    <p class="mt-4 text-gray-600 text-lg">This is your dashboard. Use the sidebar to manage your availability, credentials, preferences, and teaching history.</p>
+<div class="max-w-7xl mx-auto mt-6">
+  <!-- Welcome Header -->
+  <div class="bg-white p-8 rounded-2xl shadow mb-8">
+    <h1 class="text-3xl font-bold text-gray-800">
+      Welcome back, {{ instructor.user.firstName }}!
+    </h1>
+    <p class="mt-2 text-gray-600 text-lg">
+      Here’s an overview of your teaching profile and activities.
+    </p>
+  </div>
+
+  <!-- Overview Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <a href="{% url 'experienceList' %}" class="bg-blue-600 text-white p-6 rounded-2xl shadow hover:bg-blue-700 transition">
+      <h2 class="text-xl font-semibold">Experiences</h2>
+      <p class="mt-2 text-sm text-blue-100">{{ experience_count }} recorded</p>
+    </a>
+
+    <a href="{% url 'credentialList' %}" class="bg-purple-600 text-white p-6 rounded-2xl shadow hover:bg-purple-700 transition">
+      <h2 class="text-xl font-semibold">Credentials</h2>
+      <p class="mt-2 text-sm text-purple-100">{{ credential_count }} uploaded</p>
+    </a>
+
+    <a href="{% url 'availabilityList' %}" class="bg-green-600 text-white p-6 rounded-2xl shadow hover:bg-green-700 transition">
+      <h2 class="text-xl font-semibold">Availability</h2>
+      <p class="mt-2 text-sm text-green-100">{{ availability_count }} slots set</p>
+    </a>
+
+    <a href="{% url 'preferenceList' %}" class="bg-orange-600 text-white p-6 rounded-2xl shadow hover:bg-orange-700 transition">
+      <h2 class="text-xl font-semibold">Preferences</h2>
+      <p class="mt-2 text-sm text-orange-100">{{ preference_count }} preferences</p>
+    </a>
+
+    <a href="{% url 'teachingHistoryList' %}" class="bg-teal-600 text-white p-6 rounded-2xl shadow hover:bg-teal-700 transition">
+      <h2 class="text-xl font-semibold">Teaching History</h2>
+      <p class="mt-2 text-sm text-teal-100">{{ teaching_history_count }} subjects taught</p>
+    </a>
+  </div>
+
+  <!-- Recent Activity -->
+  <div class="mt-10 bg-white p-6 rounded-2xl shadow">
+    <h2 class="text-2xl font-semibold text-gray-800 mb-4">Recent Updates</h2>
+    {% if recent_activities %}
+      <ul class="divide-y divide-gray-200">
+        {% for activity in recent_activities %}
+          <li class="py-3">
+            {% if activity.url %}
+              <a href="{{ activity.url }}" class="font-medium text-blue-600 hover:underline">
+                {{ activity.title }}
+              </a>
+            {% else %}
+              <span class="font-medium text-gray-700">{{ activity.title }}</span>
+            {% endif %}
+            {% if activity.description %}
+              <p class="text-sm text-gray-500">{{ activity.description }}</p>
+            {% endif %}
+            <p class="text-xs text-gray-400">{{ activity.timestamp|date:"M d, Y H:i" }}</p>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-gray-500">No recent activities yet.</p>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

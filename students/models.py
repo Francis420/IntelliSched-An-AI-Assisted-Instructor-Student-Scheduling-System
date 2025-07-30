@@ -31,4 +31,5 @@ class Enrollment(models.Model):
     enrollmentDate = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.student.studentId} enrolled in {self.schedule.offer.subject.code} - {self.schedule.section.sectionCode}"
+        return f"{self.student.studentId} enrolled in {self.schedule.subject.code} - {self.schedule.section.sectionCode}"
+

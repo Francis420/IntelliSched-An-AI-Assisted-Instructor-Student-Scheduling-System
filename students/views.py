@@ -73,32 +73,19 @@ def studentAccountCreate(request):
 @has_role('student')
 def enrollmentList(request):
     user_login = get_object_or_404(UserLogin, user=request.user)
+
     if not user_login.student:
         messages.error(request, "Student profile not found.")
         return redirect('dashboard')
 
-    query = request.GET.get("q", "").strip()
-    page = int(request.GET.get("page", 1))
+    enrollments = Enrollment.objects.filter(
+        student=user_login.student
+    ).select_related(
+        'schedule__subject', 'schedule__section', 'schedule__semester'
+    )
 
-    enrollments = Enrollment.objects.filter(student=user_login.student) \
-        .select_related('schedule__offer__subject', 'schedule__section') \
-        .order_by('-enrollmentDate')
+    return render(request, 'students/enrollments/list.html', {'enrollments': enrollments})
 
-    if query:
-        enrollments = enrollments.filter(
-            Q(schedule__offer__subject__code__icontains=query) |
-            Q(schedule__offer__subject__name__icontains=query) |
-            Q(schedule__section__sectionCode__icontains=query) |
-            Q(schedule__day__icontains=query)
-        )
-
-    paginator = Paginator(enrollments, 8)
-    page_obj = paginator.get_page(page)
-
-    return render(request, "students/enrollments/list.html", {
-        "enrollments": page_obj,
-        "query": query,
-    })
 
 
 @login_required
@@ -146,22 +133,19 @@ def enrollmentCreate(request):
         messages.error(request, "Student profile not found.")
         return redirect('dashboard')
 
-    schedules = Schedule.objects.select_related('offer__subject', 'section').order_by('offer__subject__code', 'section__sectionCode')
+    schedules = Schedule.objects.select_related('subject', 'section', 'semester', 'instructor', 'room') \
+        .order_by('subject__code', 'section__sectionCode')
 
     if request.method == 'POST':
         scheduleId = request.POST.get('schedule')
         schedule = get_object_or_404(Schedule, scheduleId=scheduleId)
 
         # Prevent duplicate enrollments
-        existing = Enrollment.objects.filter(student=user_login.student, schedule=schedule).exists()
-        if existing:
+        if Enrollment.objects.filter(student=user_login.student, schedule=schedule).exists():
             messages.warning(request, 'You are already enrolled in this schedule.')
             return redirect('enrollmentList')
 
-        Enrollment.objects.create(
-            student=user_login.student,
-            schedule=schedule
-        )
+        Enrollment.objects.create(student=user_login.student, schedule=schedule)
         messages.success(request, 'Enrollment added successfully.')
         return redirect('enrollmentList')
 
@@ -180,13 +164,14 @@ def enrollmentUpdate(request, enrollmentId):
         return redirect('dashboard')
 
     enrollment = get_object_or_404(Enrollment, enrollmentId=enrollmentId, student=user_login.student)
-    schedules = Schedule.objects.select_related('offer__subject', 'section').order_by('offer__subject__code', 'section__sectionCode')
+
+    schedules = Schedule.objects.select_related('subject', 'section', 'semester', 'instructor', 'room') \
+        .order_by('subject__code', 'section__sectionCode')
 
     if request.method == 'POST':
         scheduleId = request.POST.get('schedule')
         new_schedule = get_object_or_404(Schedule, scheduleId=scheduleId)
 
-        # Prevent duplicate enrollments
         if Enrollment.objects.filter(student=user_login.student, schedule=new_schedule).exclude(enrollmentId=enrollmentId).exists():
             messages.warning(request, 'You are already enrolled in this schedule.')
             return redirect('enrollmentList')

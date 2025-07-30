@@ -12,9 +12,10 @@
               class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
         {% for sched in schedules %}
           <option value="{{ sched.scheduleId }}">
-            {{ sched.offer.subject.code }} - {{ sched.offer.subject.name }}
+            {{ sched.subject.code }} - {{ sched.subject.name }}
             (Section {{ sched.section.sectionCode }},
-             {{ sched.day }} {{ sched.startTime|time:"H:i" }}–{{ sched.endTime|time:"H:i" }})
+             {{ sched.dayOfWeek }} {{ sched.startTime|time:"H:i" }}–{{ sched.endTime|time:"H:i" }},
+             {{ sched.instructor.lastName }})
           </option>
         {% endfor %}
       </select>

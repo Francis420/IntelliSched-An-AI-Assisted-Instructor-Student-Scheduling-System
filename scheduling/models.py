@@ -131,7 +131,7 @@ class Schedule(models.Model):
     createdAt = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.offer.subject.code} - {self.dayOfWeek} ({self.startTime}-{self.endTime})"
+        return f"{self.subject.code} - {self.dayOfWeek} ({self.startTime}-{self.endTime})"
 
 
 # ---------- Schedule Control ----------

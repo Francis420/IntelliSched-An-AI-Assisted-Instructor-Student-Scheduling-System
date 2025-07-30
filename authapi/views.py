@@ -1,12 +1,17 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from rest_framework.authtoken.models import Token
 from django.core.exceptions import PermissionDenied
 from functools import wraps
-from core.models import User
+from core.models import User, UserLogin
+from django.urls import reverse
+
 from django.contrib.auth import authenticate, login 
+from instructors.models import InstructorExperience, InstructorCredentials, InstructorAvailability, InstructorSubjectPreference, TeachingHistory
+from itertools import chain
+from operator import attrgetter
 
 def has_role(required_role):
     def decorator(view_func):
@@ -86,7 +91,75 @@ def deptHeadDashboard(request):
 @login_required
 @has_role('instructor')
 def instructorDashboard(request):
-    return render(request, 'dashboards/instructorDashboard.html')
+    user_login = get_object_or_404(UserLogin, user=request.user)
+
+    if not user_login.instructor:
+        return render(request, 'dashboards/instructorDashboard.html', {
+            "error": "Instructor profile not found."
+        })
+
+    instructor = user_login.instructor
+
+    # Counts for overview cards
+    experience_count = InstructorExperience.objects.filter(instructor=instructor).count()
+    credential_count = InstructorCredentials.objects.filter(instructor=instructor).count()
+    availability_count = InstructorAvailability.objects.filter(instructor=instructor).count()
+    preference_count = InstructorSubjectPreference.objects.filter(instructor=instructor).count()
+    teaching_history_count = TeachingHistory.objects.filter(instructor=instructor).count()
+
+    # Get latest updates from each model
+    experiences = InstructorExperience.objects.filter(instructor=instructor).order_by('-createdAt')[:3]
+    credentials = InstructorCredentials.objects.filter(instructor=instructor).order_by('-createdAt')[:3]
+    availabilities = InstructorAvailability.objects.filter(instructor=instructor).order_by('-createdAt')[:3]
+    preferences = InstructorSubjectPreference.objects.filter(instructor=instructor).order_by('-createdAt')[:3]
+    teaching_history = TeachingHistory.objects.filter(instructor=instructor).order_by('-createdAt')[:3]
+
+    # Combine & sort all recent activities
+    recent_activities = sorted(
+        chain(experiences, credentials, availabilities, preferences, teaching_history),
+        key=attrgetter("createdAt"),
+        reverse=True
+    )[:5]
+
+    # Normalize with edit URLs
+    activity_feed = []
+    for item in recent_activities:
+        if isinstance(item, InstructorExperience):
+            url = reverse('experienceUpdate', args=[item.pk])
+            label = "Experience"
+        elif isinstance(item, InstructorCredentials):
+            url = reverse('credentialUpdate', args=[item.pk])
+            label = "Credential"
+        elif isinstance(item, InstructorAvailability):
+            url = reverse('availabilityUpdate', args=[item.pk])
+            label = "Availability"
+        elif isinstance(item, InstructorSubjectPreference):
+            url = reverse('preferenceUpdate', args=[item.pk])
+            label = "Preference"
+        elif isinstance(item, TeachingHistory):
+            url = reverse('teachingHistoryUpdate', args=[item.pk])
+            label = "Teaching History"
+        else:
+            url = None
+            label = "Update"
+
+        activity_feed.append({
+            "title": f"{label}: {getattr(item, 'title', getattr(item, 'name', 'Update'))}",
+            "description": getattr(item, "description", getattr(item, "details", "")),
+            "timestamp": item.createdAt,
+            "url": url,
+        })
+
+    context = {
+        "instructor": instructor,
+        "experience_count": experience_count,
+        "credential_count": credential_count,
+        "availability_count": availability_count,
+        "preference_count": preference_count,
+        "teaching_history_count": teaching_history_count,
+        "recent_activities": activity_feed,
+    }
+    return render(request, 'dashboards/instructorDashboard.html', context)
 
 
 @login_required
