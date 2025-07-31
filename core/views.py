@@ -30,8 +30,6 @@ from django.db.models import Q
 def home(request):
     return render(request, 'home.html')
 
-# ---------- # Check if username/instructorId exists ----------
-@require_GET
 def checkUsernameAvailability(request):
     username = request.GET.get('value', '').strip()
     exists = User.objects.filter(username=username).exists()
@@ -47,6 +45,15 @@ def checkInstructorIdAvailability(request):
     return JsonResponse({
         'isAvailable': not exists,
         'message': 'Instructor ID available.' if not exists else 'Instructor ID already taken.'
+    })
+
+@require_GET
+def checkStudentIdAvailability(request):
+    studentId = request.GET.get('value', '').strip()
+    exists = Student.objects.filter(studentId=studentId).exists()
+    return JsonResponse({
+        'isAvailable': not exists,
+        'message': 'Student ID available.' if not exists else 'Student ID already taken.'
     })
 
 
@@ -292,6 +299,8 @@ def instructorAccountListLive(request):
 @has_role('deptHead')
 @transaction.atomic
 def instructorAccountCreate(request):
+    from instructors.models import InstructorRank, InstructorDesignation, InstructorAcademicAttainment
+
     if request.method == 'POST':
         username = request.POST.get('username')
         email = request.POST.get('email')
@@ -300,13 +309,15 @@ def instructorAccountCreate(request):
         lastName = request.POST.get('lastName')
         instructorId = request.POST.get('instructorId')
         employmentType = request.POST.get('employmentType')
+        rank_id = request.POST.get('rank')
+        designation_id = request.POST.get('designation')
+        attainment_id = request.POST.get('attainment')
 
         if User.objects.filter(username=username).exists():
             messages.error(request, 'Username already exists.')
         elif Instructor.objects.filter(instructorId=instructorId).exists():
             messages.error(request, 'Instructor ID already exists.')
         else:
-            # Create User
             user = User.objects.create_user(
                 username=username,
                 email=email,
@@ -316,30 +327,37 @@ def instructorAccountCreate(request):
                 isActive=True
             )
 
-            # Assign Role
             instructorRole = Role.objects.get(name='instructor')
             user.roles.add(instructorRole)
 
-            # Create Instructor Profile
             instructor = Instructor.objects.create(
                 instructorId=instructorId,
-                employmentType=employmentType
+                employmentType=employmentType,
+                rank=InstructorRank.objects.filter(pk=rank_id).first() if rank_id else None,
+                designation=InstructorDesignation.objects.filter(pk=designation_id).first() if designation_id else None,
+                academicAttainment=InstructorAcademicAttainment.objects.filter(pk=attainment_id).first() if attainment_id else None
             )
 
             # Link in UserLogin
             UserLogin.objects.create(user=user, instructor=instructor)
 
-            messages.success(request, 'Instructor account sucessfully created.')
+            messages.success(request, 'Instructor account successfully created.')
             return redirect('instructorAccountList')
 
-    return render(request, 'core/instructors/create.html')
-
+    context = {
+        'ranks': InstructorRank.objects.all(),
+        'designations': InstructorDesignation.objects.all(),
+        'attainments': InstructorAcademicAttainment.objects.all(),
+    }
+    return render(request, 'core/instructors/create.html', context)
 
 
 @login_required
 @has_role('deptHead')
 @transaction.atomic
 def instructorAccountUpdate(request, userId):
+    from instructors.models import InstructorRank, InstructorDesignation, InstructorAcademicAttainment
+
     user = get_object_or_404(User, pk=userId)
     user_login = get_object_or_404(UserLogin, user=user)
 
@@ -359,24 +377,35 @@ def instructorAccountUpdate(request, userId):
         # Update Instructor info
         newInstructorId = request.POST.get('instructorId')
         employmentType = request.POST.get('employmentType')
+        rank_id = request.POST.get('rank')
+        designation_id = request.POST.get('designation')
+        attainment_id = request.POST.get('attainment')
 
         if newInstructorId and newInstructorId != instructor.instructorId:
-            # Check uniqueness
             if Instructor.objects.filter(instructorId=newInstructorId).exclude(pk=instructor.pk).exists():
                 messages.error(request, 'Instructor ID already exists.')
                 return redirect('instructorAccountUpdate', userId=user.userId)
             instructor.instructorId = newInstructorId
 
         instructor.employmentType = employmentType
+        instructor.rank = InstructorRank.objects.filter(pk=rank_id).first() if rank_id else None
+        instructor.designation = InstructorDesignation.objects.filter(pk=designation_id).first() if designation_id else None
+        instructor.academicAttainment = InstructorAcademicAttainment.objects.filter(pk=attainment_id).first() if attainment_id else None
+
         instructor.save()
 
         messages.success(request, 'Instructor account updated successfully.')
         return redirect('instructorAccountList')
 
-    return render(request, 'core/instructors/update.html', {
+    context = {
         'user': user,
-        'instructor': instructor
-    })
+        'instructor': instructor,
+        'ranks': InstructorRank.objects.all(),
+        'designations': InstructorDesignation.objects.all(),
+        'attainments': InstructorAcademicAttainment.objects.all(),
+    }
+    return render(request, 'core/instructors/update.html', context)
+
 
 
 @login_required

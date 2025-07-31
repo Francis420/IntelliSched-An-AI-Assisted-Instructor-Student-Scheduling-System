@@ -16,9 +16,10 @@ urlpatterns = [
     path('instructors/<int:userId>/update/', views.instructorAccountUpdate, name='instructorAccountUpdate'),
     path('instructors/<int:userId>/delete/', views.instructorAccountDelete, name='instructorAccountDelete'),
 
-    # Check if username/instructorId exists
-    path('check-username-availability/', views.checkUsernameAvailability, name='checkUsernameAvailability'),
-    path('check-instructor-id-availability/', views.checkInstructorIdAvailability, name='checkInstructorIdAvailability'),
+    # Availability checks
+    path('check-username-availability/', views.checkUsernameAvailability, name='check_username_availability'),
+    path('check-instructorid-availability/', views.checkInstructorIdAvailability, name='check_instructorid_availability'),
+    path('check-studentid-availability/', views.checkStudentIdAvailability, name='check_studentid_availability'),
 
     # Student accounts
     path('students/', views.studentAccountList, name='studentAccountList'),
@@ -26,3 +27,4 @@ urlpatterns = [
     path('students/create/', views.studentAccountCreate, name='studentAccountCreate'),
     path('students/update/<int:userId>/', views.studentAccountUpdate, name='studentAccountUpdate'),
 ]
+

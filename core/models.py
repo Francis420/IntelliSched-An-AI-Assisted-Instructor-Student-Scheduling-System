@@ -76,8 +76,8 @@ class User(AbstractBaseUser, PermissionsMixin):
 class Instructor(models.Model):
     instructorId = models.CharField(primary_key=True, max_length=20)  # e.g., "2025-123456"
     rank = models.ForeignKey("instructors.InstructorRank", on_delete=models.SET_NULL, null=True, blank=True)
-    designation = models.ForeignKey("instructors.InstructorDesignation", on_delete=models.SET_NULL, null=True, blank=True)
-    academicAttainment = models.ForeignKey("instructors.InstructorAcademicAttainment", on_delete=models.SET_NULL, null=True, blank=True)
+    designation = models.OneToOneField("instructors.InstructorDesignation", on_delete=models.SET_NULL, null=True, blank=True)
+    academicAttainment = models.OneToOneField("instructors.InstructorAcademicAttainment", on_delete=models.SET_NULL, null=True, blank=True)
     employmentType = models.CharField(max_length=20, choices=[
         ('permanent', 'Permanent'),
         ('temporary', 'Temporary')
@@ -102,7 +102,7 @@ class Instructor(models.Model):
 
     @property
     def experiences(self):
-        return self.instructorexperience_set.all() # how do they tag?
+        return self.instructorexperience_set.all()
 
     @property
     def subjectPreferences(self):

@@ -2,104 +2,136 @@
 {% load static %}
 
 {% block content %}
-<div class="max-w-xl mx-auto mt-8 p-6 bg-white rounded-2xl shadow-md">
-    <h2 class="text-2xl font-bold mb-6 text-gray-800">Update Instructor Account</h2>
+<div class="max-w-2xl mx-auto bg-white p-8 mt-10 rounded-xl shadow">
+  <h2 class="text-2xl font-bold text-indigo-600 mb-6">Update Instructor Account</h2>
 
-    <form method="POST" class="space-y-4">
-        {% csrf_token %}
+  <form method="POST" class="space-y-5">
+    {% csrf_token %}
 
-        <div>
-            <label for="firstName" class="block font-medium text-gray-700">First Name</label>
-            <input type="text" name="firstName" value="{{ user.firstName }}" required
-                   class="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        </div>
+    <div>
+      <label for="firstName" class="block font-medium text-gray-700">First Name</label>
+      <input type="text" name="firstName" value="{{ user.firstName }}" required
+             class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+    </div>
 
-        <div>
-            <label for="lastName" class="block font-medium text-gray-700">Last Name</label>
-            <input type="text" name="lastName" value="{{ user.lastName }}" required
-                   class="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        </div>
+    <div>
+      <label for="lastName" class="block font-medium text-gray-700">Last Name</label>
+      <input type="text" name="lastName" value="{{ user.lastName }}" required
+             class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+    </div>
 
-        <div>
-            <label for="email" class="block font-medium text-gray-700">Email</label>
-            <input type="email" name="email" value="{{ user.email }}" required
-                   class="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        </div>
+    <div>
+      <label for="email" class="block font-medium text-gray-700">Email</label>
+      <input type="email" name="email" value="{{ user.email }}" required
+             class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+    </div>
 
-        <div>
-            <label for="instructorId" class="block font-medium text-gray-700">Instructor ID</label>
-            <input type="text" name="instructorId" value="{{ instructor.instructorId }}" required
-                   class="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        </div>
+    <div>
+      <label for="instructorId" class="block font-medium text-gray-700">Instructor ID</label>
+      <input type="text" name="instructorId" id="instructorId" value="{{ instructor.instructorId }}" required
+             class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+      <span id="instructor-check" class="text-sm"></span>
+    </div>
 
-        <div>
-            <label for="employmentType" class="block font-medium text-gray-700">Employment Type</label>
-            <select name="employmentType" required
-                    class="w-full mt-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">Select Type</option>
-                <option value="full-time" {% if instructor.employmentType == 'full-time' %}selected{% endif %}>Full-Time</option>
-                <option value="part-time" {% if instructor.employmentType == 'part-time' %}selected{% endif %}>Part-Time</option>
-            </select>
-        </div>
+    <div>
+      <label for="employmentType" class="block font-medium text-gray-700">Employment Type</label>
+      <select name="employmentType" required
+              class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md bg-white focus:ring-indigo-500 focus:border-indigo-500">
+        <option value="">Select Type</option>
+        <option value="full-time" {% if instructor.employmentType == 'full-time' %}selected{% endif %}>Full-Time</option>
+        <option value="part-time" {% if instructor.employmentType == 'part-time' %}selected{% endif %}>Part-Time</option>
+      </select>
+    </div>
 
-        <div class="text-right pt-4">
-            <button type="submit"
-                    class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2 rounded-lg transition duration-200">
-                Update Account
-            </button>
-            <a href="javascript:history.back()" class="bg-gray-300 hover:bg-gray-400 text-black font-semibold px-4 py-2 rounded">Back</a>
-        </div>
-    </form>
+    <div>
+      <label for="rank" class="block font-medium text-gray-700">Rank</label>
+      <select name="rank" id="rank"
+              class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md bg-white focus:ring-indigo-500 focus:border-indigo-500">
+        <option value="">Select Rank</option>
+        {% for rank in ranks %}
+          <option value="{{ rank.rankId }}" {% if instructor.rank and instructor.rank.rankId == rank.rankId %}selected{% endif %}>
+            {{ rank.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label for="designation" class="block font-medium text-gray-700">Designation (optional)</label>
+      <select name="designation" id="designation"
+              class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md bg-white focus:ring-indigo-500 focus:border-indigo-500">
+        <option value="">None</option>
+        {% for d in designations %}
+          <option value="{{ d.designationId }}" {% if instructor.designation and instructor.designation.designationId == d.designationId %}selected{% endif %}>
+            {{ d.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label for="attainment" class="block font-medium text-gray-700">Academic Attainment</label>
+      <select name="attainment" id="attainment"
+              class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md bg-white focus:ring-indigo-500 focus:border-indigo-500">
+        <option value="">Select Academic Attainment</option>
+        {% for a in attainments %}
+          <option value="{{ a.attainmentId }}" {% if instructor.academicAttainment and instructor.academicAttainment.attainmentId == a.attainmentId %}selected{% endif %}>
+            {{ a.name }}{% if a.suffix %}, {{ a.suffix }}{% endif %}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <button type="submit"
+              class="w-full bg-indigo-600 text-white font-medium py-2 px-4 rounded-md hover:bg-indigo-700 transition">
+        Update Account
+      </button>
+    </div>
+  </form>
 </div>
 
+<!-- JS: availability check -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    const usernameInput = document.querySelector('input[name="username"]');
-    const instructorIdInput = document.querySelector('input[name="instructorId"]');
-
-    const showAvailabilityMessage = (element, isAvailable, message) => {
-        let msgElem = element.nextElementSibling;
-        if (!msgElem || !msgElem.classList.contains('availability-message')) {
-            msgElem = document.createElement('span');
-            msgElem.classList.add('availability-message', 'block', 'mt-1', 'text-sm');
-            element.parentNode.insertBefore(msgElem, element.nextSibling);
-        }
-        msgElem.textContent = message;
-        msgElem.classList.toggle('text-green-600', isAvailable);
-        msgElem.classList.toggle('text-red-600', !isAvailable);
-    };
-
-    const debounce = (func, delay) => {
-        let timer;
-        return (...args) => {
-            clearTimeout(timer);
-            timer = setTimeout(() => func.apply(this, args), delay);
-        };
-    };
-
-    const checkAvailability = debounce((type, value, element) => {
-        fetch(`/check-${type}-availability/?value=${value}`)
-            .then(res => res.json())
-            .then(data => {
-                showAvailabilityMessage(element, data.isAvailable, data.message);
-            });
-    }, 400);
-
-    if (usernameInput) {
-        usernameInput.addEventListener('input', () => {
-            if (usernameInput.value.trim() !== '') {
-                checkAvailability('username', usernameInput.value, usernameInput);
-            }
-        });
+  const instructorIdInput = document.querySelector('#instructorId');
+  const showAvailabilityMessage = (element, isAvailable, message) => {
+    let msgElem = element.parentNode.querySelector('.availability-message');
+    if (!msgElem) {
+      msgElem = document.createElement('span');
+      msgElem.classList.add('availability-message', 'text-sm');
+      element.parentNode.appendChild(msgElem);
     }
+    msgElem.textContent = message;
+    msgElem.style.color = isAvailable ? 'green' : 'red';
+  };
 
-    if (instructorIdInput) {
-        instructorIdInput.addEventListener('input', () => {
-            if (instructorIdInput.value.trim() !== '') {
-                checkAvailability('instructorId', instructorIdInput.value, instructorIdInput);
-            }
-        });
-    }
+  const debounce = (func, delay) => {
+    let timer;
+    return (...args) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => func.apply(this, args), delay);
+    };
+  };
+
+  const checkAvailability = debounce((url, value, element) => {
+    fetch(`${url}?value=${encodeURIComponent(value)}`)
+      .then(res => res.json())
+      .then(data => {
+        showAvailabilityMessage(element, data.isAvailable, data.message);
+      })
+      .catch(() => {
+        showAvailabilityMessage(element, false, 'Error checking availability');
+      });
+  }, 400);
+
+  if (instructorIdInput) {
+    instructorIdInput.addEventListener('input', () => {
+      if (instructorIdInput.value.trim() !== '') {
+        checkAvailability("{% url 'check_instructorid_availability' %}", instructorIdInput.value, instructorIdInput);
+      }
+    });
+  }
 });
 </script>
 {% endblock %}

@@ -12,7 +12,7 @@
       <label for="username" class="block font-medium text-gray-700">Username</label>
       <input type="text" name="username" id="username" required
              class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
-      <span id="username-check" class="text-sm text-red-500"></span>
+      <span id="username-check" class="text-sm"></span>
     </div>
 
     <div>
@@ -43,7 +43,7 @@
       <label for="instructorId" class="block font-medium text-gray-700">Instructor ID</label>
       <input type="text" name="instructorId" id="instructorId" required
              class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
-      <span id="instructor-check" class="text-sm text-red-500"></span>
+      <span id="instructor-check" class="text-sm"></span>
     </div>
 
     <div>
@@ -57,8 +57,42 @@
     </div>
 
     <div>
+      <label for="rank" class="block font-medium text-gray-700">Rank</label>
+      <select name="rank" id="rank"
+              class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md bg-white focus:ring-indigo-500 focus:border-indigo-500">
+        <option value="">Select Rank</option>
+        {% for rank in ranks %}
+          <option value="{{ rank.rankId }}">{{ rank.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label for="designation" class="block font-medium text-gray-700">Designation (optional)</label>
+      <select name="designation" id="designation"
+              class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md bg-white focus:ring-indigo-500 focus:border-indigo-500">
+        <option value="">None</option>
+        {% for d in designations %}
+          <option value="{{ d.designationId }}">{{ d.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label for="attainment" class="block font-medium text-gray-700">Academic Attainment</label>
+      <select name="attainment" id="attainment"
+              class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md bg-white focus:ring-indigo-500 focus:border-indigo-500">
+        <option value="">Select Academic Attainment</option>
+        {% for a in attainments %}
+          <option value="{{ a.attainmentId }}">{{ a.name }}{% if a.suffix %}, {{ a.suffix }}{% endif %}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
       <button type="submit"
-              class="w-full bg-indigo-600 text-white font-medium py-2 px-4 rounded-md hover:bg-indigo-700 transition">
+              class="w-full bg-indigo-600 text-white font-medium py-2 px-4 rounded-md hover:bg-indigo-700 transition opacity-50"
+              disabled>
         Create Account
       </button>
     </div>
@@ -68,15 +102,28 @@
 <!-- JS: availability check -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  const usernameInput = document.querySelector('input[name="username"]');
-  const instructorIdInput = document.querySelector('input[name="instructorId"]');
+  const usernameInput = document.querySelector('#username');
+  const instructorIdInput = document.querySelector('#instructorId');
+  const submitBtn = document.querySelector('button[type="submit"]');
+  let usernameValid = false;
+  let instructorIdValid = false;
+
+  const updateSubmitState = () => {
+    if (usernameValid && instructorIdValid) {
+      submitBtn.disabled = false;
+      submitBtn.classList.remove('opacity-50');
+    } else {
+      submitBtn.disabled = true;
+      submitBtn.classList.add('opacity-50');
+    }
+  };
 
   const showAvailabilityMessage = (element, isAvailable, message) => {
-    let msgElem = element.nextElementSibling;
-    if (!msgElem || !msgElem.classList.contains('availability-message')) {
+    let msgElem = element.parentNode.querySelector('.availability-message');
+    if (!msgElem) {
       msgElem = document.createElement('span');
-      msgElem.classList.add('availability-message');
-      element.parentNode.insertBefore(msgElem, element.nextSibling);
+      msgElem.classList.add('availability-message', 'text-sm');
+      element.parentNode.appendChild(msgElem);
     }
     msgElem.textContent = message;
     msgElem.style.color = isAvailable ? 'green' : 'red';
@@ -90,23 +137,39 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   };
 
-  const checkAvailability = debounce((type, value, element) => {
-    fetch(`/check-${type}-availability/?value=${value}`)
-      .then(res => res.json())
+  const checkAvailability = debounce((url, value, element, setValidFlag) => {
+    fetch(`${url}?value=${encodeURIComponent(value)}`)
+      .then(res => {
+        if (!res.ok) throw new Error('Network error');
+        return res.json();
+      })
       .then(data => {
         showAvailabilityMessage(element, data.isAvailable, data.message);
+        setValidFlag(data.isAvailable);
+        updateSubmitState();
+      })
+      .catch(() => {
+        showAvailabilityMessage(element, false, 'Error checking availability');
+        setValidFlag(false);
+        updateSubmitState();
       });
   }, 400);
 
   usernameInput.addEventListener('input', () => {
     if (usernameInput.value.trim() !== '') {
-      checkAvailability('username', usernameInput.value, usernameInput);
+      checkAvailability("{% url 'check_username_availability' %}", usernameInput.value, usernameInput, (v) => usernameValid = v);
+    } else {
+      usernameValid = false;
+      updateSubmitState();
     }
   });
 
   instructorIdInput.addEventListener('input', () => {
     if (instructorIdInput.value.trim() !== '') {
-      checkAvailability('instructorId', instructorIdInput.value, instructorIdInput);
+      checkAvailability("{% url 'check_instructorid_availability' %}", instructorIdInput.value, instructorIdInput, (v) => instructorIdValid = v);
+    } else {
+      instructorIdValid = false;
+      updateSubmitState();
     }
   });
 });
