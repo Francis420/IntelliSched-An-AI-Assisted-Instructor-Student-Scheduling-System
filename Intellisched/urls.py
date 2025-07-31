@@ -11,4 +11,5 @@ urlpatterns = [
     path('instructors/', include('instructors.urls')),
     path('scheduling/', include('scheduling.urls')),
     path('aimatching/', include('aimatching.urls')),
+    path('scheduler/', include('scheduler.urls')),
 ]

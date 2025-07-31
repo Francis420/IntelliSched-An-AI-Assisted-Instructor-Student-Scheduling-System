@@ -2,6 +2,7 @@ from django.db import models
 from core.models import Student, User
 from django.utils import timezone
 from django.apps import apps
+import datetime
 
 
 # ---------- Curriculum Table ----------
@@ -34,6 +35,7 @@ class Subject(models.Model):
     labDurationMinutes = models.IntegerField(null=True, blank=True)
     isPriorityForRooms = models.BooleanField(default=False)
     isActive = models.BooleanField(default=True)
+    sectionCount = models.IntegerField(default=1, null=True, blank=True, help_text="Number of sections to open")
     description = models.TextField(null=True, blank=True)
     subjectTopics = models.TextField(null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
@@ -74,6 +76,8 @@ class Semester(models.Model):
     term = models.CharField(max_length=10, choices=[('1st', '1st'), ('2nd', '2nd'), ('Midyear', 'Midyear')])
     isActive = models.BooleanField(default=False)
     createdAt = models.DateTimeField(auto_now_add=True)
+    normalDays = models.JSONField(default=list, null=True, blank=True, help_text="Days considered normal class days (Mon-Fri)")
+    weekendAllowed = models.BooleanField(default=True, help_text="Allow Sat/Sun classes if weekdays insufficient")
 
     def __str__(self):
         return f"{self.name}"
@@ -121,7 +125,7 @@ class Schedule(models.Model):
 
     dayOfWeek = models.CharField(max_length=10, choices=[
         ('Monday', 'Monday'), ('Tuesday', 'Tuesday'), ('Wednesday', 'Wednesday'),
-        ('Thursday', 'Thursday'), ('Friday', 'Friday'), ('Saturday', 'Saturday')
+        ('Thursday', 'Thursday'), ('Friday', 'Friday'), ('Saturday', 'Saturday'), ('Sunday', 'Sunday')
     ])
     startTime = models.TimeField()
     endTime = models.TimeField()
@@ -129,6 +133,15 @@ class Schedule(models.Model):
     isOvertime = models.BooleanField(default=False)
     scheduleStatus = models.CharField(max_length=20, choices=[('draft', 'Draft'), ('final', 'Final'), ('archived', 'Archived')])
     createdAt = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def isNormalTime(self):
+        return self.startTime >= timezone.datetime.strptime("08:00", "%H:%M").time() \
+           and self.endTime <= timezone.datetime.strptime("17:00", "%H:%M").time()
+
+    @property
+    def isOvertimeByRule(self):
+        return self.startTime >= timezone.datetime.strptime("17:00", "%H:%M").time()
 
     def __str__(self):
         return f"{self.subject.code} - {self.dayOfWeek} ({self.startTime}-{self.endTime})"
@@ -158,8 +171,19 @@ class GenEdSchedule(models.Model):
     dayOfWeek = models.CharField(max_length=10)
     startTime = models.TimeField()
     endTime = models.TimeField()
+    isPriority = models.BooleanField(default=True, help_text="If True, IT schedules must adjust around this")
     createdAt = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"GenEd {self.code} - {self.sectionCode}"
+    
+
+class SchedulingConfig(models.Model):
+    normalStartTime = models.TimeField(default=datetime.time(8, 0))
+    normalEndTime = models.TimeField(default=datetime.time(17, 0))
+    overtimeEndTime = models.TimeField(default=datetime.time(20, 0))
+    allowWeekends = models.BooleanField(default=True)
+    maxSectionsPerSubject = models.IntegerField(default=5)
+    createdAt = models.DateTimeField(auto_now_add=True)
+
 

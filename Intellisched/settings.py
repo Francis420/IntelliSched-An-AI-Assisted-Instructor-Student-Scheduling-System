@@ -36,7 +36,8 @@ INSTALLED_APPS = [
     'scheduling',
     'adminpanel',
     'authapi',
-    'aimatching',       
+    'aimatching', 
+    'scheduler',      
 ]
 
 CELERY_BROKER_URL = 'redis://localhost:6379/0'

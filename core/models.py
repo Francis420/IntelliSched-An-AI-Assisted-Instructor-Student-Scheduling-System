@@ -74,27 +74,11 @@ class User(AbstractBaseUser, PermissionsMixin):
 # ---------- Instructor Table ----------
 # This model represents instructors in the system, including their ID, rank, designation, academic attainment and employment type.
 class Instructor(models.Model):
-    instructorId = models.CharField(primary_key=True, max_length=20)  # e.g., "2025-123456"
-    rank = models.ForeignKey(
-        "instructors.InstructorRank",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True
-    )
-    designation = models.ForeignKey(   # changed from OneToOneField
-        "instructors.InstructorDesignation",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True
-    )
-    academicAttainment = models.ForeignKey(  # changed from OneToOneField
-        "instructors.InstructorAcademicAttainment",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True
-    )
-    employmentType = models.CharField(
-        max_length=20,
+    instructorId = models.CharField(primary_key=True, max_length=20) 
+    rank = models.ForeignKey("instructors.InstructorRank", on_delete=models.SET_NULL, null=True, blank=True)
+    designation = models.ForeignKey( "instructors.InstructorDesignation", on_delete=models.SET_NULL, null=True, blank=True)
+    academicAttainment = models.ForeignKey("instructors.InstructorAcademicAttainment", on_delete=models.SET_NULL, null=True, blank=True)
+    employmentType = models.CharField(max_length=20,
         choices=[
             ('permanent', 'Permanent'),
             ('temporary', 'Temporary')
@@ -102,6 +86,8 @@ class Instructor(models.Model):
     )
     createdAt = models.DateTimeField(auto_now_add=True)
     updatedAt = models.DateTimeField(auto_now=True)
+    normalLoad = models.IntegerField(default=18, help_text="Max units/hours under normal load", null=True, blank=True)
+    overLoad = models.IntegerField(default=6, help_text="Extra units/hours allowed as overload", null=True, blank=True)
 
     @property
     def activeWorkloadSource(self):
@@ -116,7 +102,6 @@ class Instructor(models.Model):
     
     @property
     def academicAttainments(self):
-        # This will now return just the linked FK
         return self.academicAttainment
 
     @property
