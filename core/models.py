@@ -75,13 +75,31 @@ class User(AbstractBaseUser, PermissionsMixin):
 # This model represents instructors in the system, including their ID, rank, designation, academic attainment and employment type.
 class Instructor(models.Model):
     instructorId = models.CharField(primary_key=True, max_length=20)  # e.g., "2025-123456"
-    rank = models.ForeignKey("instructors.InstructorRank", on_delete=models.SET_NULL, null=True, blank=True)
-    designation = models.OneToOneField("instructors.InstructorDesignation", on_delete=models.SET_NULL, null=True, blank=True)
-    academicAttainment = models.OneToOneField("instructors.InstructorAcademicAttainment", on_delete=models.SET_NULL, null=True, blank=True)
-    employmentType = models.CharField(max_length=20, choices=[
-        ('permanent', 'Permanent'),
-        ('temporary', 'Temporary')
-    ])
+    rank = models.ForeignKey(
+        "instructors.InstructorRank",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+    designation = models.ForeignKey(   # changed from OneToOneField
+        "instructors.InstructorDesignation",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+    academicAttainment = models.ForeignKey(  # changed from OneToOneField
+        "instructors.InstructorAcademicAttainment",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+    employmentType = models.CharField(
+        max_length=20,
+        choices=[
+            ('permanent', 'Permanent'),
+            ('temporary', 'Temporary')
+        ]
+    )
     createdAt = models.DateTimeField(auto_now_add=True)
     updatedAt = models.DateTimeField(auto_now=True)
 
@@ -91,14 +109,15 @@ class Instructor(models.Model):
     
     @property
     def full_name(self):
-        user = User.objects.filter(userlogin__instructor=self).first()
-        if user:
-            return f"{user.firstName} {user.lastName}"
+        user = self.userlogin_set.select_related("user").first()
+        if user and user.user:
+            return f"{user.user.firstName} {user.user.lastName}"
         return self.instructorId
     
     @property
     def academicAttainments(self):
-        return self.instructoracademicattainment_set.all()
+        # This will now return just the linked FK
+        return self.academicAttainment
 
     @property
     def experiences(self):
@@ -107,14 +126,6 @@ class Instructor(models.Model):
     @property
     def subjectPreferences(self):
         return self.instructorsubjectpreference_set.all()
-    
-    @property
-    def full_name(self):
-        user = self.userlogin_set.select_related("user").first()
-        if user and user.user:
-            return f"{user.user.firstName} {user.user.lastName}"
-        return self.instructorId
-
 
     def __str__(self):
         return self.instructorId

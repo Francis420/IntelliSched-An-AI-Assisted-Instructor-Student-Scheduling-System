@@ -294,7 +294,6 @@ def instructorAccountListLive(request):
         "has_previous": page_obj.has_previous(),
     })
 
-
 @login_required
 @has_role('deptHead')
 @transaction.atomic
@@ -311,13 +310,15 @@ def instructorAccountCreate(request):
         employmentType = request.POST.get('employmentType')
         rank_id = request.POST.get('rank')
         designation_id = request.POST.get('designation')
-        attainment_id = request.POST.get('attainment')
+        attainment_id = request.POST.get('academicAttainment')
 
+        # Validation checks
         if User.objects.filter(username=username).exists():
             messages.error(request, 'Username already exists.')
         elif Instructor.objects.filter(instructorId=instructorId).exists():
             messages.error(request, 'Instructor ID already exists.')
         else:
+            # Create user
             user = User.objects.create_user(
                 username=username,
                 email=email,
@@ -327,18 +328,20 @@ def instructorAccountCreate(request):
                 isActive=True
             )
 
+            # Assign role
             instructorRole = Role.objects.get(name='instructor')
             user.roles.add(instructorRole)
 
+            # Create instructor with proper FK relations
             instructor = Instructor.objects.create(
                 instructorId=instructorId,
                 employmentType=employmentType,
                 rank=InstructorRank.objects.filter(pk=rank_id).first() if rank_id else None,
                 designation=InstructorDesignation.objects.filter(pk=designation_id).first() if designation_id else None,
-                academicAttainment=InstructorAcademicAttainment.objects.filter(pk=attainment_id).first() if attainment_id else None
+                academicAttainment=InstructorAcademicAttainment.objects.filter(pk=attainment_id).first() if attainment_id else None,
             )
 
-            # Link in UserLogin
+            # Link UserLogin
             UserLogin.objects.create(user=user, instructor=instructor)
 
             messages.success(request, 'Instructor account successfully created.')
@@ -379,7 +382,7 @@ def instructorAccountUpdate(request, userId):
         employmentType = request.POST.get('employmentType')
         rank_id = request.POST.get('rank')
         designation_id = request.POST.get('designation')
-        attainment_id = request.POST.get('attainment')
+        attainment_id = request.POST.get('academicAttainment')
 
         if newInstructorId and newInstructorId != instructor.instructorId:
             if Instructor.objects.filter(instructorId=newInstructorId).exclude(pk=instructor.pk).exists():

@@ -8,6 +8,7 @@
   <form method="POST" class="space-y-5">
     {% csrf_token %}
 
+    <!-- Username -->
     <div>
       <label for="username" class="block font-medium text-gray-700">Username</label>
       <input type="text" name="username" id="username" required
@@ -15,30 +16,35 @@
       <span id="username-check" class="text-sm"></span>
     </div>
 
+    <!-- Email -->
     <div>
       <label for="email" class="block font-medium text-gray-700">Email</label>
       <input type="email" name="email" required
              class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
     </div>
 
+    <!-- Password -->
     <div>
       <label for="password" class="block font-medium text-gray-700">Password</label>
       <input type="password" name="password" required
              class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
     </div>
 
+    <!-- First Name -->
     <div>
       <label for="firstName" class="block font-medium text-gray-700">First Name</label>
       <input type="text" name="firstName" required
              class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
     </div>
 
+    <!-- Last Name -->
     <div>
       <label for="lastName" class="block font-medium text-gray-700">Last Name</label>
       <input type="text" name="lastName" required
              class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
     </div>
 
+    <!-- Instructor ID -->
     <div>
       <label for="instructorId" class="block font-medium text-gray-700">Instructor ID</label>
       <input type="text" name="instructorId" id="instructorId" required
@@ -46,16 +52,18 @@
       <span id="instructor-check" class="text-sm"></span>
     </div>
 
+    <!-- Employment Type -->
     <div>
       <label for="employmentType" class="block font-medium text-gray-700">Employment Type</label>
       <select name="employmentType" required
               class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md bg-white focus:ring-indigo-500 focus:border-indigo-500">
         <option value="">Select Type</option>
-        <option value="full-time">Full-Time</option>
-        <option value="part-time">Part-Time</option>
+        <option value="permanent">Permanent</option>
+        <option value="temporary">Temporary</option>
       </select>
     </div>
 
+    <!-- Rank -->
     <div>
       <label for="rank" class="block font-medium text-gray-700">Rank</label>
       <select name="rank" id="rank"
@@ -67,6 +75,7 @@
       </select>
     </div>
 
+    <!-- Designation -->
     <div>
       <label for="designation" class="block font-medium text-gray-700">Designation (optional)</label>
       <select name="designation" id="designation"
@@ -78,17 +87,21 @@
       </select>
     </div>
 
+    <!-- Academic Attainment -->
     <div>
-      <label for="attainment" class="block font-medium text-gray-700">Academic Attainment</label>
-      <select name="attainment" id="attainment"
+      <label for="academicAttainment" class="block font-medium text-gray-700">Academic Attainment</label>
+      <select name="academicAttainment" id="academicAttainment"
               class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md bg-white focus:ring-indigo-500 focus:border-indigo-500">
         <option value="">Select Academic Attainment</option>
         {% for a in attainments %}
-          <option value="{{ a.attainmentId }}">{{ a.name }}{% if a.suffix %}, {{ a.suffix }}{% endif %}</option>
+          <option value="{{ a.attainmentId }}">
+            {{ a.name }}{% if a.suffix %}, {{ a.suffix }}{% endif %}
+          </option>
         {% endfor %}
       </select>
     </div>
 
+    <!-- Submit -->
     <div>
       <button type="submit"
               class="w-full bg-indigo-600 text-white font-medium py-2 px-4 rounded-md hover:bg-indigo-700 transition opacity-50"
@@ -99,7 +112,7 @@
   </form>
 </div>
 
-<!-- JS: availability check -->
+<!-- JS availability check (username + instructorId) -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   const usernameInput = document.querySelector('#username');
