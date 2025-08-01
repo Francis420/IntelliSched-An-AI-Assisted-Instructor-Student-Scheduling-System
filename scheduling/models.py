@@ -2,7 +2,6 @@ from django.db import models
 from core.models import Student, User
 from django.utils import timezone
 from django.apps import apps
-import datetime
 
 
 # ---------- Curriculum Table ----------
@@ -176,14 +175,3 @@ class GenEdSchedule(models.Model):
 
     def __str__(self):
         return f"GenEd {self.code} - {self.sectionCode}"
-    
-
-class SchedulingConfig(models.Model):
-    normalStartTime = models.TimeField(default=datetime.time(8, 0))
-    normalEndTime = models.TimeField(default=datetime.time(17, 0))
-    overtimeEndTime = models.TimeField(default=datetime.time(20, 0))
-    allowWeekends = models.BooleanField(default=True)
-    maxSectionsPerSubject = models.IntegerField(default=5)
-    createdAt = models.DateTimeField(auto_now_add=True)
-
-

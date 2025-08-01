@@ -254,7 +254,7 @@ class InstructorAvailability(models.Model):
     ]
 
     availabilityId = models.AutoField(primary_key=True)
-    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE)
+    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE, related_name="availabilities")
     dayOfWeek = models.CharField(max_length=10, choices=DAY_CHOICES)
     startTime = models.TimeField()
     endTime = models.TimeField()
@@ -272,6 +272,14 @@ class InstructorAvailability(models.Model):
         from django.core.exceptions import ValidationError
         if self.startTime >= self.endTime:
             raise ValidationError("Start time must be before end time.")
+        
+    def to_block(self):
+        """Convert this availability to a dictionary block for solver use."""
+        return {
+            "day": self.dayOfWeek,
+            "start": self.startTime.strftime("%H:%M"),
+            "end": self.endTime.strftime("%H:%M"),
+        }
 
     def __str__(self):
         return f"{self.instructor.instructorId} - {self.dayOfWeek} {self.startTime}-{self.endTime}"
