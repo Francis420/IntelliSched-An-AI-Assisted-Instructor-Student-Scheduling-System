@@ -11,6 +11,7 @@ class Curriculum(models.Model):
     name = models.CharField(max_length=100, unique=True)  # e.g., "2021 Curriculum"
     effectiveSy = models.CharField(max_length=20)  # e.g., "S.Y. 2021-2022"
     description = models.TextField(null=True, blank=True)
+    isActive = models.BooleanField(default=True) 
     createdAt = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -34,7 +35,6 @@ class Subject(models.Model):
     labDurationMinutes = models.IntegerField(null=True, blank=True)
     isPriorityForRooms = models.BooleanField(default=False)
     isActive = models.BooleanField(default=True)
-    sectionCount = models.IntegerField(default=1, null=True, blank=True, help_text="Number of sections to open")
     description = models.TextField(null=True, blank=True)
     subjectTopics = models.TextField(null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
@@ -88,8 +88,13 @@ class Section(models.Model):
     sectionId = models.AutoField(primary_key=True)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
     semester = models.ForeignKey(Semester, on_delete=models.CASCADE)
-    sectionCode = models.CharField(max_length=10)
+    sectionCode = models.CharField(max_length=50)
     createdAt = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(
+        max_length=20,
+        choices=[('active', 'Active'), ('archived', 'Archived')],
+        default='active'
+    )
 
     def __str__(self):
         return f"{self.subject.code} - Section {self.sectionCode}"
@@ -130,7 +135,11 @@ class Schedule(models.Model):
     endTime = models.TimeField()
     scheduleType = models.CharField(max_length=10, choices=[('lecture', 'Lecture'), ('lab', 'Lab')])
     isOvertime = models.BooleanField(default=False)
-    scheduleStatus = models.CharField(max_length=20, choices=[('draft', 'Draft'), ('final', 'Final'), ('archived', 'Archived')])
+    status = models.CharField(
+        max_length=20,
+        choices=[('active', 'Active'), ('archived', 'Archived')],
+        default='active'
+    )
     createdAt = models.DateTimeField(auto_now_add=True)
 
     @property
@@ -171,7 +180,45 @@ class GenEdSchedule(models.Model):
     startTime = models.TimeField()
     endTime = models.TimeField()
     isPriority = models.BooleanField(default=True, help_text="If True, IT schedules must adjust around this")
+    status = models.CharField(
+        max_length=20,
+        choices=[('active', 'Active'), ('archived', 'Archived')],
+        default='active'
+    )
     createdAt = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"GenEd {self.code} - {self.sectionCode}"
+    
+
+class SubjectOffering(models.Model):
+    subject = models.ForeignKey("Subject", on_delete=models.CASCADE, related_name="offerings")
+    semester = models.ForeignKey("Semester", on_delete=models.CASCADE, related_name="offerings")
+    numberOfSections = models.PositiveIntegerField(default=6)
+    status = models.CharField(
+        max_length=20,
+        choices=[('active', 'Active'), ('archived', 'Archived')],
+        default='active'
+    )
+    createdAt = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("subject", "semester")
+
+    def __str__(self):
+        return f"{self.subject.code} - {self.semester} ({self.numberOfSections} section(s))"
+    
+    @property
+    def academicYear(self):
+        """Shortcut to semester academic year"""
+        return self.semester.academicYear
+    
+    @property
+    def term(self):
+        """Shortcut to semester term"""
+        return self.semester.term
+
+    @property
+    def curriculum(self):
+        """Shortcut to subject curriculum"""
+        return self.subject.curriculum

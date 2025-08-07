@@ -29,5 +29,11 @@ urlpatterns = [
     path('curriculums/create/', views.curriculumCreate, name='curriculumCreate'),
     path('curriculums/<int:curriculumId>/update/', views.curriculumUpdate, name='curriculumUpdate'),
     path('curriculums/<int:curriculumId>/delete/', views.curriculumDelete, name='curriculumDelete'),
-    path('curriculums/<int:curriculumId>/', views.curriculumDetail, name='curriculumDetail'),# Check subs under that curiculum
+    path('curriculums/<int:curriculumId>/', views.curriculumDetail, name='curriculumDetail'),
+
+    # Number of Sections per Subject
+    path('subject-offerings/', views.subjectOfferingList, name='subjectOfferingList'),
+    path('subject-offerings/live/', views.subjectOfferingListLive, name='subjectOfferingListLive'),
+    path('subject-offerings/update/<int:offeringId>/', views.subjectOfferingUpdate, name='subjectOfferingUpdate'),
+    path("subject-offerings/generate-sections/<int:semesterId>/<int:curriculumId>/", views.generateSections, name="generateSections",),
 ]

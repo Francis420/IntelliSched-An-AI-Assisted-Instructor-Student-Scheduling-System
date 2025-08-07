@@ -8,6 +8,9 @@ from scheduling.models import (
     Semester,
     Schedule,
     Curriculum,
+    Section,
+    SubjectOffering,
+    Subject,
 )
 from core.models import (
     Student,
@@ -18,6 +21,9 @@ from django.http import JsonResponse
 from django.template.loader import render_to_string
 from django.core.paginator import Paginator
 from django.db.models import Q
+import string
+from django.urls import reverse
+
 
 
 # ---------- Rooms ----------
@@ -526,3 +532,299 @@ def curriculumDetail(request, curriculumId):
         'subjects': subjects
     })
 
+
+# ---------- Semesters ----------
+@login_required
+@has_role('deptHead')
+def semesterList(request):
+    query = request.GET.get("q", "").strip()
+    page = int(request.GET.get("page", 1))
+
+    semesters = Semester.objects.all().order_by("-createdAt")
+
+    if query:
+        semesters = semesters.filter(
+            Q(name__icontains=query) |
+            Q(term__icontains=query) |
+            Q(academicYear__icontains=query)
+        )
+
+    paginator = Paginator(semesters, 10)
+    page_obj = paginator.get_page(page)
+
+    return render(request, "scheduling/semesters/list.html", {
+        "semesters": page_obj,
+        "query": query,
+    })
+
+
+@login_required
+@has_role('deptHead')
+def semesterListLive(request):
+    query = request.GET.get("q", "").strip()
+    page = int(request.GET.get("page", 1))
+
+    semesters = Semester.objects.all().order_by("-createdAt")
+
+    if query:
+        semesters = semesters.filter(
+            Q(name__icontains=query) |
+            Q(term__icontains=query) |
+            Q(academicYear__icontains=query)
+        )
+
+    paginator = Paginator(semesters, 10)
+    page_obj = paginator.get_page(page)
+
+    html = render_to_string("scheduling/semesters/_table.html", {
+        "semesters": page_obj,
+    }, request=request)
+
+    return JsonResponse({
+        "html": html,
+        "page": page_obj.number,
+        "num_pages": paginator.num_pages,
+        "has_next": page_obj.has_next(),
+        "has_previous": page_obj.has_previous(),
+    })
+
+@login_required
+@has_role('deptHead')
+def semesterCreate(request):
+    if request.method == 'POST':
+        academicYear = request.POST.get('academicYear')
+        term = request.POST.get('term')
+        isActive = bool(request.POST.get('isActive'))
+        name = f"{term} Semester {academicYear}"
+
+        if Semester.objects.filter(academicYear=academicYear, term=term).exists():
+            messages.error(request, 'Semester for this academic year and term already exists.')
+        else:
+            Semester.objects.create(
+                name=name,
+                academicYear=academicYear,
+                term=term,
+                isActive=isActive
+            )
+            messages.success(request, 'Semester created successfully.')
+            return redirect('semesterList')
+
+    return render(request, 'scheduling/semesters/create.html')
+
+@login_required
+@has_role('deptHead')
+def semesterUpdate(request, semesterId):
+    semester = get_object_or_404(Semester, semesterId=semesterId)
+
+    if request.method == 'POST':
+        academicYear = request.POST.get('academicYear')
+        term = request.POST.get('term')
+        isActive = bool(request.POST.get('isActive'))
+        name = f"{term} Semester {academicYear}"
+
+        if Semester.objects.exclude(semesterId=semester.semesterId).filter(academicYear=academicYear, term=term).exists():
+            messages.error(request, 'Another semester with this academic year and term already exists.')
+        else:
+            semester.name = name
+            semester.academicYear = academicYear
+            semester.term = term
+            semester.isActive = isActive
+            semester.save()
+            messages.success(request, 'Semester updated successfully.')
+            return redirect('semesterList')
+
+    return render(request, 'scheduling/semesters/update.html', {'semester': semester})
+
+from django.db.models import ProtectedError
+
+@login_required
+@has_role('deptHead')
+def semesterDelete(request, semesterId):
+    semester = get_object_or_404(Semester, semesterId=semesterId)
+
+    if semester.isActive:
+        messages.error(request, 'You cannot delete an active semester.')
+        return redirect('semesterList')
+
+    try:
+        semester.delete()
+        messages.success(request, 'Semester deleted successfully.')
+    except ProtectedError:
+        messages.error(request, 'Cannot delete this semester because it is linked to other records (e.g., schedules, enrollments).')
+
+    return redirect('semesterList')
+
+
+
+# ---------- Subject Offerings ----------
+@login_required
+@has_role('deptHead')
+def subjectOfferingList(request):
+    # Dropdown data (only active)
+    curricula = Curriculum.objects.filter(isActive=True).order_by("-createdAt")
+    semesters = Semester.objects.filter(isActive=True).order_by("-createdAt")
+
+    # Get selected curriculum & semester
+    selected_curriculum_id = request.GET.get("curriculum")
+    selected_semester_id = request.GET.get("semester")
+
+    selected_curriculum = (
+        get_object_or_404(Curriculum, pk=selected_curriculum_id, isActive=True)
+        if selected_curriculum_id else curricula.first()
+    )
+    selected_semester = (
+        get_object_or_404(Semester, pk=selected_semester_id, isActive=True)
+        if selected_semester_id else semesters.first()
+    )
+
+    # Get offerings for this semester & curriculum
+    offerings = SubjectOffering.objects.filter(
+        semester=selected_semester,
+        subject__curriculum=selected_curriculum
+    ).select_related("subject", "semester")
+
+    # 🔹 Fallback: Auto-create offerings if none exist yet
+    if not offerings.exists():
+        subjects_for_sem = Subject.objects.filter(
+            curriculum=selected_curriculum,
+            defaultTerm__in=[
+                0 if selected_semester.term == "1st" else
+                1 if selected_semester.term == "2nd" else
+                2
+            ]
+        )
+        for subj in subjects_for_sem:
+            SubjectOffering.objects.get_or_create(
+                subject=subj,
+                semester=selected_semester,
+                defaults={"numberOfSections": 6}
+            )
+        offerings = SubjectOffering.objects.filter(
+            semester=selected_semester,
+            subject__curriculum=selected_curriculum
+        ).select_related("subject", "semester")
+
+    # Group offerings by year level
+    grouped_offerings = []
+    for year in [1, 2, 3, 4]:
+        year_offerings = [o for o in offerings if o.subject.yearLevel == year]
+        grouped_offerings.append((year, year_offerings))
+
+    return render(request, "scheduling/offerings/list.html", {
+        "curricula": curricula,
+        "semesters": semesters,
+        "selected_curriculum": selected_curriculum,
+        "selected_semester": selected_semester,
+        "grouped_offerings": grouped_offerings,
+    })
+3
+
+
+@login_required
+@has_role('deptHead')
+def subjectOfferingListLive(request):
+    query = request.GET.get("q", "").strip()
+    page = int(request.GET.get("page", 1))
+
+    offerings = SubjectOffering.objects.select_related("subject", "semester").order_by(
+        "subject__yearLevel", "subject__code"
+    )
+
+    if query:
+        offerings = offerings.filter(
+            Q(subject__code__icontains=query) |
+            Q(subject__name__icontains=query) |
+            Q(semester__name__icontains=query) |
+            Q(semester__academicYear__icontains=query)
+        )
+
+    grouped_offerings = []
+    for year in range(1, 5):
+        year_offerings = [o for o in offerings if o.subject.yearLevel == year]
+        grouped_offerings.append((year, year_offerings))
+
+    paginator = Paginator(offerings, 10)
+    page_obj = paginator.get_page(page)
+
+    html = render_to_string("scheduling/offerings/_table.html", {
+        "grouped_offerings": grouped_offerings
+    }, request=request)
+
+    return JsonResponse({
+        "html": html,
+        "page": page_obj.number,
+        "num_pages": paginator.num_pages,
+    })
+
+
+
+@login_required
+@has_role('deptHead')
+def subjectOfferingUpdate(request, offeringId):
+    offering = get_object_or_404(SubjectOffering, pk=offeringId)
+
+    if request.method == "POST":
+        try:
+            numberOfSections = int(request.POST.get("numberOfSections", offering.numberOfSections))
+            offering.numberOfSections = numberOfSections
+            offering.save()
+            messages.success(request, f"Updated {offering.subject.code} to {numberOfSections} sections.")
+            return redirect("subjectOfferingList")
+        except ValueError:
+            messages.error(request, "Invalid number of sections entered.")
+
+    return render(request, "scheduling/offerings/update.html", {
+        "offering": offering,
+    })
+
+
+@login_required
+@has_role('deptHead')
+def generateSections(request, semesterId, curriculumId):
+    semester = get_object_or_404(Semester, pk=semesterId)
+    curriculum = get_object_or_404(Curriculum, pk=curriculumId)
+
+    offerings = SubjectOffering.objects.filter(
+        semester=semester,
+        subject__curriculum=curriculum,
+        status="active"
+    )
+
+    added, removed = 0, 0
+    letters = list(string.ascii_uppercase)
+
+    for offering in offerings:
+        existing_sections = list(
+            Section.objects.filter(subject=offering.subject, semester=semester).order_by("sectionId")
+        )
+        required_sections = offering.numberOfSections
+
+        if len(existing_sections) < required_sections:
+            for i in range(len(existing_sections), required_sections):
+                section_code = f"{offering.subject.code}-{letters[i]}"
+                Section.objects.create(
+                    subject=offering.subject,
+                    semester=semester,
+                    sectionCode=section_code,
+                    status="active",
+                )
+                added += 1
+
+        elif len(existing_sections) > required_sections:
+            to_remove = existing_sections[required_sections:]
+            for section in to_remove:
+                section.delete()
+                removed += 1
+
+    if added or removed:
+        messages.success(
+            request,
+            f"Sections updated: {added} added, {removed} removed for {semester.name} ({curriculum.name})."
+        )
+    else:
+        messages.info(
+            request,
+            f"All sections already match the set numbers for {semester.name} ({curriculum.name})."
+        )
+
+    return redirect("subjectOfferingList")

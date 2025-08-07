@@ -1,0 +1,41 @@
+{% for year, offerings_in_year in grouped_offerings %}
+  <h2 class="text-lg font-bold mt-6 mb-3 text-gray-700">
+    {{ year }}{% if year == 1 %}st{% elif year == 2 %}nd{% elif year == 3 %}rd{% else %}th{% endif %} Year
+  </h2>
+
+  {% if offerings_in_year %}
+    <div class="overflow-x-auto mb-6">
+      <table class="min-w-full bg-white border border-gray-200 rounded-lg shadow-sm text-sm">
+        <thead class="bg-gray-100 text-gray-700 uppercase tracking-wider text-xs">
+          <tr>
+            <th class="px-4 py-3 border-b">Code</th>
+            <th class="px-4 py-3 border-b">Subject</th>
+            <th class="px-4 py-3 border-b">Units</th>
+            <th class="px-4 py-3 border-b">Sections</th>
+            <th class="px-4 py-3 border-b">Semester</th>
+            <th class="px-4 py-3 border-b text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for offering in offerings_in_year %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-4 py-3 border-b">{{ offering.subject.code }}</td>
+              <td class="px-4 py-3 border-b">{{ offering.subject.name }}</td>
+              <td class="px-4 py-3 border-b">{{ offering.subject.units }}</td>
+              <td class="px-4 py-3 border-b">{{ offering.numberOfSections }}</td>
+              <td class="px-4 py-3 border-b">{{ offering.semester.name }}</td>
+              <td class="px-4 py-3 border-b text-center">
+                <a href="{% url 'subjectOfferingUpdate' offering.id %}"
+                   class="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded-md text-xs">
+                  Update
+                </a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="text-gray-500 mb-6">No offerings for this year.</p>
+  {% endif %}
+{% endfor %}

@@ -18,17 +18,15 @@ from aimatching.models import (
 )
 
 
-cross_encoder = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-12-v2")
+cross_encoder = CrossEncoder("cross-encoder/nli-deberta-v3-large")
 
 def run_matching(semester_id, batch_id, generated_by=None):
     from aimatching.tasks import notify_progress
     semester = Semester.objects.get(pk=semester_id)
 
-    # Map semester.term → Subject.defaultTerm
     term_map = {"1st": 0, "2nd": 1, "Midyear": 2}
     term_value = term_map.get(semester.term)
 
-    # Get subjects active for this semester
     subjects = Subject.objects.filter(defaultTerm=term_value, isActive=True)
     instructors = Instructor.objects.all()
 
@@ -64,7 +62,29 @@ def run_matching(semester_id, batch_id, generated_by=None):
                 (subject_text, preference_text),
             ]
             scores = cross_encoder.predict(pairs)
-            teaching_score, credential_score, experience_score, preference_score = scores
+
+            import logging
+            logger = logging.getLogger(__name__)
+
+            logger.info(f"RAW scores: {scores}")
+            logger.info(f"type(scores): {type(scores)}")
+            try:
+                logger.info(f"scores.shape: {scores.shape}")
+            except AttributeError:
+                logger.info("scores has no shape attribute")
+
+            for i, s in enumerate(scores):
+                logger.info(f"score[{i}] = {s}, type: {type(s)}")
+
+            flat_scores = []
+            for i, s in enumerate(scores):
+                try:
+                    entailment_score = float(s[1])
+                    flat_scores.append(entailment_score)
+                except Exception as e:
+                    raise ValueError(f"Unable to extract entailment score from score[{i}] = {s} (type: {type(s)})") from e
+
+            teaching_score, credential_score, experience_score, preference_score = flat_scores
 
             confidence_score = (
                 teaching_score * weights["teaching"]
@@ -107,7 +127,7 @@ def run_matching(semester_id, batch_id, generated_by=None):
                     preferenceScore=preference_score,
                     primaryFactor=primary_factor,
                     explanation=explanation,
-                    modelVersion="crossenc-v1",
+                    modelVersion="crossenc-nli-deberta-v3-large",
                     batchId=batch_id,
                     generatedBy=generated_by,
                 )

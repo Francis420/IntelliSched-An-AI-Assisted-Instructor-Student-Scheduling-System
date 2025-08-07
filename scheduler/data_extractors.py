@@ -5,9 +5,11 @@ from instructors.models import (
 from core.models import Instructor
 
 
-def get_solver_data(semester: Semester):
-    # Sections & Subjects
-    sections = Section.objects.filter(semester=semester).select_related("subject")
+def get_solver_data(semester: Semester, subject_filter=None):
+    sectionQuery = Section.objects.filter(semester=semester).select_related("subject")
+    if subject_filter:
+        sectionQuery = sectionQuery.filter(subject__id__in=subject_filter)
+    sections = list(sectionQuery)
     subjects = [s.subject for s in sections]
 
     # GenEd schedules (priority blocks)
@@ -25,7 +27,7 @@ def get_solver_data(semester: Semester):
         elif instructor.rank:
             normal_load = instructor.rank.instructionHours
         else:
-            normal_load = 18  # Default fallback if neither designation nor rank is set
+            normal_load = 18  # fallback
 
         if instructor.academicAttainment:
             if instructor.designation:
@@ -48,3 +50,4 @@ def get_solver_data(semester: Semester):
         "availabilities": availabilities,
         "instructors": load_data,
     }
+
