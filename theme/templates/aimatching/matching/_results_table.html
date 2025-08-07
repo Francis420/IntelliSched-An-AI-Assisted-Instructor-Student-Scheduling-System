@@ -25,11 +25,11 @@
         <td class="px-4 py-2 border font-semibold">{{ match.fixed_rank }}</td>
         <td class="px-4 py-2 border">{{ match.instructor.full_name }}</td>
         <td class="px-4 py-2 border">{{ match.subject.code }} - {{ match.subject.name }}</td>
-        <td class="px-4 py-2 border">{{ match.latestHistory.teachingScore|floatformat:2 }}</td>
-        <td class="px-4 py-2 border">{{ match.latestHistory.credentialScore|floatformat:2 }}</td>
-        <td class="px-4 py-2 border">{{ match.latestHistory.experienceScore|floatformat:2 }}</td>
-        <td class="px-4 py-2 border">{{ match.latestHistory.preferenceScore|floatformat:2 }}</td>
-        <td class="px-4 py-2 border font-bold">{{ match.latestHistory.confidenceScore|floatformat:2 }}</td>
+        <td class="px-4 py-2 border">{{ match.latestHistory.teachingScorePct|floatformat:2 }}%</td>
+        <td class="px-4 py-2 border">{{ match.latestHistory.credentialScorePct|floatformat:2 }}%</td>
+        <td class="px-4 py-2 border">{{ match.latestHistory.experienceScorePct|floatformat:2 }}%</td>
+        <td class="px-4 py-2 border">{{ match.latestHistory.preferenceScorePct|floatformat:2 }}%</td>
+        <td class="px-4 py-2 border font-bold">{{ match.latestHistory.confidenceScorePct|floatformat:2 }}%</td>
         <td class="px-4 py-2 border">{{ match.latestHistory.primaryFactor }}</td>
         <td class="px-4 py-2 border">{{ match.latestHistory.explanation }}</td>
     </tr>

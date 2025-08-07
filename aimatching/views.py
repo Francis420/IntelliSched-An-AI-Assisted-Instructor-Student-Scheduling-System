@@ -283,7 +283,16 @@ def _matching_results_common(request, batchId, live=False):
     results = []
     for obj in qs:
         obj.fixed_rank = rank_map.get(obj.matchId, None)
+
+        if obj.latestHistory:
+            obj.latestHistory.teachingScorePct = obj.latestHistory.teachingScore * 100
+            obj.latestHistory.credentialScorePct = obj.latestHistory.credentialScore * 100
+            obj.latestHistory.experienceScorePct = obj.latestHistory.experienceScore * 100
+            obj.latestHistory.preferenceScorePct = obj.latestHistory.preferenceScore * 100
+            obj.latestHistory.confidenceScorePct = obj.latestHistory.confidenceScore * 100
+
         results.append(obj)
+
 
     sort_map = {
         "rank": lambda x: (x.fixed_rank if x.fixed_rank is not None else 9999),
