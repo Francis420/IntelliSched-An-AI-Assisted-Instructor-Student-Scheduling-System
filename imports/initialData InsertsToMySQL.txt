@@ -1,3 +1,16 @@
+//dont forget to run first
+py manage.py shell
+from core.roles import seed_roles
+seed_roles()
+exit
+
+then create an account
+py manage.py createsuperuser
+http://127.0.0.1:8000/admin
+add roles to that user
+
+
+//On MySQL Workbench
 ### Instructor Ranking ###
 
 INSERT INTO intellisched.instructors_instructorrank (
