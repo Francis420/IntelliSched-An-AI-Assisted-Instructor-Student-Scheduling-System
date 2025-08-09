@@ -1,81 +1,101 @@
 instructorId,title,organization,startDate,endDate,description,experienceType,relatedSubjects,isVerified
-2025-100001,Systems Analyst,DICT Research Unit,2017-02-01,2018-08-25,Worked on enterprise system design and development.,Work Experience,38,TRUE
-2025-100001,IT Specialist,DICT Research Unit,2016-10-01,2019-08-17,Worked on enterprise system design and development.,Work Experience,39,FALSE
-2025-100001,IT Specialist,Byte Solutions Inc.,2017-06-01,2019-05-22,Worked on enterprise system design and development.,Work Experience,28;8,FALSE
-2025-100001,Academic Adviser,TechBridge University,2015-12-01,2018-01-19,Oversaw academic operations and curriculum design.,Administrative Role,7,TRUE
-2025-100002,Lecturer,CyberTech Institute,2015-04-01,2015-12-27,Handled key IT courses and capstone advising.,Academic Position,43,TRUE
-2025-100002,Dean,Innovate State College,2018-03-01,2020-03-20,Handled key IT courses and capstone advising.,Academic Position,4;18;24,TRUE
-2025-100002,Research Associate,TechBridge University,2019-10-01,2020-06-27,Conducted studies and contributed to technical papers.,Research Role,20;22,TRUE
-2025-100002,Project Researcher,Byte Solutions Inc.,2020-06-01,2021-09-24,Conducted studies and contributed to technical papers.,Research Role,20;25,FALSE
-2025-100003,Community Trainer,Byte Solutions Inc.,2020-06-01,2021-09-24,Engaged in outreach and digital literacy training.,Extension Service,23,TRUE
-2025-100003,Project Researcher,Innovate State College,2015-03-01,2016-05-24,Handled key IT courses and capstone advising.,Academic Position,11,TRUE
-2025-100003,Research Associate,Innovate State College,2015-04-01,2016-07-24,Conducted studies and contributed to technical papers.,Research Role,15,TRUE
-2025-100003,Project Researcher,Innovate State College,2016-03-01,2018-10-17,Conducted studies and contributed to technical papers.,Research Role,27;8,TRUE
-2025-100004,Seminar Speaker,CodeLogic Solutions,2020-01-01,2022-05-20,Engaged in outreach and digital literacy training.,Extension Service,20;12;21,FALSE
-2025-100004,Systems Analyst,Byte Solutions Inc.,2017-09-01,2019-02-23,Worked on enterprise system design and development.,Work Experience,7;9;1,TRUE
-2025-100004,Academic Adviser,DICT Research Unit,2016-09-01,2017-10-26,Oversaw academic operations and curriculum design.,Administrative Role,16;20,TRUE
-2025-100004,Seminar Speaker,CodeLogic Solutions,2015-02-01,2017-09-18,Engaged in outreach and digital literacy training.,Extension Service,2;36;39,TRUE
-2025-100005,Coordinator,CodeLogic Solutions,2019-11-01,2022-02-18,Oversaw academic operations and curriculum design.,Administrative Role,6;13,TRUE
-2025-100005,IT Specialist,TechBridge University,2019-08-01,2022-07-16,Worked on enterprise system design and development.,Work Experience,8;4,FALSE
-2025-100005,IT Consultant,Smart Barangay Program,2020-03-01,2021-09-22,Provided expert advice for digital transformation.,Consultancy,13,TRUE
-2025-100005,Academic Adviser,Digital Bayanihan PH,2021-11-01,2022-04-30,Oversaw academic operations and curriculum design.,Administrative Role,36,TRUE
-2025-100006,Systems Analyst,TechBridge University,2017-09-01,2018-07-28,Worked on enterprise system design and development.,Work Experience,21;37,TRUE
-2025-100006,Coordinator,Byte Solutions Inc.,2019-09-01,2020-07-27,Oversaw academic operations and curriculum design.,Administrative Role,12,FALSE
-2025-100006,Seminar Speaker,CyberTech Institute,2020-07-01,2022-05-22,Engaged in outreach and digital literacy training.,Extension Service,40;36,TRUE
-2025-100006,Seminar Speaker,DICT Research Unit,2015-06-01,2016-02-26,Engaged in outreach and digital literacy training.,Extension Service,16;7;30,FALSE
-2025-100007,Dean,TechBridge University,2017-02-01,2017-10-29,Handled key IT courses and capstone advising.,Academic Position,31;13;33,FALSE
-2025-100007,IT Specialist,CodeLogic Solutions,2020-09-01,2022-03-25,Worked on enterprise system design and development.,Work Experience,42;27,TRUE
-2025-100007,Project Researcher,Byte Solutions Inc.,2017-01-01,2017-10-28,Conducted studies and contributed to technical papers.,Research Role,11,FALSE
-2025-100007,Systems Consultant,Innovate State College,2018-12-01,2020-03-25,Provided expert advice for digital transformation.,Consultancy,8;5,TRUE
-2025-100008,Systems Analyst,TechBridge University,2021-09-01,2022-11-25,Worked on enterprise system design and development.,Work Experience,11,FALSE
-2025-100008,Research Assistant,DICT Research Unit,2017-05-01,2020-02-15,Conducted studies and contributed to technical papers.,Research Role,1;24;42,TRUE
-2025-100008,Department Head,Innovate State College,2021-01-01,2023-03-22,Oversaw academic operations and curriculum design.,Administrative Role,39,FALSE
-2025-100008,Lecturer,CodeLogic Solutions,2015-05-01,2017-07-19,Handled key IT courses and capstone advising.,Academic Position,39,TRUE
-2025-100009,Lecturer,Digital Bayanihan PH,2019-03-01,2020-08-22,Handled key IT courses and capstone advising.,Academic Position,31;27;8,FALSE
-2025-100009,IT Consultant,CyberTech Institute,2015-09-01,2018-03-19,Provided expert advice for digital transformation.,Consultancy,13;43;22,FALSE
-2025-100009,IT Consultant,Byte Solutions Inc.,2021-09-01,2022-11-25,Provided expert advice for digital transformation.,Consultancy,16;4;20,TRUE
-2025-100009,Tech Advisor,CyberTech Institute,2020-11-01,2023-04-20,Provided expert advice for digital transformation.,Consultancy,1;23;15,FALSE
-2025-100010,Project Researcher,TechBridge University,2021-08-01,2022-01-28,Conducted studies and contributed to technical papers.,Research Role,10;8,TRUE
-2025-100010,Community Trainer,DICT Research Unit,2020-08-01,2022-05-23,Engaged in outreach and digital literacy training.,Extension Service,43,FALSE
-2025-100010,Tech Advisor,Byte Solutions Inc.,2016-09-01,2019-07-18,Provided expert advice for digital transformation.,Consultancy,34;37,TRUE
-2025-100010,Research Associate,CyberTech Institute,2021-03-01,2023-04-20,Conducted studies and contributed to technical papers.,Research Role,31;9;14,TRUE
-2025-100011,Systems Analyst,Byte Solutions Inc.,2017-05-01,2017-12-27,Worked on enterprise system design and development.,Work Experience,2;32,TRUE
-2025-100011,IT Volunteer,CodeLogic Solutions,2015-08-01,2018-02-16,Engaged in outreach and digital literacy training.,Extension Service,19,TRUE
-2025-100011,Project Researcher,Smart Barangay Program,2019-10-01,2021-09-20,Conducted studies and contributed to technical papers.,Research Role,33;15,TRUE
-2025-100011,Coordinator,Smart Barangay Program,2016-08-01,2017-03-29,Oversaw academic operations and curriculum design.,Administrative Role,13,TRUE
-2025-100012,Research Assistant,CyberTech Institute,2019-02-01,2020-01-27,Conducted studies and contributed to technical papers.,Research Role,43;7,TRUE
-2025-100012,Tech Advisor,CodeLogic Solutions,2018-10-01,2021-07-17,Provided expert advice for digital transformation.,Consultancy,36;9,FALSE
-2025-100012,IT Volunteer,TechBridge University,2015-04-01,2016-11-21,Engaged in outreach and digital literacy training.,Extension Service,27,FALSE
-2025-100012,Department Head,Innovate State College,2019-12-01,2021-11-20,Oversaw academic operations and curriculum design.,Administrative Role,3;23,TRUE
-2025-100013,Community Trainer,CodeLogic Solutions,2019-11-01,2022-01-19,Engaged in outreach and digital literacy training.,Extension Service,27;9;1,FALSE
-2025-100013,Dean,Innovate State College,2018-09-01,2020-05-23,Handled key IT courses and capstone advising.,Academic Position,2;7,TRUE
-2025-100013,Software Engineer,Innovate State College,2019-05-01,2020-08-23,Worked on enterprise system design and development.,Work Experience,39,TRUE
-2025-100013,Software Engineer,Byte Solutions Inc.,2018-09-01,2019-03-30,Worked on enterprise system design and development.,Work Experience,24,TRUE
-2025-100014,Project Researcher,Byte Solutions Inc.,2019-01-01,2021-03-21,Conducted studies and contributed to technical papers.,Research Role,39,TRUE
-2025-100014,IT Volunteer,CodeLogic Solutions,2017-11-01,2020-02-19,Engaged in outreach and digital literacy training.,Extension Service,24,FALSE
-2025-100014,Community Trainer,TechBridge University,2016-01-01,2017-09-22,Engaged in outreach and digital literacy training.,Extension Service,18,FALSE
-2025-100014,Software Engineer,CyberTech Institute,2019-12-01,2022-02-18,Worked on enterprise system design and development.,Work Experience,27,TRUE
-2025-100015,Dean,Innovate State College,2015-11-01,2018-07-18,Handled key IT courses and capstone advising.,Academic Position,31,FALSE
-2025-100015,Dean,Smart Barangay Program,2021-04-01,2023-07-20,Handled key IT courses and capstone advising.,Academic Position,11;24,FALSE
-2025-100015,Systems Consultant,CyberTech Institute,2015-10-01,2018-02-17,Provided expert advice for digital transformation.,Consultancy,26;5,FALSE
-2025-100015,IT Consultant,CodeLogic Solutions,2015-11-01,2018-07-18,Provided expert advice for digital transformation.,Consultancy,43;9;27,FALSE
-2025-100016,Department Head,Byte Solutions Inc.,2020-12-01,2022-01-25,Oversaw academic operations and curriculum design.,Administrative Role,7;21;9,TRUE
-2025-100016,IT Specialist,CyberTech Institute,2021-06-01,2023-08-20,Worked on enterprise system design and development.,Work Experience,16;31;1,TRUE
-2025-100016,Lecturer,Smart Barangay Program,2017-08-01,2019-12-19,Handled key IT courses and capstone advising.,Academic Position,2;22,FALSE
-2025-100016,Coordinator,Innovate State College,2020-04-01,2021-08-24,Oversaw academic operations and curriculum design.,Administrative Role,37;42,TRUE
-2025-100017,Assistant Professor,TechBridge University,2020-05-01,2022-12-17,Handled key IT courses and capstone advising.,Academic Position,13,FALSE
-2025-100017,Tech Advisor,Digital Bayanihan PH,2015-01-01,2017-11-16,Provided expert advice for digital transformation.,Consultancy,26;29;36,FALSE
-2025-100017,Tech Advisor,Innovate State College,2020-09-01,2023-05-19,Provided expert advice for digital transformation.,Consultancy,43;41,FALSE
-2025-100017,Tech Advisor,DICT Research Unit,2020-01-01,2022-09-17,Provided expert advice for digital transformation.,Consultancy,29,TRUE
-2025-100018,Tech Advisor,TechBridge University,2018-01-01,2019-02-25,Provided expert advice for digital transformation.,Consultancy,11;32;19,TRUE
-2025-100018,Coordinator,Innovate State College,2018-07-01,2019-09-24,Oversaw academic operations and curriculum design.,Administrative Role,31,TRUE
-2025-100018,IT Consultant,TechBridge University,2020-02-01,2020-10-28,Provided expert advice for digital transformation.,Consultancy,10;3,TRUE
-2025-100018,Program Chair,DICT Research Unit,2016-07-01,2017-10-24,Handled key IT courses and capstone advising.,Academic Position,27;21;22,FALSE
-2025-100019,Department Head,CyberTech Institute,2018-03-01,2020-02-19,Oversaw academic operations and curriculum design.,Administrative Role,36;22,TRUE
-2025-100019,Department Head,Digital Bayanihan PH,2016-07-01,2019-02-16,Oversaw academic operations and curriculum design.,Administrative Role,13,TRUE
-2025-100019,Coordinator,CyberTech Institute,2018-02-01,2021-01-16,Oversaw academic operations and curriculum design.,Administrative Role,24,TRUE
-2025-100019,Dean,CyberTech Institute,2020-05-01,2022-02-20,Handled key IT courses and capstone advising.,Academic Position,26,TRUE
-2025-100020,IT Specialist,Smart Barangay Program,2020-11-01,2023-04-20,Worked on enterprise system design and development.,Work Experience,36;22,TRUE
-2025-100020,Systems Consultant,CodeLogic Solutions,2021-03-01,2024-02-14,Provided expert advice for digital transformation.,Consultancy,13,TRUE
-2025-100020,Research Associate,CodeLogic Solutions,2019-08-01,2022-07-16,Conducted studies and contributed to technical papers.,Research Role,24,FALSE
-2025-100020,IT Specialist,TechBridge University,2020-03-01,2021-04-25,Worked on enterprise system design and development.,Work Experience,26,FALSE
+2025-100001,Professor,National University,2010-06-01,2020-05-31,Taught introductory computing and programming fundamentals to undergraduates.,Teaching,1;2,TRUE
+2025-100001,Software Developer,ABC Software Solutions,2008-01-01,2010-05-31,Developed basic software applications and assisted in testing processes.,Industry,2,TRUE
+2025-100001,Curriculum Developer,College Academic Affairs Office,2014-01-01,2016-12-31,Designed and updated syllabus for computing and programming courses.,Curriculum Dev.,1;2,TRUE
+2025-100001,Workshop Facilitator,Community IT Training Center,2012-01-01,2013-12-31,Conducted workshops for beginners on computing concepts.,Training,1,TRUE
+2025-100001,Research Assistant,University Research Unit,2017-01-01,2019-12-31,Assisted in research on improving programming pedagogy.,Research,2,TRUE
+2025-100002,Lecturer,State College,2012-08-01,2021-07-31,Taught discrete mathematics and human-computer interaction courses.,Teaching,5;4,TRUE
+2025-100002,Research Associate,Applied Computing Research Center,2014-01-01,2016-12-31,Conducted research on mathematical models in user interface design.,Research,5;4,TRUE
+2025-100002,Systems Analyst,IT Consulting Firm,2010-01-01,2012-07-31,Analyzed business requirements and modeled software solutions.,Industry,4,TRUE
+2025-100002,Workshop Instructor,Local Training Hub,2017-01-01,2018-12-31,Delivered training on discrete structures for computing.,Training,5,TRUE
+2025-100002,Technical Writer,Freelance,2019-01-01,2020-12-31,Produced documentation for HCI research projects.,Writing,4,TRUE
+2025-100003,Assistant Professor,Metro University,2013-06-01,2022-05-31,"Taught data structures, object-oriented programming, and algorithms.",Teaching,8;9,TRUE
+2025-100003,Software Engineer,CodeCraft Inc.,2010-01-01,2013-05-31,Developed and maintained Java-based enterprise applications.,Industry,9,TRUE
+2025-100003,Research Assistant,University IT Lab,2014-01-01,2016-12-31,Assisted research on optimizing data structures for performance.,Research,8,TRUE
+2025-100003,Workshop Facilitator,Tech Skills Center,2017-01-01,2018-12-31,Conducted workshops on object-oriented design principles.,Training,9,TRUE
+2025-100003,Curriculum Developer,Academic Programs Office,2018-01-01,2019-12-31,Updated programming curriculum to integrate OOP best practices.,Curriculum Dev.,9,TRUE
+2025-100004,Lecturer,Institute of Technology,2014-08-01,2022-07-31,Taught platform technologies and web systems fundamentals.,Teaching,10;11,TRUE
+2025-100004,Web Developer,Creative Web Agency,2010-01-01,2014-07-31,Developed websites and implemented content management systems.,Industry,11,TRUE
+2025-100004,Technical Consultant,Freelance,2016-01-01,2018-12-31,Provided consultation on deploying platform technologies.,Consulting,10,TRUE
+2025-100004,Workshop Instructor,Digital Skills Training Hub,2015-01-01,2016-12-31,"Trained participants in HTML, CSS, and server technologies.",Training,11,TRUE
+2025-100004,Research Associate,Web Innovation Lab,2019-01-01,2020-12-31,Studied emerging web frameworks for better performance.,Research,11,TRUE
+2025-100005,Instructor,Community College,2015-06-01,2022-05-31,Taught introduction to networks and routing essentials.,Teaching,12;16,TRUE
+2025-100005,Network Administrator,Local ISP,2012-01-01,2015-05-31,Configured and maintained networking equipment and VLAN setups.,Industry,12;16,TRUE
+2025-100005,Workshop Facilitator,Tech Learning Center,2017-01-01,2018-12-31,Delivered CCNA preparation courses for students.,Training,12;16,TRUE
+2025-100005,Research Assistant,Networking Research Unit,2014-01-01,2015-12-31,Assisted in studies on LAN optimization and redundancy protocols.,Research,16,TRUE
+2025-100005,Freelance IT Consultant,Self-employed,2019-01-01,2020-12-31,Provided network troubleshooting services to small businesses.,Consulting,12,TRUE
+2025-100006,Assistant Professor,University of Computing,2010-08-01,2020-07-31,Taught information management and database fundamentals.,Teaching,13;18,TRUE
+2025-100006,Database Administrator,FinanceCorp,2007-01-01,2010-07-31,Managed and optimized relational databases for core banking operations.,Industry,18,TRUE
+2025-100006,Research Associate,University IT Department,2012-01-01,2014-12-31,Conducted research on data modeling techniques and performance tuning.,Research,18,TRUE
+2025-100006,Workshop Facilitator,Data Skills Hub,2016-01-01,2017-12-31,Trained participants in SQL queries and database design.,Training,18,TRUE
+2025-100006,Curriculum Developer,Education Board,2018-01-01,2019-12-31,Developed course content for information management.,Curriculum Dev.,13,TRUE
+2025-100007,Instructor,State University,2013-06-01,2022-05-31,Taught quantitative methods and analytics courses.,Teaching,14;20,TRUE
+2025-100007,Data Analyst,Business Insights Ltd.,2010-01-01,2013-05-31,Prepared statistical analyses and business forecasts.,Industry,14,TRUE
+2025-100007,Research Assistant,Analytics Research Lab,2014-01-01,2016-12-31,Worked on research in data analytics and quantitative modeling.,Research,14;20,TRUE
+2025-100007,Workshop Instructor,Professional Development Center,2017-01-01,2018-12-31,Conducted training on data visualization tools.,Training,20,TRUE
+2025-100007,Curriculum Developer,College Programs Office,2018-01-01,2019-12-31,Designed updated analytics course syllabi.,Curriculum Dev.,14;20,TRUE
+2025-100008,Lecturer,City Tech University,2015-08-01,2022-07-31,Taught integrative programming and technologies courses.,Teaching,15;32,TRUE
+2025-100008,Software Developer,Innovatech,2012-01-01,2015-07-31,Developed software integrating APIs and databases.,Industry,15;32,TRUE
+2025-100008,Research Assistant,Applied Software Lab,2014-01-01,2016-12-31,Worked on integration of multiple software platforms.,Research,15;32,TRUE
+2025-100008,Workshop Facilitator,Tech Training Hub,2017-01-01,2018-12-31,Trained learners on full-stack development tools.,Training,15,TRUE
+2025-100008,Freelance Consultant,Self-employed,2019-01-01,2020-12-31,Consulted on custom software integration projects.,Consulting,15;32,TRUE
+2025-100009,Assistant Professor,Regional University,2012-06-01,2022-05-31,Taught advanced database systems and software engineering.,Teaching,18;26,TRUE
+2025-100009,Database Architect,Enterprise Systems,2009-01-01,2012-05-31,Designed large-scale relational database systems.,Industry,18,TRUE
+2025-100009,Research Associate,Database Research Group,2013-01-01,2015-12-31,Studied emerging database standards and implementation strategies.,Research,18,TRUE
+2025-100009,Workshop Instructor,Data Academy,2017-01-01,2018-12-31,Conducted advanced SQL and database optimization training.,Training,18,TRUE
+2025-100009,Consultant,Freelance,2019-01-01,2020-12-31,Provided database design consultation for startups.,Consulting,18;26,TRUE
+2025-100010,Lecturer,Tech Institute,2014-08-01,2022-07-31,"Taught systems analysis and design, and capstone preparation courses.",Teaching,19;35,TRUE
+2025-100010,Systems Analyst,IT Consulting Group,2011-01-01,2014-07-31,Analyzed organizational needs and proposed IT solutions.,Industry,19,TRUE
+2025-100010,Research Associate,University IT Lab,2015-01-01,2017-12-31,Researched methodologies for system design and project planning.,Research,19;35,TRUE
+2025-100010,Workshop Facilitator,Professional Skills Center,2018-01-01,2019-12-31,Conducted training on preparing research proposals.,Training,35,TRUE
+2025-100010,Curriculum Developer,Education Board,2019-01-01,2020-12-31,Developed updated syllabus for capstone and research courses.,Curriculum Dev.,35,TRUE
+2025-100011,Professor,State University,2012-08-01,2022-07-31,"Taught systems analysis, software engineering, and information management courses; supervised student projects.",Teaching,13;19;26,TRUE
+2025-100011,Research Lead,University Research Center,2014-01-01,2018-12-31,Led research projects on systems development and integration methodologies.,Research,19;21,TRUE
+2025-100011,Consultant,Tech Solutions Ltd.,2019-01-01,2021-12-31,Provided consulting on system design and project management for IT firms.,Consulting,19;26,TRUE
+2025-100011,Workshop Facilitator,Professional Development Institute,2016-06-01,2017-12-31,Conducted workshops on systems analysis and software project planning.,Training,19;26,TRUE
+2025-100011,Curriculum Advisor,State Education Board,2018-01-01,2020-12-31,Advised on curriculum development for software engineering and system design courses.,Curriculum Dev.,26;19,TRUE
+2025-100012,Technical Instructor,Tech College,2015-01-01,2018-12-31,Lectured on programming fundamentals and computing basics.,Teaching,2;1,TRUE
+2025-100012,IT Support Specialist,Enterprise Solutions,2012-05-01,2014-12-31,Provided technical support and system maintenance in corporate environment.,Industry,1;36,TRUE
+2025-100012,Junior Developer,Startup Labs,2014-06-01,2016-12-31,Developed software components and assisted with testing.,Industry,6;23,TRUE
+2025-100012,Workshop Instructor,Local Community Center,2017-01-01,2018-12-31,Conducted beginner programming workshops for community learners.,Training,2;6,TRUE
+2025-100012,Freelance Consultant,Self-employed,2019-01-01,2021-12-31,Provided freelance programming and IT consulting services.,Consulting,2;23,TRUE
+2025-100013,Lecturer,National University,2013-06-01,2022-05-31,"Taught discrete mathematics, data structures, and programming courses.",Teaching,5;8;2,TRUE
+2025-100013,Research Assistant,Mathematics Department,2012-01-01,2014-12-31,Assisted in research on discrete algorithms and computational models.,Research,5;8,TRUE
+2025-100013,Tutor,Private Tutoring,2010-01-01,2020-12-31,Provided tutoring in mathematics and computer science topics.,Teaching,5;2,TRUE
+2025-100013,Curriculum Developer,Educational Services,2016-01-01,2017-12-31,Developed course content for discrete mathematics and programming classes.,Curriculum Dev.,5;2,TRUE
+2025-100013,Software Developer,Tech Innovations,2014-06-01,2016-12-31,Developed software solutions applying algorithmic principles.,Industry,8;9,TRUE
+2025-100014,IT Support Specialist,Regional Hospital,2011-04-01,2014-03-31,Managed technical support and system maintenance in healthcare setting.,Industry,1;36,TRUE
+2025-100014,Adjunct Lecturer,Community College,2015-08-01,2019-05-31,Delivered introductory computing and office productivity tool courses.,Teaching,1;3,TRUE
+2025-100014,Technical Trainer,Local Training Center,2016-01-01,2018-12-31,Conducted workshops on basic IT skills and system administration.,Training,36;38,TRUE
+2025-100014,Freelance IT Consultant,Self-employed,2019-01-01,2021-12-31,Provided IT maintenance and consulting for small and medium enterprises.,Consulting,36;38,TRUE
+2025-100014,Helpdesk Analyst,Tech Support Services,2009-06-01,2011-03-31,Provided user support and troubleshooting for hardware and software issues.,Industry,1,TRUE
+2025-100015,Associate Professor,University of Technology,2010-07-01,2020-06-30,Taught human-computer interaction and software development courses.,Teaching,4;23,TRUE
+2025-100015,Researcher,University Research Lab,2013-01-01,2016-12-31,Conducted research on usability and user experience in software systems.,Research,4;23,TRUE
+2025-100015,Project Manager,Innovatech Solutions,2017-01-01,2020-12-31,Managed software projects with a focus on user-centric design principles.,Industry,4;23,TRUE
+2025-100015,Workshop Facilitator,Tech Learning Institute,2014-06-01,2015-12-31,Conducted training on user interface design and usability evaluation.,Training,4;23,TRUE
+2025-100015,Technical Consultant,Freelance,2018-01-01,2021-12-31,Consulted on software usability improvements and interface designs.,Consulting,4;23,TRUE
+2025-100016,IT Technician,Manufacturing Corp,2013-03-01,2016-08-31,Handled system installation and troubleshooting in a manufacturing environment.,Industry,1;36,TRUE
+2025-100016,Network Support Specialist,Communications Ltd.,2016-09-01,2019-12-31,Provided maintenance and configuration for network hardware and software.,Industry,12;16,TRUE
+2025-100016,Adjunct Lecturer,City College,2020-01-01,2022-12-31,Taught networking fundamentals and system administration.,Teaching,12;36,TRUE
+2025-100016,Workshop Instructor,Local Tech Hub,2017-01-01,2018-12-31,Delivered training on network security and wireless administration.,Training,16;36,TRUE
+2025-100016,Freelance Consultant,Self-employed,2019-06-01,2021-12-31,Provided consultancy on network setup and IT infrastructure.,Consulting,12;16,TRUE
+2025-100017,Assistant Professor,State University,2014-08-01,2022-07-31,"Taught software engineering, systems integration, and database management courses.",Teaching,18;21;26,TRUE
+2025-100017,Research Associate,University Research Lab,2015-01-01,2018-12-31,Contributed to research on middleware and service-oriented architectures.,Research,21;33,TRUE
+2025-100017,Software Developer,Tech Corp,2011-01-01,2014-07-31,Developed integrated software applications for business clients.,Industry,26;21,TRUE
+2025-100017,Technical Writer,Tech Publications,2016-01-01,2017-12-31,Produced technical documentation for software integration projects.,Writing,26;21,TRUE
+2025-100017,Curriculum Developer,Education Board,2019-01-01,2020-12-31,Developed updated course materials for software engineering and integration.,Curriculum Dev.,26;21,TRUE
+2025-100018,Lecturer,National University,2012-06-01,2022-05-31,"Taught multimedia systems, web technologies, and emerging tech courses.",Teaching,27;30;22,TRUE
+2025-100018,Multimedia Designer,Creative Studio,2010-01-01,2012-05-31,Designed interactive multimedia presentations and digital media content.,Industry,27,TRUE
+2025-100018,Workshop Facilitator,Tech Academy,2013-01-01,2015-12-31,Conducted workshops on multimedia design and web development.,Training,27;22,TRUE
+2025-100018,Research Assistant,University Media Lab,2015-01-01,2017-12-31,Supported research on web systems and multimedia applications.,Research,27;22,TRUE
+2025-100018,Technical Consultant,Freelance,2018-01-01,2021-12-31,Consulted on multimedia integration and web system development.,Consulting,27;22,TRUE
+2025-100019,Adjunct Instructor,Community College,2015-08-01,2022-07-31,Taught foundational computing and general education courses.,Teaching,3;17,TRUE
+2025-100019,IT Support Specialist,Tech Helpdesk,2012-06-01,2015-07-31,Provided IT support and system troubleshooting.,Industry,1;36,TRUE
+2025-100019,Workshop Instructor,Nonprofit Org,2016-01-01,2017-12-31,Conducted IT literacy workshops for community members.,Training,3,TRUE
+2025-100019,Freelance IT Consultant,Self-employed,2018-01-01,2021-12-31,Offered freelance IT support and consultancy.,Consulting,1;3,TRUE
+2025-100019,Administrative Assistant,Local College,2010-01-01,2012-05-31,Assisted in administrative and IT coordination tasks.,Industry,3,TRUE
+2025-100020,Lecturer,State University,2013-07-01,2022-06-30,"Taught data mining, software engineering, and professional issues.",Teaching,20;26;24,TRUE
+2025-100020,Data Analyst,Research Firm,2010-01-01,2013-06-30,Conducted data analysis to support business decisions and research.,Industry,20,TRUE
+2025-100020,Research Assistant,University Research Center,2014-01-01,2017-12-31,Assisted research on data analytics and quantitative methods.,Research,24;20,TRUE
+2025-100020,Workshop Facilitator,Tech Institute,2018-01-01,2019-12-31,Facilitated training on data mining and analytics tools.,Training,20;24,TRUE
+2025-100020,Consultant,Freelance,2020-01-01,2021-12-31,Provided consultancy on data analytics and software development.,Consulting,20;26,TRUE

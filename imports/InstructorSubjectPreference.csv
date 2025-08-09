@@ -1,101 +1,201 @@
 instructorId,subjectId,preferenceType,reason,createdAt,updatedAt
-2025-100001,12,Prefer,I have industry certifications on networking.,2025-07-23,2025-07-23
-2025-100001,8,Prefer,I've taught data structures in previous semesters.,2025-07-23,2025-07-23
-2025-100001,29,Prefer,Strong background in cybersecurity.,2025-07-23,2025-07-23
-2025-100001,24,Neutral,I align this with professional ethics lectures.,2025-07-23,2025-07-23
-2025-100001,34,Prefer,Handled advanced security before.,2025-07-23,2025-07-23
-2025-100002,2,Prefer,Passionate about introducing students to programming.,2025-07-23,2025-07-23
-2025-100002,6,Neutral,Taught Java-based programming before.,2025-07-23,2025-07-23
-2025-100002,9,Prefer,Object-oriented programming is my specialization.,2025-07-23,2025-07-23
-2025-100002,22,Neutral,Skilled in modern web frameworks.,2025-07-23,2025-07-23
-2025-100002,30,Prefer,I enjoy teaching emerging technologies.,2025-07-23,2025-07-23
-2025-100003,1,Prefer,Regularly handle IT fundamentals.,2025-07-23,2025-07-23
-2025-100003,3,Neutral,I also handle GE electives alongside major subjects.,2025-07-23,2025-07-23
-2025-100003,10,Prefer,I specialize in platform-based systems.,2025-07-23,2025-07-23
-2025-100003,15,Neutral,Taught integrative programming previously.,2025-07-23,2025-07-23
-2025-100003,26,Prefer,Software engineering is aligned with my expertise.,2025-07-23,2025-07-23
-2025-100004,4,Prefer,UX/UI research is my academic focus.,2025-07-23,2025-07-23
-2025-100004,13,Neutral,I’ve created syllabi for this subject before.,2025-07-23,2025-07-23
-2025-100004,18,Prefer,I mentor database-focused thesis projects.,2025-07-23,2025-07-23
-2025-100004,21,Prefer,Expertise in system integration.,2025-07-23,2025-07-23
-2025-100004,36,Prefer,Years of experience in server administration.,2025-07-23,2025-07-23
-2025-100005,11,Prefer,Previously taught web systems and enjoy frontend topics.,2025-07-23,2025-07-23
-2025-100005,14,Avoid,Not comfortable teaching statistics-heavy courses.,2025-07-23,2025-07-23
-2025-100005,23,Prefer,Event-driven programming aligns with my teaching style.,2025-07-23,2025-07-23
-2025-100005,28,Neutral,I can teach electives but not my primary focus.,2025-07-23,2025-07-23
-2025-100005,32,Prefer,Have experience mentoring integrative projects.,2025-07-23,2025-07-23
-2025-100006,5,Avoid,Prefer teaching conceptual over mathematical topics.,2025-07-23,2025-07-23
-2025-100006,16,Prefer,Taught networking fundamentals and routing.,2025-07-23,2025-07-23
-2025-100006,17,Neutral,I can handle GE electives if required.,2025-07-23,2025-07-23
-2025-100006,27,Prefer,Multimedia systems is an area I actively research.,2025-07-23,2025-07-23
-2025-100006,37,Prefer,Have successfully guided several capstone teams.,2025-07-23,2025-07-23
-2025-100007,7,Neutral,Occasionally teach GE electives.,2025-07-23,2025-07-23
-2025-100007,19,Prefer,Good background in systems analysis & project planning.,2025-07-23,2025-07-23
-2025-100007,25,Avoid,Not certified for advanced networking courses.,2025-07-23,2025-07-23
-2025-100007,31,Neutral,Familiar with the material but not a strong preference.,2025-07-23,2025-07-23
-2025-100007,38,Prefer,Handled internship coordination and practicum before.,2025-07-23,2025-07-23
-2025-100008,20,Prefer,Actively conduct research in data analytics.,2025-07-23,2025-07-23
-2025-100008,33,Neutral,I've assisted in Systems Integration 2 classes.,2025-07-23,2025-07-23
-2025-100008,35,Prefer,Capstone supervision is part of my regular load.,2025-07-23,2025-07-23
-2025-100008,22,Neutral,Experience in web technologies but not expert.,2025-07-23,2025-07-23
-2025-100008,6,Avoid,I prefer not to teach early-stage programming.,2025-07-23,2025-07-23
-2025-100009,4,Prefer,HCI is one of my favorite courses to facilitate.,2025-07-23,2025-07-23
-2025-100009,13,Neutral,Familiar with information management concepts.,2025-07-23,2025-07-23
-2025-100009,29,Avoid,I avoid security-related subjects.,2025-07-23,2025-07-23
-2025-100009,10,Prefer,Enjoy teaching about platform-based technologies.,2025-07-23,2025-07-23
-2025-100009,1,Neutral,I can teach intro classes but prefer upper-year ones.,2025-07-23,2025-07-23
-2025-100010,15,Prefer,Enjoy guiding students on integrative projects.,2025-07-23,2025-07-23
-2025-100010,26,Avoid,Prefer not to handle software engineering.,2025-07-23,2025-07-23
-2025-100010,18,Neutral,Comfortable with advanced database topics.,2025-07-23,2025-07-23
-2025-100010,30,Prefer,App development is a personal specialty.,2025-07-23,2025-07-23
-2025-100010,3,Neutral,GE electives are manageable but not my focus.,2025-07-23,2025-07-23
-2025-100011,12,Prefer,Network fundamentals align with my certifications.,2025-07-23,2025-07-23
-2025-100011,34,Prefer,Capable of handling cybersecurity subjects.,2025-07-23,2025-07-23
-2025-100011,2,Avoid,I prefer not to teach beginner programming.,2025-07-23,2025-07-23
-2025-100011,8,Neutral,Taught data structures once before.,2025-07-23,2025-07-23
-2025-100011,17,Prefer,Actively involved in GE curriculum design.,2025-07-23,2025-07-23
-2025-100012,9,Prefer,Skilled in object-oriented programming.,2025-07-23,2025-07-23
-2025-100012,24,Neutral,Social issues are relevant but not my main area.,2025-07-23,2025-07-23
-2025-100012,36,Avoid,System administration is outside my expertise.,2025-07-23,2025-07-23
-2025-100012,21,Prefer,Handled Systems Architecture classes for 3 years.,2025-07-23,2025-07-23
-2025-100012,5,Neutral,Comfortable teaching discrete math occasionally.,2025-07-23,2025-07-23
-2025-100013,11,Prefer,Web technologies are my passion.,2025-07-23,2025-07-23
-2025-100013,6,Neutral,Can teach programming 2 if needed.,2025-07-23,2025-07-23
-2025-100013,27,Avoid,I avoid multimedia-related topics.,2025-07-23,2025-07-23
-2025-100013,22,Prefer,I’ve developed and taught web systems 2 extensively.,2025-07-23,2025-07-23
-2025-100013,14,Neutral,I occasionally handle quantitative methods.,2025-07-23,2025-07-23
-2025-100014,20,Prefer,Data analytics is my research area.,2025-07-23,2025-07-23
-2025-100014,7,Neutral,GE electives are part of my load sometimes.,2025-07-23,2025-07-23
-2025-100014,19,Avoid,Prefer to avoid systems analysis.,2025-07-23,2025-07-23
-2025-100014,28,Prefer,IT electives provide freedom to innovate.,2025-07-23,2025-07-23
-2025-100014,16,Neutral,Routing topics are familiar to me.,2025-07-23,2025-07-23
-2025-100015,32,Prefer,Love working on integration capstone projects.,2025-07-23,2025-07-23
-2025-100015,25,Avoid,I’m not CCNA certified.,2025-07-23,2025-07-23
-2025-100015,23,Neutral,Event-driven programming is manageable.,2025-07-23,2025-07-23
-2025-100015,35,Prefer,Research advising is something I enjoy.,2025-07-23,2025-07-23
-2025-100015,31,Neutral,I have experience but don’t prefer networking.,2025-07-23,2025-07-23
-2025-100016,37,Prefer,Capstone panel member for several years.,2025-07-23,2025-07-23
-2025-100016,33,Avoid,I avoid system architecture discussions.,2025-07-23,2025-07-23
-2025-100016,38,Neutral,I can manage practicum supervision.,2025-07-23,2025-07-23
-2025-100016,26,Prefer,Software engineering is my area of expertise.,2025-07-23,2025-07-23
-2025-100016,18,Neutral,Familiar with database systems.,2025-07-23,2025-07-23
-2025-100017,8,Prefer,I enjoy teaching data structures.,2025-07-23,2025-07-23
-2025-100017,5,Avoid,Discrete math isn’t my strength.,2025-07-23,2025-07-23
-2025-100017,12,Neutral,I can teach intro to networks when needed.,2025-07-23,2025-07-23
-2025-100017,13,Prefer,Information management is aligned with my expertise.,2025-07-23,2025-07-23
-2025-100017,1,Neutral,I’m okay handling introductory IT courses.,2025-07-23,2025-07-23
-2025-100018,2,Prefer,I specialize in introductory programming.,2025-07-23,2025-07-23
-2025-100018,30,Avoid,I’m not up to date with emerging tech.,2025-07-23,2025-07-23
-2025-100018,4,Neutral,I can teach HCI occasionally.,2025-07-23,2025-07-23
-2025-100018,9,Prefer,I like teaching OOP concepts.,2025-07-23,2025-07-23
-2025-100018,21,Neutral,Systems integration is within my reach.,2025-07-23,2025-07-23
-2025-100019,17,Prefer,GE electives help balance my load.,2025-07-23,2025-07-23
-2025-100019,3,Neutral,I assist with GE electives often.,2025-07-23,2025-07-23
-2025-100019,10,Avoid,Not confident with platform technologies.,2025-07-23,2025-07-23
-2025-100019,15,Prefer,I’ve taught integrative programming several times.,2025-07-23,2025-07-23
-2025-100019,36,Neutral,Administration topics are okay for me.,2025-07-23,2025-07-23
-2025-100020,24,Prefer,I emphasize ethics and professionalism.,2025-07-23,2025-07-23
-2025-100020,34,Avoid,I don’t handle security topics.,2025-07-23,2025-07-23
-2025-100020,29,Neutral,I’m capable of handling security 1.,2025-07-23,2025-07-23
-2025-100020,19,Prefer,Systems analysis is my core strength.,2025-07-23,2025-07-23
-2025-100020,6,Neutral,I can support programming 2 classes.,2025-07-23,2025-07-23
+2025-100001,1,Prefer,Strong foundation in introductory computing and productivity tools.,2025-07-23,2025-07-23
+2025-100001,2,Prefer,Experienced teaching introductory programming.,2025-07-23,2025-07-23
+2025-100001,4,Avoid,Limited background in Human-Computer Interaction.,2025-07-23,2025-07-23
+2025-100001,8,Prefer,Comfortable with algorithms and data structures.,2025-07-23,2025-07-23
+2025-100001,12,Avoid,No expertise in networking subjects.,2025-07-23,2025-07-23
+2025-100001,18,Prefer,Background in database systems.,2025-07-23,2025-07-23
+2025-100001,24,Avoid,No interest in social and professional issues.,2025-07-23,2025-07-23
+2025-100001,33,Avoid,Unfamiliar with systems integration.,2025-07-23,2025-07-23
+2025-100001,39,Prefer,Experienced in practicum supervision.,2025-07-23,2025-07-23
+2025-100001,27,Avoid,Not confident in multimedia systems.,2025-07-23,2025-07-23
+2025-100002,2,Prefer,Skilled in programming fundamentals.,2025-07-23,2025-07-23
+2025-100002,6,Prefer,Advanced programming experience.,2025-07-23,2025-07-23
+2025-100002,8,Avoid,Lacks algorithm teaching experience.,2025-07-23,2025-07-23
+2025-100002,19,Prefer,Good understanding of systems analysis.,2025-07-23,2025-07-23
+2025-100002,22,Avoid,Unfamiliar with web technologies.,2025-07-23,2025-07-23
+2025-100002,28,Prefer,Strong in IT electives.,2025-07-23,2025-07-23
+2025-100002,31,Avoid,No experience with connecting networks.,2025-07-23,2025-07-23
+2025-100002,33,Avoid,Unfamiliar with system integration.,2025-07-23,2025-07-23
+2025-100002,24,Prefer,Comfortable with quantitative methods.,2025-07-23,2025-07-23
+2025-100002,12,Avoid,Limited networking knowledge.,2025-07-23,2025-07-23
+2025-100003,4,Prefer,Background in Human-Computer Interaction.,2025-07-23,2025-07-23
+2025-100003,5,Prefer,Discrete mathematics expertise.,2025-07-23,2025-07-23
+2025-100003,9,Prefer,Object-oriented programming skills.,2025-07-23,2025-07-23
+2025-100003,11,Avoid,No web systems experience.,2025-07-23,2025-07-23
+2025-100003,18,Prefer,Advanced database systems knowledge.,2025-07-23,2025-07-23
+2025-100003,23,Avoid,Limited event-driven programming skills.,2025-07-23,2025-07-23
+2025-100003,27,Prefer,Multimedia systems experience.,2025-07-23,2025-07-23
+2025-100003,34,Avoid,Not confident in information assurance.,2025-07-23,2025-07-23
+2025-100003,39,Prefer,Capstone project mentorship experience.,2025-07-23,2025-07-23
+2025-100003,19,Prefer,Systems analysis expertise.,2025-07-23,2025-07-23
+2025-100004,3,Prefer,Experienced teaching general education courses.,2025-07-23,2025-07-23
+2025-100004,5,Avoid,Limited math background.,2025-07-23,2025-07-23
+2025-100004,8,Avoid,Weak data structure knowledge.,2025-07-23,2025-07-23
+2025-100004,11,Prefer,Web systems and technologies.,2025-07-23,2025-07-23
+2025-100004,17,Prefer,General education electives expertise.,2025-07-23,2025-07-23
+2025-100004,21,Avoid,No systems integration experience.,2025-07-23,2025-07-23
+2025-100004,25,Avoid,No experience scaling networks.,2025-07-23,2025-07-23
+2025-100004,28,Avoid,Weak elective subject knowledge.,2025-07-23,2025-07-23
+2025-100004,12,Prefer,Introduction to networks expertise.,2025-07-23,2025-07-23
+2025-100004,24,Prefer,Comfortable teaching quantitative methods.,2025-07-23,2025-07-23
+2025-100005,2,Prefer,Programming fundamentals expertise.,2025-07-23,2025-07-23
+2025-100005,9,Prefer,Object-oriented programming skills.,2025-07-23,2025-07-23
+2025-100005,20,Avoid,No data mining experience.,2025-07-23,2025-07-23
+2025-100005,24,Prefer,Strong quantitative methods skills.,2025-07-23,2025-07-23
+2025-100005,26,Prefer,Software engineering background.,2025-07-23,2025-07-23
+2025-100005,29,Avoid,Limited info assurance knowledge.,2025-07-23,2025-07-23
+2025-100005,32,Prefer,Integrative programming skills.,2025-07-23,2025-07-23
+2025-100005,35,Avoid,No capstone project supervision.,2025-07-23,2025-07-23
+2025-100005,18,Prefer,Database systems experience.,2025-07-23,2025-07-23
+2025-100005,22,Avoid,Weak web systems background.,2025-07-23,2025-07-23
+2025-100006,3,Avoid,No general education expertise.,2025-07-23,2025-07-23
+2025-100006,6,Prefer,Programming skills.,2025-07-23,2025-07-23
+2025-100006,13,Prefer,Information management background.,2025-07-23,2025-07-23
+2025-100006,19,Prefer,Systems analysis experience.,2025-07-23,2025-07-23
+2025-100006,21,Avoid,No system integration knowledge.,2025-07-23,2025-07-23
+2025-100006,23,Avoid,Not skilled in event-driven programming.,2025-07-23,2025-07-23
+2025-100006,28,Avoid,Weak IT elective background.,2025-07-23,2025-07-23
+2025-100006,34,Avoid,Limited info assurance skills.,2025-07-23,2025-07-23
+2025-100006,16,Prefer,Routing and switching basics.,2025-07-23,2025-07-23
+2025-100006,9,Avoid,Unfamiliar with OOP concepts.,2025-07-23,2025-07-23
+2025-100007,1,Avoid,No introductory computing expertise.,2025-07-23,2025-07-23
+2025-100007,3,Prefer,General education electives.,2025-07-23,2025-07-23
+2025-100007,7,Prefer,General education experience.,2025-07-23,2025-07-23
+2025-100007,10,Avoid,Unfamiliar with platform technologies.,2025-07-23,2025-07-23
+2025-100007,14,Prefer,Quantitative methods skills.,2025-07-23,2025-07-23
+2025-100007,17,Prefer,General education electives.,2025-07-23,2025-07-23
+2025-100007,21,Avoid,No systems integration experience.,2025-07-23,2025-07-23
+2025-100007,26,Avoid,Weak software engineering skills.,2025-07-23,2025-07-23
+2025-100007,9,Avoid,Limited programming skills.,2025-07-23,2025-07-23
+2025-100007,12,Avoid,No networking knowledge.,2025-07-23,2025-07-23
+2025-100008,4,Prefer,Human-computer interaction background.,2025-07-23,2025-07-23
+2025-100008,9,Prefer,Object-oriented programming skills.,2025-07-23,2025-07-23
+2025-100008,18,Prefer,Advanced database knowledge.,2025-07-23,2025-07-23
+2025-100008,22,Avoid,Limited web systems experience.,2025-07-23,2025-07-23
+2025-100008,27,Prefer,Multimedia systems.,2025-07-23,2025-07-23
+2025-100008,31,Avoid,No connecting networks experience.,2025-07-23,2025-07-23
+2025-100008,35,Prefer,Capstone project mentoring.,2025-07-23,2025-07-23
+2025-100008,20,Avoid,No data mining expertise.,2025-07-23,2025-07-23
+2025-100008,12,Prefer,Networking fundamentals.,2025-07-23,2025-07-23
+2025-100008,33,Avoid,Unfamiliar with systems integration.,2025-07-23,2025-07-23
+2025-100009,2,Prefer,Programming fundamentals.,2025-07-23,2025-07-23
+2025-100009,9,Prefer,Object-oriented programming.,2025-07-23,2025-07-23
+2025-100009,16,Prefer,Routing and switching essentials.,2025-07-23,2025-07-23
+2025-100009,22,Prefer,Web systems and technologies.,2025-07-23,2025-07-23
+2025-100009,24,Avoid,No quantitative methods skills.,2025-07-23,2025-07-23
+2025-100009,27,Prefer,Multimedia systems.,2025-07-23,2025-07-23
+2025-100009,31,Avoid,No network scaling experience.,2025-07-23,2025-07-23
+2025-100009,35,Avoid,No capstone experience.,2025-07-23,2025-07-23
+2025-100009,38,Prefer,Practicum supervision.,2025-07-23,2025-07-23
+2025-100009,39,Prefer,Capstone project support.,2025-07-23,2025-07-23
+2025-100010,3,Prefer,General education electives.,2025-07-23,2025-07-23
+2025-100010,6,Prefer,Programming fundamentals.,2025-07-23,2025-07-23
+2025-100010,11,Avoid,No web system expertise.,2025-07-23,2025-07-23
+2025-100010,18,Prefer,Database systems.,2025-07-23,2025-07-23
+2025-100010,22,Avoid,Unfamiliar with web technologies.,2025-07-23,2025-07-23
+2025-100010,24,Prefer,Quantitative methods.,2025-07-23,2025-07-23
+2025-100010,27,Avoid,No multimedia skills.,2025-07-23,2025-07-23
+2025-100010,29,Prefer,Information assurance basics.,2025-07-23,2025-07-23
+2025-100010,31,Avoid,No network experience.,2025-07-23,2025-07-23
+2025-100010,35,Avoid,No capstone project mentoring.,2025-07-23,2025-07-23
+2025-100011,1,Prefer,Strong foundation in introductory computing.,2025-07-23,2025-07-23
+2025-100011,4,Prefer,Background in HCI and usability.,2025-07-23,2025-07-23
+2025-100011,9,Avoid,Limited OOP teaching experience.,2025-07-23,2025-07-23
+2025-100011,13,Prefer,Information management expertise.,2025-07-23,2025-07-23
+2025-100011,18,Avoid,Not focused on advanced databases.,2025-07-23,2025-07-23
+2025-100011,24,Prefer,Good grasp of quantitative methods.,2025-07-23,2025-07-23
+2025-100011,26,Avoid,Not specialized in software engineering.,2025-07-23,2025-07-23
+2025-100011,33,Avoid,No systems integration experience.,2025-07-23,2025-07-23
+2025-100011,39,Prefer,Experienced in practicum oversight.,2025-07-23,2025-07-23
+2025-100011,27,Avoid,Limited multimedia exposure.,2025-07-23,2025-07-23
+2025-100012,2,Prefer,Expertise in programming fundamentals.,2025-07-23,2025-07-23
+2025-100012,6,Prefer,Advanced programming concepts.,2025-07-23,2025-07-23
+2025-100012,9,Prefer,OOP teaching background.,2025-07-23,2025-07-23
+2025-100012,13,Avoid,Not focused on information management.,2025-07-23,2025-07-23
+2025-100012,16,Prefer,Routing and switching skills.,2025-07-23,2025-07-23
+2025-100012,19,Prefer,Systems analysis experience.,2025-07-23,2025-07-23
+2025-100012,24,Avoid,Limited quantitative methods.,2025-07-23,2025-07-23
+2025-100012,27,Avoid,No multimedia background.,2025-07-23,2025-07-23
+2025-100012,31,Prefer,Experience with network connectivity.,2025-07-23,2025-07-23
+2025-100012,34,Avoid,No information assurance expertise.,2025-07-23,2025-07-23
+2025-100013,4,Prefer,HCI and interface design skills.,2025-07-23,2025-07-23
+2025-100013,5,Prefer,Discrete mathematics background.,2025-07-23,2025-07-23
+2025-100013,9,Prefer,Proficient in OOP.,2025-07-23,2025-07-23
+2025-100013,11,Avoid,Limited web systems experience.,2025-07-23,2025-07-23
+2025-100013,18,Prefer,Database systems expertise.,2025-07-23,2025-07-23
+2025-100013,22,Avoid,Not specialized in advanced web technologies.,2025-07-23,2025-07-23
+2025-100013,27,Prefer,Multimedia creation background.,2025-07-23,2025-07-23
+2025-100013,33,Avoid,No systems integration knowledge.,2025-07-23,2025-07-23
+2025-100013,39,Prefer,Capstone mentoring experience.,2025-07-23,2025-07-23
+2025-100013,20,Avoid,No data mining experience.,2025-07-23,2025-07-23
+2025-100014,1,Avoid,Not focused on introductory computing.,2025-07-23,2025-07-23
+2025-100014,3,Prefer,General education electives teaching.,2025-07-23,2025-07-23
+2025-100014,7,Prefer,General education course experience.,2025-07-23,2025-07-23
+2025-100014,10,Avoid,Not skilled in platform technologies.,2025-07-23,2025-07-23
+2025-100014,14,Prefer,Quantitative methods expertise.,2025-07-23,2025-07-23
+2025-100014,17,Prefer,General education background.,2025-07-23,2025-07-23
+2025-100014,21,Avoid,Limited systems integration exposure.,2025-07-23,2025-07-23
+2025-100014,26,Avoid,No interest in software engineering.,2025-07-23,2025-07-23
+2025-100014,12,Avoid,Networking not a focus.,2025-07-23,2025-07-23
+2025-100014,9,Avoid,Limited programming knowledge.,2025-07-23,2025-07-23
+2025-100015,2,Prefer,Programming fundamentals background.,2025-07-23,2025-07-23
+2025-100015,9,Prefer,Strong OOP skills.,2025-07-23,2025-07-23
+2025-100015,18,Prefer,Database systems expertise.,2025-07-23,2025-07-23
+2025-100015,20,Avoid,Limited data mining exposure.,2025-07-23,2025-07-23
+2025-100015,22,Prefer,Hands-on web systems teaching.,2025-07-23,2025-07-23
+2025-100015,27,Avoid,No multimedia focus.,2025-07-23,2025-07-23
+2025-100015,29,Prefer,Information assurance knowledge.,2025-07-23,2025-07-23
+2025-100015,31,Avoid,Not experienced with large network scaling.,2025-07-23,2025-07-23
+2025-100015,35,Prefer,Capstone supervision experience.,2025-07-23,2025-07-23
+2025-100015,39,Prefer,Capstone and practicum mentoring.,2025-07-23,2025-07-23
+2025-100016,3,Prefer,General education teaching.,2025-07-23,2025-07-23
+2025-100016,6,Prefer,Programming experience.,2025-07-23,2025-07-23
+2025-100016,11,Avoid,No web systems specialization.,2025-07-23,2025-07-23
+2025-100016,14,Prefer,Strong quantitative skills.,2025-07-23,2025-07-23
+2025-100016,18,Prefer,Database systems knowledge.,2025-07-23,2025-07-23
+2025-100016,22,Avoid,Not focused on web tech.,2025-07-23,2025-07-23
+2025-100016,27,Avoid,No multimedia background.,2025-07-23,2025-07-23
+2025-100016,29,Prefer,Information assurance basics.,2025-07-23,2025-07-23
+2025-100016,31,Avoid,Limited networking exposure.,2025-07-23,2025-07-23
+2025-100016,35,Avoid,No capstone project experience.,2025-07-23,2025-07-23
+2025-100017,4,Prefer,HCI and UX expertise.,2025-07-23,2025-07-23
+2025-100017,9,Prefer,OOP programming.,2025-07-23,2025-07-23
+2025-100017,18,Prefer,Advanced database knowledge.,2025-07-23,2025-07-23
+2025-100017,22,Avoid,Not specialized in modern web technologies.,2025-07-23,2025-07-23
+2025-100017,27,Prefer,Multimedia content creation.,2025-07-23,2025-07-23
+2025-100017,31,Avoid,No networking experience.,2025-07-23,2025-07-23
+2025-100017,34,Prefer,Information assurance skills.,2025-07-23,2025-07-23
+2025-100017,20,Avoid,No data mining exposure.,2025-07-23,2025-07-23
+2025-100017,35,Prefer,Capstone mentorship.,2025-07-23,2025-07-23
+2025-100017,39,Prefer,Practicum guidance.,2025-07-23,2025-07-23
+2025-100018,2,Prefer,Programming foundations.,2025-07-23,2025-07-23
+2025-100018,6,Prefer,Intermediate programming.,2025-07-23,2025-07-23
+2025-100018,11,Prefer,Web systems and tech basics.,2025-07-23,2025-07-23
+2025-100018,16,Prefer,Networking essentials.,2025-07-23,2025-07-23
+2025-100018,20,Avoid,No data mining focus.,2025-07-23,2025-07-23
+2025-100018,24,Prefer,Quantitative methods skills.,2025-07-23,2025-07-23
+2025-100018,27,Avoid,Limited multimedia knowledge.,2025-07-23,2025-07-23
+2025-100018,29,Prefer,Basic info assurance skills.,2025-07-23,2025-07-23
+2025-100018,31,Avoid,Not experienced in network scaling.,2025-07-23,2025-07-23
+2025-100018,35,Avoid,No capstone supervision.,2025-07-23,2025-07-23
+2025-100019,4,Prefer,HCI and interaction design.,2025-07-23,2025-07-23
+2025-100019,9,Prefer,OOP and design patterns.,2025-07-23,2025-07-23
+2025-100019,13,Prefer,Information management systems.,2025-07-23,2025-07-23
+2025-100019,18,Prefer,Advanced database skills.,2025-07-23,2025-07-23
+2025-100019,20,Avoid,No background in data mining.,2025-07-23,2025-07-23
+2025-100019,22,Avoid,Not specialized in web systems.,2025-07-23,2025-07-23
+2025-100019,27,Prefer,Multimedia systems teaching.,2025-07-23,2025-07-23
+2025-100019,33,Avoid,No systems integration experience.,2025-07-23,2025-07-23
+2025-100019,35,Prefer,Capstone project mentoring.,2025-07-23,2025-07-23
+2025-100019,39,Prefer,Practicum supervision.,2025-07-23,2025-07-23
+2025-100020,2,Prefer,Programming basics.,2025-07-23,2025-07-23
+2025-100020,9,Prefer,OOP skills.,2025-07-23,2025-07-23
+2025-100020,13,Prefer,Information management.,2025-07-23,2025-07-23
+2025-100020,18,Prefer,Database knowledge.,2025-07-23,2025-07-23
+2025-100020,20,Avoid,No experience in data mining.,2025-07-23,2025-07-23
+2025-100020,22,Avoid,Not specialized in web tech.,2025-07-23,2025-07-23
+2025-100020,27,Avoid,No multimedia exposure.,2025-07-23,2025-07-23
+2025-100020,29,Prefer,Information assurance background.,2025-07-23,2025-07-23
+2025-100020,31,Avoid,No networking expertise.,2025-07-23,2025-07-23
+2025-100020,35,Prefer,Capstone mentoring.,2025-07-23,2025-07-23
