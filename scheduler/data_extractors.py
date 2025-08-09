@@ -1,53 +1,147 @@
-from scheduling.models import Semester, Section, Subject, GenEdSchedule 
-from instructors.models import (
-    InstructorDesignation, InstructorRank, InstructorAcademicAttainment, InstructorAvailability
+from collections import defaultdict
+from scheduling.models import (
+    Subject, Section, SubjectOffering, Curriculum, ScheduleControl, Room
 )
 from core.models import Instructor
+from aimatching.models import InstructorSubjectMatch
 
 
-def get_solver_data(semester: Semester, subject_filter=None):
-    sectionQuery = Section.objects.filter(semester=semester).select_related("subject")
-    if subject_filter:
-        sectionQuery = sectionQuery.filter(subject__id__in=subject_filter)
-    sections = list(sectionQuery)
-    subjects = [s.subject for s in sections]
+def get_solver_data(semester):
+    """
+    Returns a dict with normalized solver data:
+    - instructor_index: {instructor_id: idx}
+    - section_index: {section_id: idx}
+    - instructors: [instructor_id,...]
+    - sections: [section_id,...]
+    - subjects: {subject_id: {has_lab, lecture_hours, lab_hours, is_gened, is_priority_for_rooms}}
+    - section_subjects: {section_id: subject_id}
+    - gened_sections: set(section_id,...)
+    - instructor_availability: {instr_id: {day: [(start_min, end_min), ...]}}
+    - instructor_loads: {instr_id: (normal_hours, overload_hours)}
+    - matches: {section_id: [(instr_id, score), ...]}
+    - section_hours: {section_id: (lecture_hours, lab_hours)}
+    - lecture_lab_pairs: [(lecture_section_id, lab_section_id), ...]
+    - rooms: [room_id,...]
+    - room_index: {room_id: idx}
+    - rooms_qs: list of Room instances
+    - section_enrollment: {section_id: enrolled_students_count}
+    """
 
-    # GenEd schedules (priority blocks)
-    gened_blocks = list(GenEdSchedule.objects.filter(semester=semester, isPriority=True))
+    # ==== Instructors ====
+    instructors_qs = list(Instructor.objects.all())
+    instructors = [i.instructorId for i in instructors_qs]
+    instructor_index = {i.instructorId: idx for idx, i in enumerate(instructors_qs)}
 
-    # Instructor availability
-    availabilities = InstructorAvailability.objects.select_related("instructor")
+    # ==== Sections ====
+    sections_qs = list(Section.objects.filter(semester=semester))
+    sections = [s.sectionId for s in sections_qs]
+    section_index = {s.sectionId: idx for idx, s in enumerate(sections_qs)}
 
-    # Instructor teaching load rules
-    instructors = Instructor.objects.all()
-    load_data = []
-    for instructor in instructors:
-        if instructor.designation:
-            normal_load = instructor.designation.instructionHours
-        elif instructor.rank:
-            normal_load = instructor.rank.instructionHours
-        else:
-            normal_load = 18  # fallback
+    # ==== Subjects & Properties ====
+    subject_ids = {s.subject_id for s in sections_qs}
+    subjects_qs = Subject.objects.filter(subjectId__in=subject_ids).select_related("curriculum")
+    subjects = {}
+    for subj in subjects_qs:
+        subjects[subj.subjectId] = {
+            "has_lab": bool(getattr(subj, "hasLab", False)),
+            "lecture_hours": round(getattr(subj, "durationMinutes", 0) / 60, 2),
+            "lab_hours": round(getattr(subj, "labDurationMinutes", 0) / 60, 2) if getattr(subj, "hasLab", False) else 0,
+            "is_gened": bool(subj.curriculum.isActive and getattr(subj.curriculum, "is_gened", False)) if getattr(subj, "curriculum", None) else False,
+            "is_priority_for_rooms": bool(getattr(subj, "isPriorityForRooms", False)),
+            "type": getattr(subj, "type", None),  # optional if exists
+        }
 
-        if instructor.academicAttainment:
-            if instructor.designation:
-                overload_units = instructor.academicAttainment.overloadUnitsHasDesignation
-            else:
-                overload_units = instructor.academicAttainment.overloadUnitsNoDesignation
-        else:
-            overload_units = 0
+    section_subjects = {s.sectionId: s.subject_id for s in sections_qs}
+    gened_sections = {s.sectionId for s in sections_qs if subjects.get(s.subject_id, {}).get("is_gened", False)}
 
-        load_data.append({
-            "instructor": instructor,
-            "normal_load": normal_load,
-            "overload_units": overload_units,
-        })
+    # ==== Section hours (lecture, lab) ====
+    section_hours = {}
+    for s in sections_qs:
+        subj = subjects.get(s.subject_id, {"lecture_hours": 0, "lab_hours": 0})
+        lecture_h = subj.get("lecture_hours", 0)
+        lab_h = subj.get("lab_hours", 0) if subj.get("has_lab", False) else 0
+        section_hours[s.sectionId] = (lecture_h, lab_h)
+
+    # ==== Section enrollment counts ====
+    section_enrollment = {s.sectionId: getattr(s, "enrollment_count", 0) for s in sections_qs}
+
+    # ==== Instructor loads ====
+    instructor_loads = {}
+    for inst in instructors_qs:
+        normal = getattr(inst.designation, "normalLoad", None) if getattr(inst, "designation", None) else None
+        overload = getattr(inst.academicAttainment, "overLoad", None) if getattr(inst, "academicAttainment", None) else None
+        normal = normal if normal is not None else 12
+        overload = overload if overload is not None else 3
+        instructor_loads[inst.instructorId] = (int(normal), int(overload))
+
+    # ==== Instructor availability ====
+    instructor_availability = defaultdict(lambda: defaultdict(list))  # instr_id -> {day -> [(start,end), ...]}
+    controls = ScheduleControl.objects.filter(schedule__instructor__in=instructors_qs)
+
+    for c in controls:
+        day = int(c.schedule.dayOfWeek) if isinstance(c.schedule.dayOfWeek, int) else \
+              {"Monday":0, "Tuesday":1, "Wednesday":2, "Thursday":3, "Friday":4,
+               "Saturday":5, "Sunday":6}.get(c.schedule.dayOfWeek, 0)
+        start = c.schedule.startTime.hour * 60 + c.schedule.startTime.minute
+        end = c.schedule.endTime.hour * 60 + c.schedule.endTime.minute
+        instructor_availability[c.schedule.instructor_id][day].append((start, end))
+
+    # ==== Matches (InstructorSubjectMatch) ====
+    # Get subject IDs for filtering matches
+    subject_ids = {s.subject_id for s in sections_qs}
+    match_qs = InstructorSubjectMatch.objects.filter(subject_id__in=subject_ids)
+    
+    # Build matches dict mapping section_id -> list of (instructor_id, score)
+    matches = defaultdict(list)
+    # Because InstructorSubjectMatch relates to subject, but we want matches per section,
+    # and each section has subject_id, so we assign matches to all sections with matching subject.
+    subj_to_section_ids = defaultdict(list)
+    for s in sections_qs:
+        subj_to_section_ids[s.subject_id].append(s.sectionId)
+    
+    for m in match_qs.select_related("instructor", "subject"):
+        instr_id = m.instructor.instructorId
+        subj_id = m.subject.subjectId
+        for sec_id in subj_to_section_ids.get(subj_id, []):
+            matches[sec_id].append((instr_id, float(m.isRecommended)))  # or m.score if you have score field
+
+    # ==== Lecture/Lab pairs ====
+    lecture_lab_pairs = []
+    subj_to_sections = defaultdict(list)
+    for s in sections_qs:
+        subj_to_sections[s.subject_id].append(s.sectionId)
+
+    for subj_id, sec_ids in subj_to_sections.items():
+        subj_meta = subjects.get(subj_id, {})
+        if not subj_meta.get("has_lab", False):
+            continue
+        lectures = [sid for sid in sec_ids if section_hours.get(sid, (0, 0))[0] > 0]
+        labs = [sid for sid in sec_ids if section_hours.get(sid, (0, 0))[1] > 0]
+        for lec in lectures:
+            for lab in labs:
+                if lec != lab:
+                    lecture_lab_pairs.append((lec, lab))
+
+    # ==== Rooms ====
+    rooms_qs = list(Room.objects.filter(isActive=True))
+    rooms = [r.roomId for r in rooms_qs]
+    room_index = {r.roomId: idx for idx, r in enumerate(rooms_qs)}
 
     return {
+        "instructor_index": instructor_index,
+        "section_index": section_index,
+        "instructors": instructors,
         "sections": sections,
         "subjects": subjects,
-        "gened_blocks": gened_blocks,
-        "availabilities": availabilities,
-        "instructors": load_data,
+        "section_subjects": section_subjects,
+        "gened_sections": gened_sections,
+        "instructor_availability": {k: dict(v) for k, v in instructor_availability.items()},
+        "instructor_loads": instructor_loads,
+        "matches": dict(matches),
+        "section_hours": section_hours,
+        "lecture_lab_pairs": lecture_lab_pairs,
+        "rooms": rooms,
+        "room_index": room_index,
+        "rooms_qs": rooms_qs,
+        "section_enrollment": section_enrollment,
     }
-

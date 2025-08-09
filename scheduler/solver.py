@@ -1,97 +1,97 @@
-# scheduler/solver.py
-
 from ortools.sat.python import cp_model
-from scheduling.models import Schedule
-from core.models import Instructor
-from scheduling.models import SubjectOffering, Subject
-import random
+from scheduler.data_extractors import get_solver_data
+from scheduler import constraints
 
-def simulateTestData(semester, numSections=6):
-    instructors = list(Instructor.objects.all())[:3]
-    
-    # Create mock subject offerings if none exist
-    offerings = list(SubjectOffering.objects.filter(semester=semester))
-    if not offerings:
-        print("⚠️ No real SubjectOffering found — simulating fake ones.")
-        subjects = list(Subject.objects.all())[:3]
-        offerings = []
-        for subj in subjects:
-            fakeOffering = SubjectOffering(subject=subj, semester=semester, numberOfSections=2)
-            offerings.append(fakeOffering)
 
-    fakeSections = []
-    sid = 1
-    for offering in offerings:
-        for i in range(min(numSections, offering.numberOfSections)):
-            fakeSections.append({
-                "id": sid,
-                "subject": offering.subject,
-                "type": "Lec" if i % 2 == 0 else "Lab",
-                "units": 3,
-            })
-            sid += 1
-            if len(fakeSections) >= numSections:
-                break
-        if len(fakeSections) >= numSections:
-            break
+def solve_schedule_for_semester(semester, time_limit_seconds=30):
+    data = get_solver_data(semester)
 
-    return fakeSections, instructors
-
-def generateSchedule(semester, verbose=True):
     model = cp_model.CpModel()
-    sections, instructors = simulateTestData(semester)
-    
-    instructorIndexMap = {inst.instructorId: idx for idx, inst in enumerate(instructors)}
 
-    # Time setup
-    minutesStart = 8 * 60
-    minutesEnd = 20 * 60
-    possibleStarts = list(range(minutesStart, minutesEnd - 60 + 1, 60))
-    days = list(range(1, 6))  # Monday to Friday
+    instructors = data["instructors"]
+    sections = data["sections"]
+    rooms = data.get("rooms", [])
+    room_index = data.get("room_index", {})
 
-    sectionVars = {}
-    for sec in sections:
-        start = model.NewIntVarFromDomain(cp_model.Domain.FromValues(possibleStarts), f"start_{sec['id']}")
-        day = model.NewIntVar(1, 5, f"day_{sec['id']}")
-        duration = sec["units"] * 60
-        instructor = model.NewIntVar(0, len(instructors) - 1, f"instructor_{sec['id']}")
-        interval = model.NewIntervalVar(start, duration, start + duration, f"interval_{sec['id']}")
+    instructor_index = data["instructor_index"]
+    section_index = data["section_index"]
 
-        sectionVars[(sec["id"], sec["type"])] = {
-            "start": start,
-            "day": day,
-            "instructor": instructor,
-            "interval": interval,
-            "duration": duration,
-        }
+    num_instructors = len(instructors)
+    num_rooms = len(rooms)
+    no_room_idx = num_rooms  # extra index for "TBA"
 
-    # You can insert constraint function calls here if needed
+    if num_instructors == 0 or len(sections) == 0:
+        return []
+
+    time_blocks = list(range(8 * 60, 20 * 60 + 1, 15))
+
+    # Decision variables
+    section_day = {}
+    section_start = {}
+    section_instructor = {}
+    section_room = {}
+
+    for sid in sections:
+        section_day[sid] = model.NewIntVar(0, 4, f"day_s{sid}")
+        section_start[sid] = model.NewIntVarFromDomain(cp_model.Domain.FromValues(time_blocks), f"start_s{sid}")
+        section_instructor[sid] = model.NewIntVar(0, num_instructors - 1, f"instr_s{sid}")
+        # Room variable includes actual rooms plus a TBA option (no_room_idx)
+        section_room[sid] = model.NewIntVar(0, no_room_idx, f"room_s{sid}")
+
+    constraints.apply_constraints(model, sections, section_day, section_start, section_instructor, data, section_room)
+
+    # Objective: maximize instructor matching and priority subjects assigned rooms
+    match_terms = []
+    room_priority_terms = []
+
+    for sid in sections:
+        for instr_id, score in data.get("matches", {}).get(sid, []):
+            if instr_id not in instructor_index:
+                continue
+            iidx = instructor_index[instr_id]
+            b = model.NewBoolVar(f"assign_s{sid}_i{iidx}")
+            model.Add(section_instructor[sid] == iidx).OnlyEnforceIf(b)
+            model.Add(section_instructor[sid] != iidx).OnlyEnforceIf(b.Not())
+            match_terms.append(b * int(round(score * 1000)))
+
+        subj = data["subjects"].get(data["section_subjects"][sid], {})
+        if subj.get("is_priority_for_rooms", False) or subj.get("isPriorityForRooms", False):
+            room_assigned = model.NewBoolVar(f"room_assigned_s{sid}")
+            model.Add(section_room[sid] != no_room_idx).OnlyEnforceIf(room_assigned)
+            model.Add(section_room[sid] == no_room_idx).OnlyEnforceIf(room_assigned.Not())
+            room_priority_terms.append(room_assigned * 100000)
+
+    if match_terms or room_priority_terms:
+        model.Maximize(sum(match_terms) + sum(room_priority_terms))
 
     solver = cp_model.CpSolver()
+    solver.parameters.max_time_in_seconds = float(time_limit_seconds)
+    solver.parameters.num_search_workers = 8
+
     status = solver.Solve(model)
 
-    results = []
-    if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
-        for (sectionId, component), vars in sectionVars.items():
-            start = solver.Value(vars["start"])
-            day = solver.Value(vars["day"])
-            instIdx = solver.Value(vars["instructor"])
-            instructor = instructors[instIdx]
+    if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+        return None
 
-            results.append(Schedule(
-                semester=semester,
-                section_id=None,  # no real Section object yet
-                instructor=instructor,
-                dayOfWeek=day,
-                startTime=f"{start // 60:02d}:{start % 60:02d}",
-                endTime=f"{(start + vars['duration']) // 60:02d}:{(start + vars['duration']) % 60:02d}",
-                scheduleType=component,  # 🛠️ replace with your real Schedule field name
-            ))
-    else:
-        print("❌ No feasible schedule found.")
+    schedule = []
+    for sid in sections:
+        assigned_idx = solver.Value(section_instructor[sid])
+        assigned_instructor_id = instructors[assigned_idx]
+        assigned_room_idx = solver.Value(section_room[sid])
+        assigned_room_id = None
+        if assigned_room_idx != no_room_idx:
+            assigned_room_id = rooms[assigned_room_idx]
 
-    if verbose:
-        for r in results:
-            print(f"{r.scheduleType} by {r.instructor} on Day {r.dayOfWeek} from {r.startTime} to {r.endTime}")
+        # Use integer minutes directly from data["section_hours"]
+        duration_min = sum(data["section_hours"].get(sid, (0, 0)))
 
-    return status, results
+        schedule.append({
+            "section_id": sid,
+            "instructor_id": assigned_instructor_id,
+            "room_id": assigned_room_id,
+            "day": int(solver.Value(section_day[sid])),
+            "start_minute": int(solver.Value(section_start[sid])),
+            "duration_min": int(duration_min),
+        })
+
+    return schedule

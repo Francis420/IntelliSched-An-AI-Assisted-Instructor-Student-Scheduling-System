@@ -1,128 +1,215 @@
+# scheduler/constraints.py
+# Unified constraint application for CP-SAT scheduling
+
 from ortools.sat.python import cp_model
+from itertools import combinations
 
-def checkInstructorAvailability(instructorData, day, start, end):
-    for block in instructorData["availability"]:
-        if block["day"] == day and block["start"] <= start and block["end"] >= end:
-            return True
-    return False
 
-def checkInstructorLoad(instructorData, assignedHours):
-    if assignedHours <= instructorData["normalLoad"]:
-        return True
-    elif assignedHours <= instructorData["normalLoad"] + instructorData["overloadUnits"]:
-        return True
-    return False
+def apply_constraints(model, sections, section_day, section_start, section_instructor, data, section_room=None):
+    """
+    Applies all constraints to `model`.
 
-def enforceLectureLabSplitDay(model, sectionVars, sections):
-    for section in sections:
-        if section.subject.hasLab:
-            lecDay = sectionVars[(section.sectionId, "Lecture")]["day"]
-            labDay = sectionVars[(section.sectionId, "Lab")]["day"]
-            model.Add(lecDay != labDay)
+    Expected:
+      - sections: iterable/list of section_ids
+      - section_day: dict[section_id] -> IntVar (0..4)
+      - section_start: dict[section_id] -> IntVar (minutes since midnight)
+      - section_instructor: dict[section_id] -> IntVar (0..num_instructors-1)
+      - data: output of get_solver_data(semester)
+      - section_room (optional): dict[section_id] -> IntVar (0..num_rooms or TBA index)
+    """
 
-def enforceSameInstructorForLectureLab(model, sectionVars, sections):
-    for section in sections:
-        if section.subject.hasLab:
-            lecInst = sectionVars[(section.sectionId, "Lecture")]["instructor"]
-            labInst = sectionVars[(section.sectionId, "Lab")]["instructor"]
-            model.Add(lecInst == labInst)
+    instructor_idx = data["instructor_index"]
+    availability = data["instructor_availability"]
+    loads = data["instructor_loads"]
+    section_hours = data["section_hours"]
+    gened_sections = data.get("gened_sections", set())
+    matches = data.get("matches", {})
+    lecture_lab_pairs = data.get("lecture_lab_pairs", [])
 
-def enforceNoInstructorOverlap(model, sectionVars, sections):
-    from collections import defaultdict
-    instructorToIntervals = defaultdict(list)
+    # Precompute durations (minutes)
+    section_duration_min = {sid: int(sum(section_hours.get(sid, (0, 0)))) for sid in sections}
 
-    for (secId, typ), vars in sectionVars.items():
-        inst = vars["instructor"]
-        interval = vars["interval"]
-        instructorToIntervals[inst].append(interval)
+    # --- Assigned boolean mapping (reified) ---
+    # assigned_bool[(sid, iidx)] == True iff section sid is assigned to instructor index iidx
+    assigned_bool = {}
+    for sid in sections:
+        dur = section_duration_min[sid]
+        for instr_id, iidx in instructor_idx.items():
+            b = model.NewBoolVar(f"s{sid}_is_i{iidx}")
+            model.Add(section_instructor[sid] == iidx).OnlyEnforceIf(b)
+            model.Add(section_instructor[sid] != iidx).OnlyEnforceIf(b.Not())
+            assigned_bool[(sid, iidx)] = b
 
-    for intervals in instructorToIntervals.values():
-        model.AddNoOverlap(intervals)
+            avail = availability.get(instr_id, {})
+            if not avail:
+                # No availability info, assume full availability Mon-Fri 8:00-20:00
+                valid_block_bools = []
+                for day in range(5):  # Monday=0 to Friday=4
+                    blk_start = 8 * 60
+                    blk_end = 20 * 60
+                    latest_start = blk_end - dur
+                    block_ok = model.NewBoolVar(f"s{sid}_i{iidx}_d{day}_fullavail")
+                    model.Add(section_day[sid] == day).OnlyEnforceIf(block_ok)
+                    model.Add(section_day[sid] != day).OnlyEnforceIf(block_ok.Not())
+                    model.Add(section_start[sid] >= blk_start).OnlyEnforceIf(block_ok)
+                    model.Add(section_start[sid] <= latest_start).OnlyEnforceIf(block_ok)
+                    valid_block_bools.append(block_ok)
+                model.AddBoolOr(valid_block_bools).OnlyEnforceIf(b)
+            else:
+                # Limited availability - collect valid blocks
+                valid_block_bools = []
+                for day, blocks in avail.items():
+                    for (blk_start, blk_end) in blocks:
+                        latest_start = blk_end - dur
+                        if latest_start < blk_start:
+                            continue
+                        block_ok = model.NewBoolVar(f"s{sid}_i{iidx}_d{day}_b{blk_start}-{blk_end}")
+                        model.Add(section_day[sid] == day).OnlyEnforceIf(block_ok)
+                        model.Add(section_day[sid] != day).OnlyEnforceIf(block_ok.Not())
+                        model.Add(section_start[sid] >= blk_start).OnlyEnforceIf(block_ok)
+                        model.Add(section_start[sid] <= latest_start).OnlyEnforceIf(block_ok)
+                        valid_block_bools.append(block_ok)
+                if not valid_block_bools:
+                    # No valid availability blocks => cannot assign instructor to this section
+                    model.Add(b == 0)
+                else:
+                    model.AddBoolOr(valid_block_bools).OnlyEnforceIf(b)
 
-def enforceNoSectionOverlap(model, sectionVars, sections):
-    from collections import defaultdict
-    sectionToIntervals = defaultdict(list)
 
-    for (secId, typ), vars in sectionVars.items():
-        interval = vars["interval"]
-        sectionToIntervals[secId].append(interval)
 
-    for intervals in sectionToIntervals.values():
-        model.AddNoOverlap(intervals)
+    # --- No-overlap per instructor (reified) ---
+    # For each pair of sections and each instructor: if both assigned to same instructor,
+    # then day different OR non-overlapping times.
+    for sid1, sid2 in combinations(sections, 2):
+        dur1 = section_duration_min[sid1]
+        dur2 = section_duration_min[sid2]
+        end1 = model.NewIntVar(0, 24 * 60, f"end_s{sid1}")
+        end2 = model.NewIntVar(0, 24 * 60, f"end_s{sid2}")
+        model.Add(end1 == section_start[sid1] + dur1)
+        model.Add(end2 == section_start[sid2] + dur2)
 
-def enforceGenEdBlocking(model, sectionVars, genedBlocks):
-    for block in genedBlocks:
-        blockStart = block.startTime.hour * 60 + block.startTime.minute
-        blockEnd = block.endTime.hour * 60 + block.endTime.minute
-        blockDay = block.dayOfWeek
+        for instr_id, iidx in instructor_idx.items():
+            b1 = assigned_bool[(sid1, iidx)]
+            b2 = assigned_bool[(sid2, iidx)]
+            both_assigned = model.NewBoolVar(f"both_s{sid1}_s{sid2}_i{iidx}")
+            model.AddBoolAnd([b1, b2]).OnlyEnforceIf(both_assigned)
+            model.AddBoolOr([b1.Not(), b2.Not()]).OnlyEnforceIf(both_assigned.Not())
 
-        for key, vars in sectionVars.items():
-            day = vars["day"]
-            start = vars["start"]
-            end = vars["end"]
+            day_diff = model.NewBoolVar(f"daydiff_s{sid1}_s{sid2}_i{iidx}")
+            model.Add(section_day[sid1] != section_day[sid2]).OnlyEnforceIf(day_diff)
+            model.Add(section_day[sid1] == section_day[sid2]).OnlyEnforceIf(day_diff.Not())
 
-            dayMatch = model.NewBoolVar(f"gened_day_{key}")
-            startBeforeEnd = model.NewBoolVar(f"gened_startbefore_{key}")
-            endAfterStart = model.NewBoolVar(f"gened_endafter_{key}")
-            blocked = model.NewBoolVar(f"gened_blocked_{key}")
+            sid1_after_sid2 = model.NewBoolVar(f"s{sid1}_after_s{sid2}_i{iidx}")
+            sid2_after_sid1 = model.NewBoolVar(f"s{sid2}_after_s{sid1}_i{iidx}")
+            model.Add(section_start[sid1] >= end2).OnlyEnforceIf(sid1_after_sid2)
+            model.Add(section_start[sid1] < end2).OnlyEnforceIf(sid1_after_sid2.Not())
+            model.Add(section_start[sid2] >= end1).OnlyEnforceIf(sid2_after_sid1)
+            model.Add(section_start[sid2] < end1).OnlyEnforceIf(sid2_after_sid1.Not())
 
-            model.Add(day == blockDay).OnlyEnforceIf(dayMatch)
-            model.Add(start < blockEnd).OnlyEnforceIf(startBeforeEnd)
-            model.Add(end > blockStart).OnlyEnforceIf(endAfterStart)
+            model.AddBoolOr([day_diff, sid1_after_sid2, sid2_after_sid1]).OnlyEnforceIf(both_assigned)
 
-            model.AddBoolAnd([dayMatch, startBeforeEnd, endAfterStart]).OnlyEnforceIf(blocked)
-            model.Add(blocked == 0)
-
-def enforceTimeWindow(model, sectionVars):
-    for key, vars in sectionVars.items():
-        model.Add(vars["start"] >= 8 * 60)
-        model.Add(vars["end"] <= 20 * 60)
-
-def addFairnessSoftConstraint(model, instructorLoadVars):
-    maxLoad = model.NewIntVar(0, 100, "maxLoad")
-    minLoad = model.NewIntVar(0, 100, "minLoad")
-    model.AddMaxEquality(maxLoad, list(instructorLoadVars.values()))
-    model.AddMinEquality(minLoad, list(instructorLoadVars.values()))
-    model.Minimize(maxLoad - minLoad)
-
-def enforceInstructorAvailability(model, sectionVars, instructorDataMap):
-    for key, vars in sectionVars.items():
-        instId = vars["instructor"]
-        dayVar = vars["day"]
-        startVar = vars["start"]
-        endVar = vars["end"]
-
-        # Instructor availability assumed as list of {day, start, end} in minutes
-        if instId not in instructorDataMap:
+    # --- Instructor load limits ---
+    for instr_id, iidx in instructor_idx.items():
+        terms = []
+        for sid in sections:
+            b = assigned_bool[(sid, iidx)]
+            dur = section_duration_min[sid]
+            terms.append(b * dur)
+        if not terms:
             continue
-        availability = instructorDataMap[instId]["availability"]
+        total = model.NewIntVar(0, 10000, f"total_load_i{iidx}")
+        model.Add(total == sum(terms))
+        normal_h, overload_h = loads.get(instr_id, (0, 0))
+        model.Add(total <= (normal_h + overload_h) * 60)
 
-        allowed = []
-        for block in availability:
-            day = block["day"]
-            start = block["start"]
-            end = block["end"]
+    # --- Time bounds (global) ---
+    for sid in sections:
+        dur = section_duration_min[sid]
+        model.Add(section_start[sid] >= 8 * 60)
+        model.Add(section_start[sid] <= 20 * 60 - dur)
 
-            b1 = model.NewBoolVar(f"avail_{key}_day")
-            b2 = model.NewBoolVar(f"avail_{key}_start")
-            b3 = model.NewBoolVar(f"avail_{key}_end")
-            valid = model.NewBoolVar(f"avail_{key}_valid")
+    # --- Lecture/Lab pairing: same instructor, different days ---
+    for pair in lecture_lab_pairs:
+        if isinstance(pair, (list, tuple)) and len(pair) == 2:
+            lec_id, lab_id = pair
+        elif isinstance(pair, dict):
+            lec_id = pair.get("lecture_section_id") or pair.get("lecture_id") or pair["lecture_var"]["section_id"]
+            lab_id = pair.get("lab_section_id") or pair.get("lab_id") or pair["lab_var"]["section_id"]
+        else:
+            continue
 
-            model.Add(dayVar == day).OnlyEnforceIf(b1)
-            model.Add(startVar >= start).OnlyEnforceIf(b2)
-            model.Add(endVar <= end).OnlyEnforceIf(b3)
-            model.AddBoolAnd([b1, b2, b3]).OnlyEnforceIf(valid)
-            allowed.append(valid)
+        # same instructor
+        model.Add(section_instructor[lec_id] == section_instructor[lab_id])
+        # different days
+        model.Add(section_day[lec_id] != section_day[lab_id])
 
-        if allowed:
-            model.AddBoolOr(allowed)
+        # safety: ensure they don't overlap if somehow same day allowed later
+        lec_end = model.NewIntVar(0, 24 * 60, f"end_lec_{lec_id}")
+        lab_end = model.NewIntVar(0, 24 * 60, f"end_lab_{lab_id}")
+        model.Add(lec_end == section_start[lec_id] + section_duration_min[lec_id])
+        model.Add(lab_end == section_start[lab_id] + section_duration_min[lab_id])
 
-def enforceInstructorLoadCap(model, instructorLoadVars, instructorDataMap):
-    for instId, loadVar in instructorLoadVars.items():
-        cap = instructorDataMap[instId]["normalLoad"]
-        model.Add(loadVar <= cap)
+        same_day = model.NewBoolVar(f"same_day_lec_{lec_id}_lab_{lab_id}")
+        model.Add(section_day[lec_id] == section_day[lab_id]).OnlyEnforceIf(same_day)
+        model.Add(section_day[lec_id] != section_day[lab_id]).OnlyEnforceIf(same_day.Not())
 
-def enforceInstructorOverloadLimit(model, instructorLoadVars, instructorDataMap):
-    for instId, loadVar in instructorLoadVars.items():
-        cap = instructorDataMap[instId]["normalLoad"] + instructorDataMap[instId]["overloadUnits"]
-        model.Add(loadVar <= cap)
+        lec_after_lab = model.NewBoolVar(f"lec_after_lab_{lec_id}_{lab_id}")
+        lab_after_lec = model.NewBoolVar(f"lab_after_lec_{lec_id}_{lab_id}")
+        model.Add(section_start[lec_id] >= lab_end).OnlyEnforceIf(lec_after_lab)
+        model.Add(section_start[lab_id] >= lec_end).OnlyEnforceIf(lab_after_lec)
+        model.AddBoolOr([lec_after_lab, lab_after_lec]).OnlyEnforceIf(same_day)
+
+    # --- GenEd priority (reified) ---
+    for sid in sections:
+        if sid in gened_sections:
+            continue
+        for instr_id, _ in matches.get(sid, []):
+            if instr_id not in instructor_idx:
+                continue
+            iidx = instructor_idx[instr_id]
+            b_s = assigned_bool[(sid, iidx)]
+            for gs in gened_sections:
+                if instr_id not in [iid for (iid, _) in matches.get(gs, [])]:
+                    continue
+                b_g = assigned_bool[(gs, iidx)]
+                both = model.NewBoolVar(f"ged_both_s{sid}_g{gs}_i{iidx}")
+                model.AddBoolAnd([b_s, b_g]).OnlyEnforceIf(both)
+                model.AddBoolOr([b_s.Not(), b_g.Not()]).OnlyEnforceIf(both.Not())
+                model.Add(section_day[gs] <= section_day[sid]).OnlyEnforceIf(both)
+
+    # --- Room constraints ---
+    if section_room is not None:
+        rooms = data.get("rooms", [])
+        room_index = data.get("room_index", {})
+        subjects = data.get("subjects", {})
+        section_subjects = data.get("section_subjects", {})
+        rooms_qs = data.get("rooms_qs", [])
+        section_enrollment = data.get("section_enrollment", {})
+
+        no_room_idx = len(rooms)  # Index representing no room assigned ("TBA")
+
+        for sid in sections:
+            room_var = section_room[sid]
+            subj_id = section_subjects.get(sid)
+            subj_meta = subjects.get(subj_id, {})
+            enrollment = section_enrollment.get(sid, 0)
+
+            # Room capacity constraints: assigned room capacity >= enrollment OR room is TBA (no room)
+            for r_idx, room_id in enumerate(rooms):
+                room_obj = next((r for r in rooms_qs if r.roomId == room_id), None)
+                if room_obj is None:
+                    continue
+
+                b_room_assigned = model.NewBoolVar(f"room_s{sid}_is_{r_idx}")
+                model.Add(room_var == r_idx).OnlyEnforceIf(b_room_assigned)
+                model.Add(room_var != r_idx).OnlyEnforceIf(b_room_assigned.Not())
+
+                # Capacity must be >= enrollment for assigned rooms
+                model.Add(room_obj.capacity >= enrollment).OnlyEnforceIf(b_room_assigned)
+
+                # If subject has type, enforce room.type == subject.type
+                subj_type = subj_meta.get("type", None)
+                if subj_type is not None and hasattr(room_obj, "type"):
+                    model.Add(room_obj.type == subj_type).OnlyEnforceIf(b_room_assigned)
+
+            # No direct constraint needed for TBA room (no_room_idx), allowed fallback

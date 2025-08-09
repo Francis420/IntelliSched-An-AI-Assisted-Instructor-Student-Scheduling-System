@@ -2,6 +2,14 @@ import csv
 from django.core.management.base import BaseCommand
 from scheduling.models import Subject, Curriculum
 
+def str_to_bool(value):
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    value_str = str(value).strip().lower()
+    return value_str in ['true', '1', 'yes']
+
 class Command(BaseCommand):
     help = 'Import subjects from a CSV file'
 
@@ -32,15 +40,15 @@ class Command(BaseCommand):
                             defaults={
                                 'curriculum': curriculum,
                                 'name': row['name'].strip(),
-                                'units': int(row['units']),
-                                'durationMinutes': int(row['durationMinutes']),
-                                'isPriorityForRooms': row['isPriorityForRooms'].strip().lower() == 'true',
-                                'defaultTerm': int(row['defaultTerm']),
-                                'yearLevel': int(row['yearLevel']),
-                                'hasLab': row['hasLab'].strip().lower() == 'true',
+                                'units': int(row['units']) if row['units'].strip() else 0,
+                                'durationMinutes': int(row['durationMinutes']) if row['durationMinutes'].strip() else 0,
+                                'isPriorityForRooms': str_to_bool(row['isPriorityForRooms']),
+                                'defaultTerm': int(row['defaultTerm']) if row['defaultTerm'].strip() else 0,
+                                'yearLevel': int(row['yearLevel']) if row['yearLevel'].strip() else 1,
+                                'hasLab': str_to_bool(row['hasLab']),
                                 'labDurationMinutes': int(row['labDurationMinutes']) if row['labDurationMinutes'].strip() else None,
-                                'description': row.get('description', '').strip() if row.get('description') else None,
-                                'subjectTopics': row.get('subjectTopics', '').strip() if row.get('subjectTopics') else None,
+                                'description': row.get('description', '').strip() or None,
+                                'subjectTopics': row.get('subjectTopics', '').strip() or None,
                             }
                         )
 
