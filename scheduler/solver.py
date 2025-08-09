@@ -3,9 +3,11 @@ from scheduler.data_extractors import get_solver_data
 from scheduler import constraints
 
 
-def solve_schedule_for_semester(semester, time_limit_seconds=30):
-    data = get_solver_data(semester)
-
+def solve_schedule_from_data(data, time_limit_seconds=30):
+    """
+    Same solver logic as before but accepts a prepared `data` dict (from get_solver_data
+    or a hand-constructed dict). Returns the same schedule list.
+    """
     model = cp_model.CpModel()
 
     instructors = data["instructors"]
@@ -95,3 +97,12 @@ def solve_schedule_for_semester(semester, time_limit_seconds=30):
         })
 
     return schedule
+
+
+def solve_schedule_for_semester(semester, time_limit_seconds=30):
+    """
+    Backwards-compatible wrapper for existing code: gathers data from DB then calls
+    the `solve_schedule_from_data` function.
+    """
+    data = get_solver_data(semester)
+    return solve_schedule_from_data(data, time_limit_seconds=time_limit_seconds)

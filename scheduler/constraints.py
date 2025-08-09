@@ -213,3 +213,129 @@ def apply_constraints(model, sections, section_day, section_start, section_instr
                     model.Add(room_obj.type == subj_type).OnlyEnforceIf(b_room_assigned)
 
             # No direct constraint needed for TBA room (no_room_idx), allowed fallback
+
+
+from datetime import timedelta
+import logging
+
+logger = logging.getLogger(__name__)
+
+def checkInstructorAvailability(instructor, offering):
+    """
+    Quick availability check used before assigning an instructor to a SubjectOffering.
+    - `instructor`: Instructor instance (core.models.Instructor)
+    - `offering`: SubjectOffering instance (scheduling.models.SubjectOffering)
+
+    This function is intentionally permissive by default (returns True) so it
+    won't block assignments when availability model differs from expectations.
+    Replace or tighten with your real InstructorAvailability model logic.
+
+    Behavior implemented:
+      - If there's a model named InstructorAvailability in core.models,
+        tries to ensure instructor has at least one availability block (otherwise False).
+      - If we cannot inspect availability, returns True.
+    """
+    try:
+        # Lazy import to avoid circular imports
+        from core.models import InstructorAvailability
+    except Exception:
+        # If we don't have the model available (or import fails), assume okay.
+        logger.debug("InstructorAvailability model not found — skipping detailed availability check.")
+        return True
+
+    try:
+        # Query availability blocks for this instructor (expected fields: day, start_min, end_min)
+        blocks = InstructorAvailability.objects.filter(instructor=instructor)
+        if not blocks.exists():
+            # No availability defined -> assume instructor is not available (safer)
+            logger.debug(f"No availability blocks found for instructor {getattr(instructor, 'instructorId', instructor)}")
+            return False
+
+        # If the offering already has a preferred timeslot stored (rare), we could check that.
+        # But usually SubjectOffering doesn't have a concrete time yet; so presence of blocks is enough.
+        return True
+    except Exception as ex:
+        logger.exception("Error checking InstructorAvailability — defaulting to True.")
+        return True
+
+
+def checkInstructorLoad(instructor, offering):
+    """
+    Simple teaching-load check before assigning an instructor to a SubjectOffering.
+    - calculates the instructor's current assigned hours from Schedule (if present)
+    - adds `offering` subject hours (using expected field names)
+    - returns True if total would be <= normal + overload hours
+
+    Expected instructor fields (fallback values used if missing):
+      - instructor.designation.normalLoad (hours) OR instructor.normalLoad
+      - instructor.academicAttainment.overLoad (hours) OR instructor.overLoad
+    Expected offering/subject fields:
+      - offering.subject.durationMinutes (lecture total minutes)
+      - offering.subject.labDurationMinutes (lab minutes) if any
+    """
+    try:
+        from scheduling.models import Schedule
+    except Exception:
+        Schedule = None
+
+    # Get instructor limits (use sensible defaults if unknown)
+    try:
+        normal = getattr(instructor, "normalLoad", None)
+        if normal is None and getattr(instructor, "designation", None):
+            normal = getattr(instructor.designation, "normalLoad", None)
+        if normal is None:
+            normal = 12  # fallback hours
+
+        overload = getattr(instructor, "overLoad", None)
+        if overload is None and getattr(instructor, "academicAttainment", None):
+            overload = getattr(instructor.academicAttainment, "overLoad", None)
+        if overload is None:
+            overload = 3  # fallback hours
+    except Exception:
+        normal, overload = 12, 3
+
+    # current load (in minutes)
+    current_minutes = 0
+    if Schedule is not None:
+        try:
+            # Sum schedule durations for this instructor (all semesters) — conservative approach
+            qs = Schedule.objects.filter(instructor=instructor)
+            for s in qs:
+                try:
+                    if getattr(s, "startTime", None) and getattr(s, "endTime", None):
+                        delta = (s.endTime - s.startTime)
+                        # delta could be datetime.timedelta or number of minutes; handle both
+                        if isinstance(delta, timedelta):
+                            current_minutes += int(delta.total_seconds() // 60)
+                        else:
+                            # fallback: assume integer minutes
+                            current_minutes += int(delta)
+                except Exception:
+                    continue
+        except Exception:
+            logger.exception("Error computing current Schedule load — assuming 0 current minutes.")
+            current_minutes = 0
+
+    # offering minutes
+    offering_minutes = 0
+    try:
+        subj = getattr(offering, "subject", None)
+        if subj is not None:
+            offering_minutes = int(getattr(subj, "durationMinutes", 0))
+            if getattr(subj, "hasLab", False):
+                offering_minutes += int(getattr(subj, "labDurationMinutes", 0) or 0)
+    except Exception:
+        offering_minutes = 0
+
+    total_after = current_minutes + offering_minutes
+    allowed_minutes = int((int(normal) + int(overload)) * 60)
+
+    if total_after <= allowed_minutes:
+        return True
+
+    logger.debug(
+        f"Instructor {getattr(instructor, 'instructorId', instructor)} would be overloaded: "
+        f"{total_after/60:.2f}h > allowed {allowed_minutes/60:.2f}h"
+    )
+    return False
+

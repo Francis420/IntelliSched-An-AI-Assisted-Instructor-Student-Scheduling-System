@@ -12,3 +12,11 @@ aimatching/models
 
 hf_models/
 
+adminpanel/migrations
+aimatching/migrations
+authapi/migrations
+core/migrations
+instructors/migrations
+scheduler/migrations
+scheduling/migrations
+students/migrations

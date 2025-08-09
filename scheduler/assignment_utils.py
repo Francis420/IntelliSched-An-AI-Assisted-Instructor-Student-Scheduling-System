@@ -111,3 +111,30 @@ def group_by_subject(offerings):
     for o in offerings:
         grouped.setdefault(o.subject_id, []).append(o)
     return grouped
+
+def prepare_assignments(data):
+    """
+    Prepare a simple list of initial assignments from solver data.
+    Returns list of dicts like:
+      {"section_id": section_id, "preferred_instructor_id": instr_id, "score": float}
+
+    Strategy:
+     - For each section, pick the highest-scoring instructor (from data['matches']) if any.
+     - If no match exists, leave it unassigned (skip).
+    This is intentionally simple — you can extend to pick top-N, avoid overloaded instructors, etc.
+    """
+    assignments = []
+    matches = data.get("matches", {})
+
+    for sid in data.get("sections", []):
+        sec_matches = matches.get(sid, [])
+        if not sec_matches:
+            continue
+        # pick top by score (score might already be float)
+        best = max(sec_matches, key=lambda x: x[1])
+        assignments.append({
+            "section_id": sid,
+            "preferred_instructor_id": best[0],
+            "score": float(best[1]),
+        })
+    return assignments
