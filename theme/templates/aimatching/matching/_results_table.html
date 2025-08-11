@@ -1,52 +1,110 @@
+<!-- aimatching/matching/_results_table.html -->
 <div class="overflow-x-auto">
-  <table class="min-w-full border">
+  <table class="min-w-full border border-gray-300 text-sm">
     <thead>
-    <tr class="bg-gray-100">
-        <th class="px-4 py-2 border">Rank</th>
-        <th class="px-4 py-2 border">Instructor Name</th>
-        <th class="px-4 py-2 border">Subject Code</th>
-        {% for col, label in columns %}
-        <th class="px-4 py-2 border">
-            <a href="#" onclick="changeSort('{{ col }}')">
-            {{ label }}
-            {% if sort_by == col %}
-                {% if direction == 'asc' %}▲{% else %}▼{% endif %}
-            {% endif %}
-            </a>
-        </th>
+      <tr class="bg-gray-200">
+        <th class="px-3 py-2 border cursor-pointer" onclick="changeSort('rank')">Rank</th>
+        <th class="px-3 py-2 border">Subject</th>
+        <th class="px-3 py-2 border">Instructor</th>
+        {% for col_key, col_label in columns %}
+          <th class="px-3 py-2 border cursor-pointer" onclick="changeSort('{{ col_key }}')">
+            {{ col_label }}
+          </th>
         {% endfor %}
-        <th class="px-4 py-2 border">Primary Factor</th>
-        <th class="px-4 py-2 border">Explanation</th>
-    </tr>
+        <th class="px-3 py-2 border">Explanation</th>
+      </tr>
     </thead>
     <tbody>
-    {% for match in matches %}
-    <tr>
-        <td class="px-4 py-2 border font-semibold">{{ match.fixed_rank }}</td>
-        <td class="px-4 py-2 border">{{ match.instructor.full_name }}</td>
-        <td class="px-4 py-2 border">{{ match.subject.code }} - {{ match.subject.name }}</td>
-        <td class="px-4 py-2 border">{{ match.latestHistory.teachingScorePct|floatformat:2 }}%</td>
-        <td class="px-4 py-2 border">{{ match.latestHistory.credentialScorePct|floatformat:2 }}%</td>
-        <td class="px-4 py-2 border">{{ match.latestHistory.experienceScorePct|floatformat:2 }}%</td>
-        <td class="px-4 py-2 border">{{ match.latestHistory.preferenceScorePct|floatformat:2 }}%</td>
-        <td class="px-4 py-2 border font-bold">{{ match.latestHistory.confidenceScorePct|floatformat:2 }}%</td>
-        <td class="px-4 py-2 border">{{ match.latestHistory.primaryFactor }}</td>
-        <td class="px-4 py-2 border">{{ match.latestHistory.explanation }}</td>
-    </tr>
-    {% empty %}
-    <tr><td colspan="11" class="px-4 py-2 text-center">No matches found.</td></tr>
-    {% endfor %}
+      {% for match in matches %}
+        <tr class="hover:bg-gray-50">
+          <td class="px-3 py-2 border text-center">
+            {% if match.fixed_rank %}{{ match.fixed_rank }}{% else %}-{% endif %}
+          </td>
+          <td class="px-3 py-2 border">
+            {{ match.subject.code }} - {{ match.subject.name }}
+          </td>
+          <td class="px-3 py-2 border">
+            {{ match.full_name }}
+          </td>
+          {% for col_key, col_label in columns %}
+            <td class="px-3 py-2 border text-center">
+              {% if match.latestHistory %}
+                {% if col_key == 'teaching' %}
+                  {{ match.latestHistory.teachingScorePct|floatformat:1 }}%
+                {% elif col_key == 'credentials' %}
+                  {{ match.latestHistory.credentialScorePct|floatformat:1 }}%
+                {% elif col_key == 'experience' %}
+                  {{ match.latestHistory.experienceScorePct|floatformat:1 }}%
+                {% elif col_key == 'preference' %}
+                  {{ match.latestHistory.preferenceScorePct|floatformat:1 }}%
+                {% elif col_key == 'total' %}
+                  <span class="font-bold text-green-700">
+                    {{ match.latestHistory.confidenceScorePct|floatformat:1 }}%
+                  </span>
+                {% endif %}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+          {% endfor %}
+          <td class="px-3 py-2 border">
+            {% if match.latestHistory and match.latestHistory.explanation %}
+              {% if match.latestHistory.explanation|length > 80 %}
+                <span class="short-text">{{ match.latestHistory.explanation|slice:":80" }}...</span>
+                <span class="full-text hidden">{{ match.latestHistory.explanation }}</span>
+                <button type="button" class="text-blue-600 underline toggle-btn">Show more</button>
+              {% else %}
+                {{ match.latestHistory.explanation }}
+              {% endif %}
+            {% else %}
+              <span class="text-gray-500">-</span>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="{{ 4|add:columns|length }}" class="px-3 py-4 text-center text-gray-500">
+            No matching results found.
+          </td>
+        </tr>
+      {% endfor %}
     </tbody>
   </table>
 </div>
 
 <!-- Pagination -->
-<div class="mt-4 flex justify-center">
+<div class="mt-4 flex justify-center space-x-1">
   {% if matches.has_previous %}
-    <a href="#" class="px-3 py-1 border rounded bg-gray-200 live-page-link" data-page="{{ matches.previous_page_number }}">Previous</a>
+    <a href="#" data-page="{{ matches.previous_page_number }}" class="px-3 py-1 border rounded live-page-link">&laquo;</a>
   {% endif %}
-  <span class="px-4 py-2">Page {{ matches.number }} of {{ matches.paginator.num_pages }}</span>
+  {% for num in matches.paginator.page_range %}
+    {% if matches.number == num %}
+      <span class="px-3 py-1 border rounded bg-blue-500 text-white">{{ num }}</span>
+    {% else %}
+      <a href="#" data-page="{{ num }}" class="px-3 py-1 border rounded live-page-link">{{ num }}</a>
+    {% endif %}
+  {% endfor %}
   {% if matches.has_next %}
-    <a href="#" class="px-3 py-1 border rounded bg-gray-200 live-page-link" data-page="{{ matches.next_page_number }}">Next</a>
+    <a href="#" data-page="{{ matches.next_page_number }}" class="px-3 py-1 border rounded live-page-link">&raquo;</a>
   {% endif %}
 </div>
+
+<script>
+document.querySelectorAll('.toggle-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const row = btn.closest('td');
+    const shortText = row.querySelector('.short-text');
+    const fullText = row.querySelector('.full-text');
+
+    if (fullText.classList.contains('hidden')) {
+      shortText.classList.add('hidden');
+      fullText.classList.remove('hidden');
+      btn.textContent = 'Show less';
+    } else {
+      shortText.classList.remove('hidden');
+      fullText.classList.add('hidden');
+      btn.textContent = 'Show more';
+    }
+  });
+});
+</script>

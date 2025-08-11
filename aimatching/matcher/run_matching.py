@@ -28,7 +28,7 @@ cross_encoder = CrossEncoder("cross-encoder/nli-deberta-v3-large")
 def get_scores(text_a, list_of_text_b):
     for b in list_of_text_b:
         if not isinstance(b, str):
-            print(f"[Warning] Non-str detected in pair: {text_a=} {b=}")
+            logger.warning(f"[Non-str detected in pair] text_a={text_a} b={b}")
     pairs = [(str(text_a), str(b) if b is not None else "") for b in list_of_text_b]
     return cross_encoder.predict(pairs)
 
@@ -38,11 +38,8 @@ def extract_entailment_prob(scores):
     scores = np.array(scores)
     if scores.ndim == 1:
         scores = scores.reshape(1, -1)
-    entail_probs = [softmax(row)[1] for row in scores]  # [1] = entailment class
+    entail_probs = [softmax(row)[1] for row in scores]  # index 1 = entailment
     return float(max(entail_probs))
-
-
-
 
 def run_matching(semester_id, batch_id, generated_by=None):
     from aimatching.tasks import notify_progress
@@ -74,27 +71,24 @@ def run_matching(semester_id, batch_id, generated_by=None):
         subject_text = get_subject_text(subject)
 
         for instructor in instructors:
+            # Extract data
             teaching_text = get_teaching_text(instructor)
             credentials_text = get_credentials_text(instructor)
             experience_text = get_experience_text(instructor)
             preference_text = get_preference_text(instructor, subject)
 
+            # Get entailment scores
             teaching_scores = get_scores(subject_text, teaching_text)
             credential_scores = get_scores(subject_text, credentials_text)
             experience_scores = get_scores(subject_text, experience_text)
             preference_scores = get_scores(subject_text, preference_text)
-
-            logger.info(f"TEACHING RAW scores: {teaching_scores}")
-            logger.info(f"CREDENTIAL RAW scores: {credential_scores}")
-            logger.info(f"EXPERIENCE RAW scores: {experience_scores}")
-            logger.info(f"PREFERENCE RAW scores: {preference_scores}")
 
             teaching_score = extract_entailment_prob(teaching_scores)
             credential_score = extract_entailment_prob(credential_scores)
             experience_score = extract_entailment_prob(experience_scores)
             preference_score = extract_entailment_prob(preference_scores)
 
-
+            # Weighted confidence
             confidence_score = (
                 teaching_score * weights["teaching"]
                 + credential_score * weights["credentials"]
@@ -102,6 +96,7 @@ def run_matching(semester_id, batch_id, generated_by=None):
                 + preference_score * weights["preference"]
             )
 
+            # Determine strongest factor
             factors = {
                 "Teaching": teaching_score,
                 "Credentials": credential_score,
@@ -110,19 +105,29 @@ def run_matching(semester_id, batch_id, generated_by=None):
             }
             primary_factor = max(factors, key=factors.get)
 
-            # explanation = generate_mistral_explanation(
-            #     subject,
-            #     instructor,
-            #     instructor.full_name,
-            #     factors,
-            #     confidence_score,
-            #     f"Primary factor: {primary_factor}"
-            # )
+            # Pick evidence text for primary factor
+            factor_evidence_map = {
+                "Teaching": "\n".join(teaching_text),
+                "Credentials": "\n".join(credentials_text),
+                "Experience": "\n".join(experience_text),
+                "Preference": "\n".join(preference_text),
+            }
+            primary_evidence = factor_evidence_map.get(primary_factor, "")
 
-            explanation = (
-                f"{instructor.full_name} is matched with {subject.name}. "
-                f"This decision prioritizes their strongest area: {primary_factor}. "
-                f"AI-generated detailed explanation is currently disabled for faster matching."
+            logger.debug(
+                f"[MATCH DEBUG] Subject='{subject.name}' | Instructor='{instructor.full_name}' "
+                f"| Primary Factor={primary_factor} ({factors[primary_factor]:.4f}) "
+                f"| Evidence length={len(primary_evidence)} chars"
+            )
+
+            # Generate explanation using Mistral
+            explanation = generate_mistral_explanation(
+                subject,
+                instructor,
+                instructor.full_name,
+                primary_factor,
+                factors[primary_factor],
+                primary_evidence
             )
 
             with transaction.atomic():

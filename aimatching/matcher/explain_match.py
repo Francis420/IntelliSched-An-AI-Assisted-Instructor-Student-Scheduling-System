@@ -3,47 +3,38 @@ import re
 from django.conf import settings
 from aimatching.matcher.data_extractors import get_subject_text, get_experience_text, get_credentials_text
 
-def generate_mistral_explanation(subject, instructor, full_name, scores, weighted_score, context_strengths=""):
+def generate_mistral_explanation(subject, instructor, full_name, primary_factor, primary_score, primary_evidence):
+    """
+    Generate an explanation for why an instructor is a strong match for a subject,
+    based ONLY on the strongest matching factor and its supporting evidence.
+    """
     try:
-        subject_text = get_subject_text(subject)
-
-        exp_text = get_experience_text(instructor)
-        cred_text = get_credentials_text(instructor)
-
-        strengths = []
-        if cred_text:
-            strengths.append(f"Credentials: {cred_text}")
-        if exp_text:
-            strengths.append(f"Experience: {exp_text}")
-
-        strengths_text = "\n".join(strengths) if strengths else "No strong evidence found."
-
-        # Build prompt
         prompt = f"""
-        You are an assistant helping the IT department assign instructors to subjects.
+You are an assistant helping the IT department assign instructors to subjects.
 
-        Subject:
-        {subject_text}
+Subject:
+{subject.name}
 
-        Instructor:
-        Name: {full_name}
+Instructor:
+Name: {full_name}
 
-        Evidence:
-        {strengths_text}
+Primary Match Factor:
+{primary_factor} (Score: {primary_score})
 
-        Additional Context:
-        {context_strengths}
+Evidence:
+{primary_evidence}
 
-        Task:
-        Write a clear and concise explanation (3 sentences) about why {full_name} is a good match for "{subject.name}".
-        Focus only on this subject. 
-        If multiple instructors seem equally qualified, highlight subject-specific preference, recent relevant activity, or direct tagging that makes them stand out.
-        Do not include numeric scores.
-        """
+Task:
+Write a short, clear explanation (max 3 sentences) about why {full_name} is a strong match for "{subject.name}".
+Focus only on the primary factor and evidence provided.
+Do not include numeric scores in the explanation.
+"""
 
+        # Paths to llama.cpp runner and model
         llama_cpp_path = settings.BASE_DIR / "aimatching" / "models" / "llama-run.exe"
         mistral_model_path = settings.BASE_DIR / "aimatching" / "models" / "mistral-7b-instruct-v0.1.Q6_K.gguf"
 
+        # Run local mistral model
         result = subprocess.run(
             [str(llama_cpp_path), str(mistral_model_path), prompt],
             capture_output=True,
@@ -51,6 +42,7 @@ def generate_mistral_explanation(subject, instructor, full_name, scores, weighte
             check=True
         )
 
+        # Remove terminal color codes if present
         cleaned_output = re.sub(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])', '', result.stdout)
         return cleaned_output.strip()
 
@@ -58,3 +50,4 @@ def generate_mistral_explanation(subject, instructor, full_name, scores, weighte
         return f"⚠️ Mistral error: {e.stderr.strip()}"
     except Exception as e:
         return f"⚠️ Unexpected error: {str(e)}"
+

@@ -42,10 +42,32 @@
             <td class="px-3 py-2 border">{{ forloop.counter }}</td>
             <td class="px-3 py-2 border">{{ match.instructor.full_name }}</td>
             <td class="px-3 py-2 border font-bold text-green-700">
-              {{ match.latestHistory.confidenceScore|floatformat:2 }}
+              {% if match.latestHistory %}
+                {{ match.latestHistory.confidenceScore|floatformat:1 }}%
+              {% else %}
+                -
+              {% endif %}
             </td>
-            <td class="px-3 py-2 border">{{ match.latestHistory.primaryFactor }}</td>
-            <td class="px-3 py-2 border">{{ match.latestHistory.explanation|truncatechars:80 }}</td>
+            <td class="px-3 py-2 border">
+              {% if match.latestHistory %}
+                {{ match.latestHistory.primaryFactor }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td class="px-3 py-2 border">
+              {% if match.latestHistory and match.latestHistory.explanation %}
+                {% if match.latestHistory.explanation|length > 80 %}
+                  <span class="short-text">{{ match.latestHistory.explanation|slice:":80" }}...</span>
+                  <span class="full-text hidden">{{ match.latestHistory.explanation }}</span>
+                  <button type="button" class="text-blue-600 underline toggle-btn">Show more</button>
+                {% else %}
+                  {{ match.latestHistory.explanation }}
+                {% endif %}
+              {% else %}
+                <span class="text-gray-500">-</span>
+              {% endif %}
+            </td>
           </tr>
           {% empty %}
           <tr>
@@ -64,12 +86,12 @@
 </div>
 
 <script>
+  // Subject search filter
   const searchInput = document.getElementById('subjectSearch');
   const subjectCards = document.querySelectorAll('.subject-card');
   const viewAllBtn = document.getElementById('viewAllBtn');
   let typingTimer;
 
-  // Restore saved search from localStorage
   if (localStorage.getItem("subjectSearchQuery")) {
     searchInput.value = localStorage.getItem("subjectSearchQuery");
     filterSubjects(searchInput.value);
@@ -79,12 +101,11 @@
     clearTimeout(typingTimer);
     typingTimer = setTimeout(() => {
       const query = searchInput.value;
-      localStorage.setItem("subjectSearchQuery", query); // save search
+      localStorage.setItem("subjectSearchQuery", query);
       filterSubjects(query);
-    }, 300); // debounce
+    }, 300);
   });
 
-  // Reset search when clicking "View All"
   viewAllBtn.addEventListener('click', () => {
     localStorage.removeItem("subjectSearchQuery");
   });
@@ -97,5 +118,24 @@
       card.style.display = (name.includes(q) || code.includes(q)) ? 'block' : 'none';
     });
   }
+
+  // Show more / Show less toggle
+  document.querySelectorAll('.toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cell = btn.closest('td');
+      const shortText = cell.querySelector('.short-text');
+      const fullText = cell.querySelector('.full-text');
+
+      if (fullText.classList.contains('hidden')) {
+        shortText.classList.add('hidden');
+        fullText.classList.remove('hidden');
+        btn.textContent = 'Show less';
+      } else {
+        shortText.classList.remove('hidden');
+        fullText.classList.add('hidden');
+        btn.textContent = 'Show more';
+      }
+    });
+  });
 </script>
 {% endblock %}
