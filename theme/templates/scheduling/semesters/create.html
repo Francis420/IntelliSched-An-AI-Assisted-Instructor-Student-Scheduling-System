@@ -9,7 +9,7 @@
     {% csrf_token %}
 
     <div>
-      <label for="term" class="block font-medium">Term:</label>
+      <label for="term" class="block font-medium">Semester:</label>
       <select name="term" id="term" required class="w-full border border-gray-300 rounded px-3 py-2">
         <option value="1st">1st</option>
         <option value="2nd">2nd</option>
@@ -20,11 +20,6 @@
     <div>
       <label for="academicYear" class="block font-medium">Academic Year (e.g. 2025 - 2026):</label>
       <input type="text" name="academicYear" required class="w-full border border-gray-300 rounded px-3 py-2">
-    </div>
-
-    <div class="flex items-center">
-      <input type="checkbox" name="isActive" id="isActive" class="mr-2">
-      <label for="isActive" class="font-medium">Set as Active</label>
     </div>
 
     <div class="flex justify-between items-center">

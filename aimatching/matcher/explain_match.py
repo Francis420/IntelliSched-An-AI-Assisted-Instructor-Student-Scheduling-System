@@ -3,6 +3,7 @@ import re
 from django.conf import settings
 from aimatching.matcher.data_extractors import get_subject_text, get_experience_text, get_credentials_text
 
+
 def generate_mistral_explanation(subject, instructor, full_name, primary_factor, primary_score, primary_evidence):
     """
     Generate an explanation for why an instructor is a strong match for a subject,
@@ -30,24 +31,32 @@ Focus only on the primary factor and evidence provided.
 Do not include numeric scores in the explanation.
 """
 
-        # Paths to llama.cpp runner and model
         llama_cpp_path = settings.BASE_DIR / "aimatching" / "models" / "llama-run.exe"
         mistral_model_path = settings.BASE_DIR / "aimatching" / "models" / "mistral-7b-instruct-v0.1.Q6_K.gguf"
 
-        # Run local mistral model
+        # Run with --verbose flag for better output and diagnostics
         result = subprocess.run(
-            [str(llama_cpp_path), str(mistral_model_path), prompt],
+            [
+                str(llama_cpp_path),
+                '--verbose',
+                str(mistral_model_path),
+                prompt
+            ],
             capture_output=True,
             text=True,
-            check=True
+            check=True,
+            timeout=120,  # timeout after 2 minutes to prevent hangs
         )
 
-        # Remove terminal color codes if present
+        # Clean terminal color codes if any
         cleaned_output = re.sub(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])', '', result.stdout)
         return cleaned_output.strip()
 
+    except subprocess.TimeoutExpired:
+        return "⚠️ Mistral error: Model inference timed out."
     except subprocess.CalledProcessError as e:
-        return f"⚠️ Mistral error: {e.stderr.strip()}"
+        # Show stderr for diagnosis
+        err = e.stderr or "No stderr output"
+        return f"⚠️ Mistral error: {err.strip()}"
     except Exception as e:
         return f"⚠️ Unexpected error: {str(e)}"
-

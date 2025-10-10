@@ -24,17 +24,17 @@
         {% if request.user.is_authenticated %}
           {% if 'deptHead' in request.user.get_roles %}
           <div class="pt-4 border-t border-gray-200 space-y-1">
-            <span class="text-xs text-gray-500 uppercase tracking-wide px-4">Department Head</span>
+            <span class="text-xs text-gray-500 uppercase tracking-wide px-4">User Management</span>
             <a href="{% url 'deptHeadDashboard' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📊 Dashboard</a>
             <a href="{% url 'instructorAccountList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">👨‍🏫 Instructor Accounts</a>
             <a href="{% url 'studentAccountList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🧑‍🎓 Student Accounts</a>
           </div>
 
           <div class="pt-4 border-t border-gray-200 space-y-1">
-            <span class="text-xs text-gray-500 uppercase tracking-wide px-4">Scheduling</span>
+            <span class="text-xs text-gray-500 uppercase tracking-wide px-4">Scheduling Config</span>
             <a href="{% url 'curriculumList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📘 Curriculums</a>
-            <a href="{% url 'semesterList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🗓️ Semesters</a>
             <a href="{% url 'subjectList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📚 Subjects</a>
+            <a href="{% url 'semesterList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🗓️ Semesters</a>
             <a href="{% url 'roomList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🏫 Rooms</a>
             <a href="{% url 'genedScheduleList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">⚙️ GenEd Schedules</a>
             <a href="{% url 'subjectOfferingList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📝 Set Sections</a>
@@ -50,7 +50,7 @@
 
           {% if 'instructor' in request.user.get_roles %}
           <div class="pt-4 border-t border-gray-200 space-y-1">
-            <span class="text-xs text-gray-500 uppercase tracking-wide px-4">Instructor Tools</span>
+            <span class="text-xs text-gray-500 uppercase tracking-wide px-4">Instructor</span>
             <a href="{% url 'instructorDashboard' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📊 Dashboard</a>
             <a href="{% url 'experienceList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🧠 Experiences</a>
             <a href="{% url 'credentialList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📄 Credentials</a>

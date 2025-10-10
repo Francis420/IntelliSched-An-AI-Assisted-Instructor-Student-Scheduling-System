@@ -14,10 +14,32 @@
     <!-- Progress details -->
     <p id="progress-details" class="text-gray-700">Waiting for updates...</p>
     <p id="progress-status" class="mt-2 font-semibold text-blue-700"></p>
+    <p id="progress-current" class="text-gray-800 mt-2 italic"></p>
+    <p id="progress-debug" class="text-sm text-gray-500 mt-1"></p>
+    <button id="cancel-btn" class="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Cancel Matching</button>
 </div>
 
 <script>
     const batchId = "{{ batchId }}";
+
+    // Helper function to get CSRF token from cookie
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.startsWith(name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    const csrftoken = getCookie('csrftoken');
+
     const socket = new WebSocket(
         (window.location.protocol === "https:" ? "wss://" : "ws://") + 
         window.location.host + "/ws/progress/" + batchId + "/"
@@ -30,6 +52,10 @@
         const completed = data.completedTasks;
         const total = data.totalTasks;
         const status = data.status;
+        const subjects = data.subjectCount;
+        const instructors = data.instructorCount;
+        const currentInstructor = data.currentInstructor || "";
+        const currentSubject = data.currentSubject || "";
 
         // Update progress bar
         const fill = document.getElementById("progress-fill");
@@ -39,12 +65,50 @@
         // Update details
         document.getElementById("progress-details").textContent = 
             `Completed ${completed} of ${total} tasks`;
+
         document.getElementById("progress-status").textContent = 
             `Status: ${status}`;
+
+        // Show current matching info
+        if (currentInstructor && currentSubject) {
+            document.getElementById("progress-current").textContent =
+                `Currently matching: ${currentInstructor} → ${currentSubject}`;
+        } else {
+            document.getElementById("progress-current").textContent = "";
+        }
+
+        // Debug info
+        document.getElementById("progress-debug").textContent = 
+            `Subjects: ${subjects}, Instructors: ${instructors}, Total Tasks: ${total}`;
+
+        if (data.status === "cancelled") {
+            document.getElementById("progress-status").textContent = "❌ Matching Cancelled";
+            document.getElementById("cancel-btn").disabled = true;
+        }
     };
 
     socket.onclose = function() {
         document.getElementById("progress-status").textContent = "⚠️ Connection closed";
+    };
+
+    document.getElementById("cancel-btn").onclick = function() {
+        fetch(`/aimatching/matching/cancel/${batchId}/`, {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": csrftoken,
+                "Content-Type": "application/json",
+            },
+        })
+
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert("Matching cancelled successfully.");
+            } else {
+                alert("Failed to cancel: " + data.message);
+            }
+        })
+        .catch(() => alert("Network error while cancelling."));
     };
 </script>
 {% endblock %}

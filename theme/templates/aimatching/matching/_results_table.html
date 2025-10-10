@@ -11,7 +11,6 @@
             {{ col_label }}
           </th>
         {% endfor %}
-        <th class="px-3 py-2 border">Explanation</th>
       </tr>
     </thead>
     <tbody>
@@ -47,19 +46,6 @@
               {% endif %}
             </td>
           {% endfor %}
-          <td class="px-3 py-2 border">
-            {% if match.latestHistory and match.latestHistory.explanation %}
-              {% if match.latestHistory.explanation|length > 80 %}
-                <span class="short-text">{{ match.latestHistory.explanation|slice:":80" }}...</span>
-                <span class="full-text hidden">{{ match.latestHistory.explanation }}</span>
-                <button type="button" class="text-blue-600 underline toggle-btn">Show more</button>
-              {% else %}
-                {{ match.latestHistory.explanation }}
-              {% endif %}
-            {% else %}
-              <span class="text-gray-500">-</span>
-            {% endif %}
-          </td>
         </tr>
       {% empty %}
         <tr>

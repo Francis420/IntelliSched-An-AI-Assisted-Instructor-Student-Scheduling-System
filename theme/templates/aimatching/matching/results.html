@@ -2,7 +2,13 @@
 {% block content %}
 <div class="max-w-7xl mx-auto p-6 bg-white shadow rounded-xl">
 
-  <h2 class="text-2xl font-bold mb-4">Matching Results for Batch {{ batchId }}</h2>
+  <h3>
+  Matching Results for Batch {{ batchId }}
+  {% if generated_at %}
+    <small>Ran on {{ generated_at|date:"F j, Y, g:i A" }}</small>
+  {% endif %}
+  </h3>
+
 
   <!-- Search Filters -->
   <div class="flex gap-4 mb-4">

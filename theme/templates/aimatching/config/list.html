@@ -26,8 +26,10 @@
           <td class="px-4 py-2">{{ config.experienceWeight }}</td>
           <td class="px-4 py-2">{{ config.preferenceWeight }}</td>
           <td class="px-4 py-2">
-            <a href="{% url 'configUpdate' config.semester.semesterId %}"
-               class="text-blue-600 hover:underline">Edit</a>
+            <a href="{% url 'subjectUpdate' subject.code %}"
+             class="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded-md text-xs font-medium">
+            Update
+            </a>
           </td>
         </tr>
         {% endfor %}

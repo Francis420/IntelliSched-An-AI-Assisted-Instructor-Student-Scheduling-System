@@ -46,21 +46,43 @@ def run_matching_task(semester_id, batch_id, user_id):
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from scheduling.models import Subject
+from core.models import User as CoreUser
 
-def notify_progress(batch_id, progress):
+def notify_progress(batch_id, progress, current_instructor=None, current_subject=None,
+                    subject_count=None, instructor_count=None, total_tasks=None):
     channel_layer = get_channel_layer()
+
+    try:
+        if subject_count is None or instructor_count is None or total_tasks is None:
+            progress_obj = MatchingProgress.objects.get(batchId=batch_id)
+            term_map = {'1st': 0, '2nd': 1, 'Midyear': 2}
+            default_term = term_map.get(progress_obj.semester.term)
+
+            subject_count = Subject.objects.filter(defaultTerm=default_term, isActive=True).count()
+            instructor_count = CoreUser.objects.filter(roles__name="Instructor", isActive=True).distinct().count()
+            total_tasks = subject_count * instructor_count
+    except MatchingProgress.DoesNotExist:
+        subject_count = instructor_count = total_tasks = 0
+
+    percentage = (
+        (progress.completedTasks / total_tasks) * 100
+        if total_tasks > 0 else 0
+    )
+
     async_to_sync(channel_layer.group_send)(
         f"progress_{batch_id}",
         {
             "type": "progress_update",
             "data": {
-                "totalTasks": progress.totalTasks,
+                "totalTasks": total_tasks,
                 "completedTasks": progress.completedTasks,
                 "status": progress.status,
-                "percentage": (
-                    (progress.completedTasks / progress.totalTasks) * 100
-                    if progress.totalTasks > 0 else 0
-                ),
+                "percentage": percentage,
+                "subjectCount": subject_count,
+                "instructorCount": instructor_count,
+                "currentInstructor": current_instructor,
+                "currentSubject": current_subject,
             }
         }
     )

@@ -8,6 +8,46 @@ then create an account
 py manage.py createsuperuser
 http://127.0.0.1:8000/admin
 add roles to that user
+//on MySQL Workbench
+INSERT INTO intellisched.core_instructor (
+    instructorId,
+    employmentType,
+    createdAt,
+    updatedAt,
+    rank_id,
+    academicAttainment_id,
+    designation_id,
+    normalLoad,
+    overLoad
+) VALUES (
+    1,
+    'permanent',
+    '2025-08-10 08:29:02.412209',
+    '2025-08-10 08:29:02.412209',
+    1,
+    1,
+    1,
+    18,
+    6
+);
+SELECT * FROM intellisched.core_instructor;
+
+
+INSERT INTO intellisched.core_student (
+    studentId,
+    createdAt
+) VALUES (
+    1,
+    '2025-08-10 08:29:02.412209'
+);
+SELECT * FROM intellisched.core_student;
+
+
+INSERT INTO intellisched.core_userlogin (loginId, createdAt, instructor_id, student_id, user_id)
+VALUES ('21', '2025-08-10 08:29:07.725088', '1', '1', '1');
+SELECT * FROM intellisched.core_userlogin;
+
+
 
 
 //On MySQL Workbench

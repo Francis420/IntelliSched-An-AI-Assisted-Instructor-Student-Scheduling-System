@@ -44,27 +44,45 @@ def get_experience_text(instructor, max_tokens=200):
     ])
     return chunk_text(full_text, max_tokens=max_tokens)
 
-def get_preference_text(instructor, subject, max_tokens=200):
-    preference = instructor.preferences.select_related('subject').filter(subject=subject).first()
+# def get_preference_text(instructor, subject, max_tokens=200):
+#     preference = instructor.preferences.select_related('subject').filter(subject=subject).first()
+#     if not preference:
+#         return []
+
+#     preference_phrase = {
+#         'Prefer': f"The instructor explicitly prefers to teach {subject.code} - {subject.name}.",
+#         'Neutral': f"The instructor has a neutral stance toward teaching {subject.code} - {subject.name}.",
+#         'Avoid': f"The instructor prefers to avoid teaching {subject.code} - {subject.name}."
+#     }.get(preference.preferenceType, f"The instructor's preference for {subject.code} - {subject.name} is unspecified.")
+
+#     reason_text = f"Reason: {preference.reason.strip()}" if preference.reason else "No reason provided."
+
+#     full_text = (
+#         f"PREFERENCE:\n"
+#         f"{preference_phrase} "
+#         f"{reason_text} "
+#         f"(Preference Type: {preference.preferenceType})"
+#     )
+
+#     return chunk_text(full_text, max_tokens=max_tokens)
+
+def get_preference_score(instructor, subject):
+    preference = instructor.preferences.filter(subject=subject).first()
     if not preference:
-        return []
+        return 0.0
+    if preference.preferenceType == "Prefer":
+        return 1.0
+    if preference.preferenceType == "Avoid":
+        return -1.0
+    return 0.0
 
-    preference_phrase = {
-        'Prefer': f"The instructor explicitly prefers to teach {subject.code} - {subject.name}.",
-        'Neutral': f"The instructor has a neutral stance toward teaching {subject.code} - {subject.name}.",
-        'Avoid': f"The instructor prefers to avoid teaching {subject.code} - {subject.name}."
-    }.get(preference.preferenceType, f"The instructor's preference for {subject.code} - {subject.name} is unspecified.")
 
-    reason_text = f"Reason: {preference.reason.strip()}" if preference.reason else "No reason provided."
 
-    full_text = (
-        f"PREFERENCE:\n"
-        f"{preference_phrase} "
-        f"{reason_text} "
-        f"(Preference Type: {preference.preferenceType})"
-    )
-
-    return chunk_text(full_text, max_tokens=max_tokens)
+def get_preference_reason_text(instructor, subject):
+    pref = instructor.preferences.filter(subject=subject).first()
+    if not pref:
+        return "No preference recorded."
+    return f"{pref.preferenceType}: {(pref.reason or 'No reason provided.').strip()}"
 
 
 def get_subject_text(subject, max_tokens=200):
@@ -84,7 +102,7 @@ def build_instructor_text_profile(instructor, subject, max_tokens=200):
     profile_chunks += get_teaching_text(instructor, max_tokens)
     profile_chunks += get_experience_text(instructor, max_tokens)
     profile_chunks += get_credentials_text(instructor, max_tokens)
-    profile_chunks += get_preference_text(instructor, subject, max_tokens)
+    profile_chunks += chunk_text(get_preference_reason_text(instructor, subject), max_tokens=max_tokens)
 
     if not subject_chunks:
         return []

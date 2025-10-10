@@ -85,7 +85,8 @@ class MatchingProgress(models.Model):
     semester = models.ForeignKey('scheduling.Semester', on_delete=models.CASCADE)
     totalTasks = models.IntegerField(default=0)
     completedTasks = models.IntegerField(default=0)
-    status = models.CharField(max_length=20, default="running")  # running, completed, failed
+    status = models.CharField(max_length=20, default="running")
+    cancel_requested = models.BooleanField(default=False)
     generated_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
     startedAt = models.DateTimeField(auto_now_add=True)
     finishedAt = models.DateTimeField(null=True, blank=True)

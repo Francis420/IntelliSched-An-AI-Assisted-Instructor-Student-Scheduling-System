@@ -76,9 +76,10 @@ def matchingDashboard(request):
             .order_by('-latestHistory__confidenceScore')[:5]
         )
 
-        # Attach readable names using Instructor.full_name property
         for m in matches:
             m.instructor_display_name = m.instructor.full_name
+            if m.latestHistory:
+                m.latestHistory.confidenceScorePct = m.latestHistory.confidenceScore * 100
 
         subject.top_matches = matches
 
@@ -140,7 +141,7 @@ def matchingRun(request):
             status="running",
         )
 
-        # 🔥 Run matching asynchronously
+        # Run matching asynchronously
         run_matching_task.delay(semester.semesterId, batch_id, request.user.id)
 
         MatchingRun.objects.create(
@@ -182,13 +183,18 @@ def matchingProgress(request, run_id):
         total_tasks = subject_count * instructor_count
 
         print(f"[DEBUG] Progress calc — Subjects: {subject_count}, Instructors: {instructor_count}, Total Tasks: {total_tasks}")
+        if progress.status == "completed" and progress.completedTasks < total_tasks:
+            progress.completedTasks = total_tasks
 
         data = {
+            "subjectCount": subject_count,
+            "instructorCount": instructor_count,
             "totalTasks": total_tasks,
             "completedTasks": progress.completedTasks,
             "status": progress.status,
             "percentage": (progress.completedTasks / total_tasks) * 100 if total_tasks > 0 else 0,
         }
+
         return JsonResponse(data)
 
     except Exception as e:
@@ -205,6 +211,19 @@ def matchingProgressPage(request, batchId):
         "batchId": batchId,
         "semester": progress.semester,
     })
+    
+
+def cancelMatching(request, batch_id):
+    if request.method == "POST":
+        try:
+            progress = MatchingProgress.objects.get(batchId=batch_id)
+            progress.cancel_requested = True
+            progress.status = "cancelled"
+            progress.save(update_fields=["cancel_requested", "status"])
+            return JsonResponse({"success": True, "message": "Matching cancelled."})
+        except MatchingProgress.DoesNotExist:
+            return JsonResponse({"success": False, "message": "Batch not found."}, status=404)
+    return JsonResponse({"success": False, "message": "Invalid request method."}, status=405)
 
 
 @login_required
@@ -218,6 +237,8 @@ def matchingResultsLive(request, batchId):
 def matchingResults(request, batchId):
     return _matching_results_common(request, batchId, live=False)
 
+
+from django.utils.timezone import localtime
 
 def _matching_results_common(request, batchId, live=False):
     subject_query = request.GET.get('subject', '').strip()
@@ -234,6 +255,14 @@ def _matching_results_common(request, batchId, live=False):
         defaultTerm=term_map[semester.term],
         isActive=True
     ).values_list("subjectId", flat=True)
+
+    latest_generated = (
+        InstructorSubjectMatch.objects
+        .filter(batchId=batchId)
+        .order_by('-generatedAt')
+        .values_list('generatedAt', flat=True)
+        .first()
+    )
 
     cache_key_base = f"ranked_matches:{batchId}:{semester.term}"
     ranked_matches = cache.get(cache_key_base)
@@ -293,7 +322,6 @@ def _matching_results_common(request, batchId, live=False):
 
         results.append(obj)
 
-
     sort_map = {
         "rank": lambda x: (x.fixed_rank if x.fixed_rank is not None else 9999),
         "teaching": lambda x: x.latestHistory.teachingScore if x.latestHistory else 0,
@@ -313,12 +341,13 @@ def _matching_results_common(request, batchId, live=False):
         "matches": page_obj,
         "batchId": batchId,
         "semester": semester,
+        "generated_at": localtime(latest_generated) if latest_generated else None,  # ✅ Add here
         "columns": [
-            ("teaching", "Teaching"),
-            ("credentials", "Credentials"),
-            ("experience", "Experience"),
-            ("preference", "Preference"),
-            ("total", "Total Confidence Score"),
+            ("teaching", "Teaching Score"),
+            ("credentials", "Credentials Score"),
+            ("experience", "Experience Score"),
+            ("preference", "Preference Score"),
+            ("total", "Total Score"),
         ],
         "sort_by": sort_by,
         "direction": direction,
@@ -331,6 +360,7 @@ def _matching_results_common(request, batchId, live=False):
         return JsonResponse({"html": html, "cached": True})
     else:
         return render(request, 'aimatching/matching/results.html', context)
+
 
 
 # ---------- CONFIG ----------

@@ -9,7 +9,7 @@
     {% csrf_token %}
 
     <div>
-      <label for="term" class="block font-medium mb-1">Term:</label>
+      <label for="term" class="block font-medium mb-1">Semester:</label>
       <select name="term" id="term" required
               class="w-full border border-gray-300 rounded px-3 py-2">
         <option value="1st" {% if semester.term == '1st' %}selected{% endif %}>1st</option>
@@ -23,12 +23,6 @@
       <input type="text" name="academicYear" id="academicYear"
              value="{{ semester.academicYear }}" required
              class="w-full border border-gray-300 rounded px-3 py-2" />
-    </div>
-
-    <div class="flex items-center">
-      <input type="checkbox" name="isActive" id="isActive"
-             class="mr-2" {% if semester.isActive %}checked{% endif %}>
-      <label for="isActive" class="font-medium">Set as Active</label>
     </div>
 
     <div class="flex justify-between">

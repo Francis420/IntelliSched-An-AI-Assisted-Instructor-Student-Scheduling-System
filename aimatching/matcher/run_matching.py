@@ -5,7 +5,8 @@ from aimatching.matcher.data_extractors import (
     get_teaching_text,
     get_credentials_text,
     get_experience_text,
-    get_preference_text,
+    get_preference_score,
+    get_preference_reason_text,
     get_subject_text,
 )
 from aimatching.matcher.explain_match import generate_mistral_explanation
@@ -71,22 +72,37 @@ def run_matching(semester_id, batch_id, generated_by=None):
         subject_text = get_subject_text(subject)
 
         for instructor in instructors:
+            # Check if cancel flag is set
+            progress.refresh_from_db()  # refresh to get latest cancel status
+            if getattr(progress, "cancel_requested", False):  # <-- updated here
+                progress.status = "cancelled"
+                progress.save(update_fields=["status"])
+                notify_progress(
+                    batch_id,
+                    progress,
+                    current_instructor=None,
+                    current_subject=None,
+                    subject_count=subjects.count(),
+                    instructor_count=instructors.count(),
+                    total_tasks=total_tasks,
+                )
+                return False  # exit early due to cancel
+
             # Extract data
             teaching_text = get_teaching_text(instructor)
             credentials_text = get_credentials_text(instructor)
             experience_text = get_experience_text(instructor)
-            preference_text = get_preference_text(instructor, subject)
 
             # Get entailment scores
             teaching_scores = get_scores(subject_text, teaching_text)
             credential_scores = get_scores(subject_text, credentials_text)
             experience_scores = get_scores(subject_text, experience_text)
-            preference_scores = get_scores(subject_text, preference_text)
 
             teaching_score = extract_entailment_prob(teaching_scores)
             credential_score = extract_entailment_prob(credential_scores)
             experience_score = extract_entailment_prob(experience_scores)
-            preference_score = extract_entailment_prob(preference_scores)
+
+            preference_score = get_preference_score(instructor, subject)
 
             # Weighted confidence
             confidence_score = (
@@ -110,25 +126,11 @@ def run_matching(semester_id, batch_id, generated_by=None):
                 "Teaching": "\n".join(teaching_text),
                 "Credentials": "\n".join(credentials_text),
                 "Experience": "\n".join(experience_text),
-                "Preference": "\n".join(preference_text),
+                "Preference": get_preference_reason_text(instructor, subject),
             }
             primary_evidence = factor_evidence_map.get(primary_factor, "")
 
-            logger.debug(
-                f"[MATCH DEBUG] Subject='{subject.name}' | Instructor='{instructor.full_name}' "
-                f"| Primary Factor={primary_factor} ({factors[primary_factor]:.4f}) "
-                f"| Evidence length={len(primary_evidence)} chars"
-            )
-
-            # Generate explanation using Mistral
-            explanation = generate_mistral_explanation(
-                subject,
-                instructor,
-                instructor.full_name,
-                primary_factor,
-                factors[primary_factor],
-                primary_evidence
-            )
+            explanation = "<Explanation generation is temporarily disabled>"
 
             with transaction.atomic():
                 history = InstructorSubjectMatchHistory.objects.create(
@@ -161,11 +163,31 @@ def run_matching(semester_id, batch_id, generated_by=None):
                 match.generatedBy = generated_by
                 match.save()
 
+            # Update progress & notify with current matching info
             completed_tasks += 1
             progress.completedTasks = completed_tasks
             if completed_tasks >= total_tasks:
                 progress.status = "completed"
             progress.save(update_fields=["completedTasks", "status"])
-            notify_progress(batch_id, progress)
-
+            notify_progress(
+                batch_id,
+                progress,
+                current_instructor=instructor.full_name,
+                current_subject=subject.name,
+                subject_count=subjects.count(),
+                instructor_count=instructors.count(),
+                total_tasks=total_tasks
+            )
+            
     return True
+
+
+# # Generate explanation using Mistral
+            # explanation = generate_mistral_explanation(
+            #     subject,
+            #     instructor,
+            #     instructor.full_name,
+            #     primary_factor,
+            #     factors[primary_factor],
+            #     primary_evidence
+            # )

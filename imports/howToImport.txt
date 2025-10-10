@@ -16,5 +16,5 @@ importInstructorCredential
 importInstructorExperience
 importInstructorSubjectPreference
 importInstructorTeachingHistory
-
+C:\Users\Bea Dadula\IntelliSched-An-AI-Assisted-Instructor-Student-Scheduling-System\imports\InstructorLogin.csv
 
