@@ -147,6 +147,7 @@ def subjectCreate(request):
         hasLab = request.POST.get('hasLab') == 'on'
         labDurationMinutes = request.POST.get('labDurationMinutes') or None
         isPriorityForRooms = request.POST.get('isPriorityForRooms') == 'on'
+        description = request.POST.get('description') or ''  # 🆕 Added field
         subjectTopics = request.POST.get('subjectTopics') or ''
         notes = request.POST.get('notes') or ''
 
@@ -164,6 +165,7 @@ def subjectCreate(request):
                 hasLab=hasLab,
                 labDurationMinutes=labDurationMinutes,
                 isPriorityForRooms=isPriorityForRooms,
+                description=description, 
                 subjectTopics=subjectTopics,
                 notes=notes
             )
@@ -200,6 +202,7 @@ def subjectUpdate(request, subjectCode):
         labDuration = request.POST.get('labDurationMinutes') or None
         subject.labDurationMinutes = int(labDuration) if labDuration else None
         subject.isPriorityForRooms = 'isPriorityForRooms' in request.POST
+        subject.description = request.POST.get('description') or '' 
         subject.subjectTopics = request.POST.get('subjectTopics') or ''
         subject.notes = request.POST.get('notes') or ''
 
@@ -212,6 +215,7 @@ def subjectUpdate(request, subjectCode):
         'subject': subject,
         'curriculums': curriculums
     })
+
 
 
 @login_required
