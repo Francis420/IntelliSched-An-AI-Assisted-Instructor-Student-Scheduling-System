@@ -1,4 +1,3 @@
-# scheduler/solver.py
 import datetime
 from collections import defaultdict
 from itertools import combinations
@@ -17,7 +16,7 @@ from aimatching.models import InstructorSubjectMatch
 
 
 # ----------------- Configuration -----------------
-TARGET_SEMESTER_ID = 7  # hard-coded as requested
+TARGET_SEMESTER_ID = 16  # hard-coded as requested
 DEFAULT_NORMAL_HOURS = 18  # fallback normal hours (in hours)
 DEFAULT_OVERLOAD_UNITS = 6  # fallback overload units (units ~ hours)
 # windows
@@ -130,12 +129,21 @@ def build_tasks_from_sections(sections):
 
 
 # ----------------- Main scheduling function -----------------
-def solve_schedule_for_semester(time_limit_seconds=30, interval_minutes=30):
+def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_minutes=30):
     """
     Entry point: reads DB, builds CP-SAT model, solves, archives old schedules and saves new ones.
+
+    Parameters
+    - semester: either a Semester instance or a primary key (int). If None, falls back to TARGET_SEMESTER_ID.
+    - time_limit_seconds: max solve time for OR-Tools.
+    - interval_minutes: schedule start time granularity.
     """
-    # Load semester
-    semester = Semester.objects.get(pk=TARGET_SEMESTER_ID)
+    # Resolve semester: accept Semester instance, integer PK, or fallback to TARGET_SEMESTER_ID
+    if semester is None:
+        semester = Semester.objects.get(pk=TARGET_SEMESTER_ID)
+    elif isinstance(semester, int):
+        semester = Semester.objects.get(pk=semester)
+    # otherwise assume it's already a Semester instance
 
     print(f"[Solver] Semester: {semester}")
 
