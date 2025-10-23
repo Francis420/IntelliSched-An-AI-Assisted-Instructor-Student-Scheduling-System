@@ -67,15 +67,28 @@ def get_solver_data(semester):
 
     # ==== Instructor loads ====
     instructor_loads = {}
+
     for inst in instructors_qs:
-        normal = getattr(inst.designation, "normalLoad", None) if getattr(inst, "designation", None) else None
-        overload = getattr(inst.academicAttainment, "overLoad", None) if getattr(inst, "academicAttainment", None) else None
-        normal = normal if normal is not None else 12
-        overload = overload if overload is not None else 3
+        # --- NORMAL LOAD ---
+        # Priority: Designation > Rank > Fallback
+        if inst.designation and getattr(inst.designation, "normalLoad", None) is not None:
+            normal = inst.designation.normalLoad
+        elif inst.rank and getattr(inst.rank, "normalLoad", None) is not None:
+            normal = inst.rank.normalLoad
+        else:
+            normal = 18  # default fallback if neither rank nor designation has one
+
+        # --- OVERLOAD ---
+        # Based on Academic Attainment (and may vary if has designation)
+        if inst.academicAttainment:
+            overload = getattr(inst.academicAttainment, "overLoad", 3)
+        else:
+            overload = 6 # default if no attainment assigned
+
         instructor_loads[inst.instructorId] = (int(normal), int(overload))
 
     # ==== Instructor availability ====
-    instructor_availability = defaultdict(lambda: defaultdict(list))  # instr_id -> {day -> [(start,end), ...]}
+    instructor_availability = defaultdict(lambda: defaultdict(list))
     controls = ScheduleControl.objects.filter(schedule__instructor__in=instructors_qs)
 
     for c in controls:

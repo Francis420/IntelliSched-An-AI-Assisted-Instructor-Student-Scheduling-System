@@ -18,7 +18,7 @@ from aimatching.models import InstructorSubjectMatch
 # ----------------- Configuration -----------------
 TARGET_SEMESTER_ID = 16  # hard-coded as requested
 DEFAULT_NORMAL_HOURS = 18  # fallback normal hours (in hours)
-DEFAULT_OVERLOAD_UNITS = 6  # fallback overload units (units ~ hours)
+DEFAULT_OVERLOAD_UNITS = 6  # fallback overload units (units)
 # windows
 MORNING_START, MORNING_END = 8 * 60, 12 * 60
 AFTERNOON_START, AFTERNOON_END = 13 * 60, 17 * 60
@@ -27,8 +27,10 @@ OVERLOAD_START, OVERLOAD_END = 17 * 60, 20 * 60
 # objective weights (tune these as needed)
 WEIGHT_MATCH = 1000
 WEIGHT_ROOM_PRIORITY = 200000
-WEIGHT_LOAD_BALANCE = -5  # negative because we'll maximize; lower (more negative) penalizes imbalance more
-WEIGHT_OVERLOAD_PENALTY = -1  # penalize overload minutes
+# load balance: we will *minimize* overload imbalance (sum abs deviations scaled)
+WEIGHT_LOAD_BALANCE = -1
+# penalize total overload minutes as a secondary objective (negative because model.Maximize)
+WEIGHT_OVERLOAD_PENALTY = -1
 
 
 # ----------------- Helpers -----------------
@@ -52,16 +54,17 @@ def make_task_id(section_id, kind):
     return f"{section_id}__{kind}"
 
 
-# get instructor normal / overload limits (minutes)
+# get instructor normal / overload limits
+# returns (normal_minutes, overload_units) where overload_units is number of units (not minutes)
 def resolve_instructor_limits(instr: Instructor):
     # normal hours: designation.instructionHours -> rank.instructionHours -> instructor.normalLoad -> DEFAULT_NORMAL_HOURS
     normal_h = None
     try:
-        if getattr(instr, "designation", None) and getattr(instr.designation, "instructionHours", None):
+        if getattr(instr, "designation", None) and getattr(instr.designation, "instructionHours", None) is not None:
             normal_h = instr.designation.instructionHours
-        elif getattr(instr, "rank", None) and getattr(instr.rank, "instructionHours", None):
+        elif getattr(instr, "rank", None) and getattr(instr.rank, "instructionHours", None) is not None:
             normal_h = instr.rank.instructionHours
-        elif getattr(instr, "normalLoad", None):
+        elif getattr(instr, "normalLoad", None) is not None:
             normal_h = instr.normalLoad
     except Exception:
         normal_h = None
@@ -73,7 +76,6 @@ def resolve_instructor_limits(instr: Instructor):
     try:
         att = getattr(instr, "academicAttainment", None)
         if att:
-            # choose based on whether instructor has designation
             if getattr(instr, "designation", None):
                 overload_units = getattr(att, "overloadUnitsHasDesignation", None)
             else:
@@ -81,12 +83,13 @@ def resolve_instructor_limits(instr: Instructor):
     except Exception:
         overload_units = None
 
-    if not overload_units:
+    if overload_units is None:
         overload_units = getattr(instr, "overLoad", None)
 
     overload_units = int(overload_units) if overload_units else int(DEFAULT_OVERLOAD_UNITS)
 
-    return normal_h * 60, overload_units * 60  # return minutes
+    # Return normal in minutes, overload in units
+    return normal_h * 60, overload_units
 
 
 # ----------------- Build tasks (lecture + lab) -----------------
@@ -96,11 +99,13 @@ def build_tasks_from_sections(sections):
       tasks: list of task ids (str)
       task_to_section: {task: section_id}
       task_duration_min: {task: duration in minutes}
+      task_units: {task: units (int)}  # units only meaningful for lecture tasks (0 for labs)
       lec_lab_pairs: [(lec_task, lab_task), ...]
     """
     tasks = []
     task_to_section = {}
     task_duration_min = {}
+    task_units = {}
     lec_lab_pairs = []
 
     for sec in sections:
@@ -109,6 +114,9 @@ def build_tasks_from_sections(sections):
         lec_min = int(getattr(subj, "durationMinutes", 0) or 0)
         lab_min = int(getattr(subj, "labDurationMinutes", 0) or 0) if getattr(subj, "hasLab", False) else 0
 
+        # Units: try 'units' or 'creditUnits' fallback to 0
+        units = int(getattr(subj, "units", None) or getattr(subj, "creditUnits", None) or 0)
+
         lec_task = None
         lab_task = None
         if lec_min > 0:
@@ -116,16 +124,19 @@ def build_tasks_from_sections(sections):
             tasks.append(lec_task)
             task_to_section[lec_task] = sec.sectionId
             task_duration_min[lec_task] = lec_min
+            task_units[lec_task] = units
         if lab_min > 0:
             lab_task = make_task_id(sec.sectionId, "lab")
             tasks.append(lab_task)
             task_to_section[lab_task] = sec.sectionId
             task_duration_min[lab_task] = lab_min
+            # labs do not count toward normal load nor overload units
+            task_units[lab_task] = 0
 
         if lec_task and lab_task:
             lec_lab_pairs.append((lec_task, lab_task))
 
-    return tasks, task_to_section, task_duration_min, lec_lab_pairs
+    return tasks, task_to_section, task_duration_min, task_units, lec_lab_pairs
 
 
 # ----------------- Main scheduling function -----------------
@@ -166,7 +177,7 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
         return None
 
     # Build tasks
-    tasks, task_to_section, task_duration_min, lec_lab_pairs = build_tasks_from_sections(sections)
+    tasks, task_to_section, task_duration_min, task_units, lec_lab_pairs = build_tasks_from_sections(sections)
     if not tasks:
         print("[Solver] No tasks (lecture/lab) built — nothing to schedule.")
         return None
@@ -233,14 +244,13 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
     num_rooms = len(rooms)
     TBA_ROOM_IDX = num_rooms  # allowed TBA index
 
-    # Build per-subject metadata
+    # Build per-subject metadata (kept minimal)
     subject_meta = {}
     for sec in sections:
         subj = sec.subject
         subject_meta[subj.subjectId] = {
-            "is_gened": getattr(subj.curriculum, "isActive", False) and getattr(subj, "isPriorityForRooms", False) == False and getattr(subj, "isActive", True) and getattr(subj, "hasLab", False) == False and getattr(subj, "hasLab", False)  # placeholder false (we'll fallback)
+            "is_gened": bool(getattr(subj.curriculum, "is_gened", False)) if getattr(subj, "curriculum", None) else False
         }
-    # The above is not critical - use subj.curriculum and subj properties as needed later
 
     # ------------- Build CP-SAT model -------------
     model = cp_model.CpModel()
@@ -352,12 +362,9 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
                         model.AddBoolOr([p_task_instr[t][iidx].Not(), day_eq[t][d].Not(), start_eq[t][s].Not()])
 
     # 4) GenEd blocking: for tasks whose subject is not gened, forbid overlaps with any gened block on same day
-    # We'll consider overlap by start times that would overlap gened block
-    # Build mapping section_id -> subject.gened
     section_is_gened = {}
     for sec in sections:
         subj = sec.subject
-        # detect gened by subj.curriculum.isActive and subj.curriculum maybe has flag — fallback to False
         is_gened = False
         try:
             is_gened = bool(subj.curriculum and getattr(subj.curriculum, "is_gened", False))
@@ -378,8 +385,6 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
                     model.AddBoolOr([day_eq[t][gday].Not(), start_eq[t][s].Not()])
 
     # 5) Room type matching: if room has .type and subject has .type, forbid mismatch
-    # Build subject types map if available
-    # assume Section.subject points to Subject having 'type' attribute optionally
     for t in tasks:
         sec_id = task_to_section[t]
         subj = Section.objects.get(pk=sec_id).subject  # select_related not used here; small overhead
@@ -395,22 +400,15 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
                 model.Add(p_task_room[t][r_idx] == 0)
 
     # 6) No-overlap per instructor and per room (if room != TBA)
-    # For instructor: for each instructor i and each task pair, if both p_task_instr true and same day -> non-overlap on times
     for iidx in instructors_by_index:
         for t1, t2 in combinations(tasks, 2):
             dur1 = task_duration_min[t1]
             dur2 = task_duration_min[t2]
             if dur1 <= 0 or dur2 <= 0:
                 continue
-            # only check pairs if both could be assigned to this instructor (we didn't rule out p earlier)
             b1 = p_task_instr[t1][iidx]
             b2 = p_task_instr[t2][iidx]
-            # if both true and day equal then non-overlap
-            # encode: AddBoolOr([b1.Not(), b2.Not(), day_eq[t1][d].Not(), day_eq[t2][d].Not(), t1_after_t2, t2_after_t1]) for all d
             for d in range(5):
-                # build day and presence combination
-                # if both assigned and both day == d then require non-overlap
-                # t1_after_t2: start_t1 >= start_t2 + dur2
                 t1_after_t2 = model.NewBoolVar(f"{t1}_after_{t2}_i{iidx}_d{d}")
                 t2_after_t1 = model.NewBoolVar(f"{t2}_after_{t1}_i{iidx}_d{d}")
                 model.Add(task_start[t1] >= task_start[t2] + dur2).OnlyEnforceIf(t1_after_t2)
@@ -418,8 +416,6 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
                 model.Add(task_start[t2] >= task_start[t1] + dur1).OnlyEnforceIf(t2_after_t1)
                 model.Add(task_start[t2] < task_start[t1] + dur1).OnlyEnforceIf(t2_after_t1.Not())
 
-                # if both present and both day==d then (t1_after_t2 or t2_after_t1)
-                # enforce via AddBoolOr([b1.Not(), b2.Not(), day_eq[t1][d].Not(), day_eq[t2][d].Not(), t1_after_t2, t2_after_t1])
                 model.AddBoolOr([b1.Not(), b2.Not(), day_eq[t1][d].Not(), day_eq[t2][d].Not(), t1_after_t2, t2_after_t1])
 
     # For room conflicts: for each real room r (not TBA), ensure that tasks assigned to it on same day do not overlap
@@ -444,7 +440,7 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
     # 7) Enforce that every task has exactly one instructor and one room presence boolean is true — already ensured by reification above
 
     # 8) Instructor load constraints (normal vs overload)
-    # Precompute is_normal_window[t] and is_overload_window[t] as BoolVars linked to start_eq booleans
+    # Precompute is_normal_window[t] and is_overload_window[t] as BoolVars linked to start_eq booleans (keeps current logic of morning/afternoon vs overtime windows)
     is_normal = {}
     is_overload = {}
     for t in tasks:
@@ -469,127 +465,127 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
             model.AddBoolAnd([bb.Not() for bb in overload_bools]).OnlyEnforceIf(is_over.Not())
         else:
             model.Add(is_over == 0)
-        # exactly one of normal/overload should be true for tasks with valid starts (if no valid starts they might both be 0)
-        # we won't force exactly one here to allow infeasible tasks to be detected earlier
         is_normal[t] = is_norm
         is_overload[t] = is_over
 
-    # For each instructor compute total_normal_minutes and total_overload_minutes
-    instr_total_normal = {}
-    instr_total_over = {}
-    instr_total = {}
+    # For each instructor compute total lecture minutes, total overload minutes (derived), and cap overload by attainment
+    instr_total_lecture = {}
+    instr_overload_minutes = {}
+    instr_total_minutes = {}
+
     for iidx, instr in instructors_by_index.items():
-        normal_limit_min, overload_limit_min = resolve_instructor_limits(instr)
-        # normal contributions: sum over tasks of (p_task_instr[t][iidx] AND is_normal[t]) * dur
-        normal_contrib_terms = []
-        overload_contrib_terms = []
+        # normal limit (minutes) and overload limit (units)
+        normal_limit_min, overload_limit_units = resolve_instructor_limits(instr)
+        overload_limit_min = overload_limit_units * 60  # convert overload units to minutes (1 unit == 60 minutes)
+
+        # Sum of lecture minutes assigned to this instructor
+        lecture_terms = []
         total_terms = []
+        overload_terms = []  # we'll still compute overload based on lecture minutes beyond normal, but need this list for completeness
         for t in tasks:
             dur = task_duration_min[t]
-            # c_normal = AND(p_task_instr[t][iidx], is_normal[t])
-            c_normal = model.NewBoolVar(f"c_norm_{t}_i{iidx}")
-            model.AddBoolAnd([p_task_instr[t][iidx], is_normal[t]]).OnlyEnforceIf(c_normal)
-            model.AddBoolOr([p_task_instr[t][iidx].Not(), is_normal[t].Not()]).OnlyEnforceIf(c_normal.Not())
-            normal_contrib_terms.append(c_normal * dur)
-
-            c_over = model.NewBoolVar(f"c_over_{t}_i{iidx}")
-            model.AddBoolAnd([p_task_instr[t][iidx], is_overload[t]]).OnlyEnforceIf(c_over)
-            model.AddBoolOr([p_task_instr[t][iidx].Not(), is_overload[t].Not()]).OnlyEnforceIf(c_over.Not())
-            overload_contrib_terms.append(c_over * dur)
-
-            # total contribution = p_task_instr[t][iidx] * dur
+            if t.endswith("__lec"):
+                # counts toward lecture load
+                lecture_terms.append(p_task_instr[t][iidx] * dur)
+            # total contribution (lecture + lab) - used for optional metrics
             total_terms.append(p_task_instr[t][iidx] * dur)
 
-        total_norm = model.NewIntVar(0, 10000, f"total_norm_i{iidx}")
-        total_over = model.NewIntVar(0, 10000, f"total_over_i{iidx}")
-        total_load = model.NewIntVar(0, 20000, f"total_load_i{iidx}")
+        # Create IntVars for totals
+        total_lecture_min = model.NewIntVar(0, 20000, f"total_lecture_min_i{iidx}")
+        total_min = model.NewIntVar(0, 40000, f"total_min_i{iidx}")
 
-        if normal_contrib_terms:
-            model.Add(total_norm == sum(normal_contrib_terms))
+        if lecture_terms:
+            model.Add(total_lecture_min == sum(lecture_terms))
         else:
-            model.Add(total_norm == 0)
-        if overload_contrib_terms:
-            model.Add(total_over == sum(overload_contrib_terms))
-        else:
-            model.Add(total_over == 0)
+            model.Add(total_lecture_min == 0)
+
         if total_terms:
-            model.Add(total_load == sum(total_terms))
+            model.Add(total_min == sum(total_terms))
         else:
-            model.Add(total_load == 0)
+            model.Add(total_min == 0)
 
-        # enforce hard caps: normal <= normal_limit_min, overload <= overload_limit_min
-        model.Add(total_norm <= normal_limit_min)
-        model.Add(total_over <= overload_limit_min)
+        # Overload minutes variable: overload when lecture exceeds normal_limit_min
+        overload_min_var = model.NewIntVar(0, overload_limit_min, f"overload_min_i{iidx}")
+        # Enforce overload_min_var >= total_lecture_min - normal_limit_min
+        # and overload_min_var >= 0 (already by domain)
+        # Since CP-SAT can't do max directly, we encode:
+        # overload_min_var >= total_lecture_min - normal_limit_min
+        model.Add(overload_min_var >= total_lecture_min - normal_limit_min)
+        # Enforce hard cap: overload cannot exceed instructor's attainment-based cap (converted to minutes)
+        model.Add(overload_min_var <= overload_limit_min)
+        # Also enforce total lecture + (0) <= normal + overload cap (redundant given above but explicit)
+        model.Add(total_lecture_min <= normal_limit_min + overload_limit_min)
 
-        instr_total_normal[iidx] = total_norm
-        instr_total_over[iidx] = total_over
-        instr_total[iidx] = total_load
+        instr_total_lecture[iidx] = total_lecture_min
+        instr_overload_minutes[iidx] = overload_min_var
+        instr_total_minutes[iidx] = total_min
 
-    # 9) Objective: combine match scores, room priority, minimize overload & balance loads
+    # 9) Objective: combine match scores, room priority, minimize overload imbalance & total overload
     match_score_terms = []
     room_priority_terms = []
-    # matches_by_subject: subjId -> list of (instrId, score)
     subj_match_map = defaultdict(list)
     for subj_id, lst in matches_by_subject.items():
         subj_match_map[subj_id] = lst
 
     for t in tasks:
         sec_id = task_to_section[t]
-        # get subject id for this section instance (from DB)
         sec_obj = next((s for s in sections if s.sectionId == sec_id), None)
         subj_id = sec_obj.subject.subjectId if sec_obj else None
-        # For each instructor index, add match contribution
         for iidx, instr in instructors_by_index.items():
             iid = instr.instructorId
             score = 0.0
-            # find score from subj_match_map
             for (mid, mscore) in subj_match_map.get(subj_id, []):
                 if mid == iid:
                     score = float(mscore)
                     break
             if score:
                 match_score_terms.append(p_task_instr[t][iidx] * int(round(score * WEIGHT_MATCH)))
-        # room priority: if subject.isPriorityForRooms true, reward assignment of non-TBA room
         subj_obj = sec_obj.subject if sec_obj else None
         if subj_obj and getattr(subj_obj, "isPriorityForRooms", False):
-            # create bool room_assigned (True if room_idx != TBA_ROOM_IDX)
-            # p_task_room[t][r] booleans exist; sum for r != TBA_ROOM_IDX
             assigned_room_bool = model.NewBoolVar(f"room_assigned_{t}")
-            # If there are actual rooms:
             if num_rooms > 0:
-                # link: assigned_room_bool <-> OR(p_task_room[t][0..TBA_ROOM_IDX-1])
                 model.AddBoolOr([p_task_room[t][r] for r in range(num_rooms)]).OnlyEnforceIf(assigned_room_bool)
                 model.AddBoolAnd([p_task_room[t][r].Not() for r in range(num_rooms)]).OnlyEnforceIf(assigned_room_bool.Not())
             else:
-                # no real rooms -> assigned_room_bool false
                 model.Add(assigned_room_bool == 0)
             room_priority_terms.append(assigned_room_bool * WEIGHT_ROOM_PRIORITY)
 
-    # Load balance measure: max_load - min_load
-    max_load = model.NewIntVar(0, 20000, "max_load")
-    min_load = model.NewIntVar(0, 20000, "min_load")
-    for iidx in instr_total:
-        model.Add(max_load >= instr_total[iidx])
-        model.Add(min_load <= instr_total[iidx])
-    load_imbalance = model.NewIntVar(0, 20000, "load_imbalance")
-    model.Add(load_imbalance == max_load - min_load)
+    # Build overload balancing measure:
+    # We'll minimize sum of absolute deviations of each instructor's overload minutes from the average overload.
+    # To avoid fractional average, use scaled diffs:
+    # diff_scaled_i = overload_i * N - total_overload_sum
+    instr_count = len(instructors)
+    total_overload_sum = model.NewIntVar(0, 20000, "total_overload_sum")
+    model.Add(total_overload_sum == sum(instr_overload_minutes.values()))
 
-    # Total overload minutes sum
-    total_overload_minutes = model.NewIntVar(0, 20000, "total_overload_minutes")
-    model.Add(total_overload_minutes == sum(instr_total_over.values()))
+    abs_scaled_diffs = []
+    for iidx in instr_overload_minutes:
+        diff_scaled = model.NewIntVar(-200000, 200000, f"diff_scaled_i{iidx}")
+        # diff_scaled = overload_i * N - total_overload_sum
+        model.Add(diff_scaled == instr_overload_minutes[iidx] * instr_count - total_overload_sum)
+        abs_scaled = model.NewIntVar(0, 200000, f"abs_scaled_i{iidx}")
+        model.AddAbsEquality(abs_scaled, diff_scaled)
+        abs_scaled_diffs.append(abs_scaled)
 
-    # Combine objective
-    # We maximize: match_scores_sum + room_priority_terms + WEIGHT_LOAD_BALANCE * (-load_imbalance) + WEIGHT_OVERLOAD_PENALTY * (-total_overload_minutes)
-    # Since we want to 'minimize' load imbalance/overload, we subtract them (or add negative weights).
+    # total overload minutes (to penalize overloads overall)
+    total_overload_minutes = total_overload_sum
+
+    # Combine objective terms
     objective_terms = []
     if match_score_terms:
         objective_terms.append(sum(match_score_terms))
     if room_priority_terms:
         objective_terms.append(sum(room_priority_terms))
-    # subtract load imbalance by adding a negative coefficient (WEIGHT_LOAD_BALANCE is negative)
-    objective_terms.append(WEIGHT_LOAD_BALANCE * load_imbalance)
+
+    # Penalize overload imbalance (scaled absolute diffs)
+    if abs_scaled_diffs:
+        # sum(abs_scaled_diffs) scaled compared to minutes: note it's scaled by N; account in weight if needed
+        objective_terms.append(WEIGHT_LOAD_BALANCE * sum(abs_scaled_diffs))
+
+    # Penalize total overload minutes (secondary)
     objective_terms.append(WEIGHT_OVERLOAD_PENALTY * total_overload_minutes)
 
+    # Maximize overall objective (match + room priority - imbalance - overload)
     model.Maximize(sum(objective_terms))
 
     # ---------- Solve ----------
@@ -604,9 +600,7 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
         return None
 
     # ---------- Extract & Save schedule ----------
-    # Build list of Schedule objects to create
     schedules_to_create = []
-    # For easier lookup: map section id -> Section instance
     section_by_id = {s.sectionId: s for s in sections}
     room_by_index = {idx: r for idx, r in enumerate(rooms)}
 
@@ -658,6 +652,7 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
         print(f"[Solver] Saved {len(schedules_to_create)} schedules for semester {semester} (status='active').")
 
     return schedules_to_create
+
 
 def generateSchedule():
     # You can customize args here if needed
