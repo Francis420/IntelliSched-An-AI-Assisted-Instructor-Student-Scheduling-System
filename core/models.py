@@ -66,6 +66,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     def get_roles(self):
         return [role.name for role in self.roles.all()]
     
+    def get_full_name(self):
+        return f"{self.firstName} {self.lastName}".strip()
+    
     @property
     def id(self):
         return self.userId
@@ -111,6 +114,12 @@ class Instructor(models.Model):
     @property
     def subjectPreferences(self):
         return self.instructorsubjectpreference_set.all()
+    
+    @property
+    def user(self):
+        login = self.userlogin_set.select_related("user").first()
+        return login.user if login else None
+
 
     def __str__(self):
         return self.instructorId

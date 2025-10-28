@@ -43,24 +43,33 @@ def get_solver_data(semester):
     subjects = {}
     for subj in subjects_qs:
         subjects[subj.subjectId] = {
-            "has_lab": bool(getattr(subj, "hasLab", False)),
-            "lecture_hours": round(getattr(subj, "durationMinutes", 0) / 60, 2),
-            "lab_hours": round(getattr(subj, "labDurationMinutes", 0) / 60, 2) if getattr(subj, "hasLab", False) else 0,
-            "is_gened": bool(subj.curriculum.isActive and getattr(subj.curriculum, "is_gened", False)) if getattr(subj, "curriculum", None) else False,
-            "is_priority_for_rooms": bool(getattr(subj, "isPriorityForRooms", False)),
-            "type": getattr(subj, "type", None),  # optional if exists
+            "units": getattr(subj, "units", 0),  # 🆕 added
+            "lecture_hours": subj.lectureHours,  # computed from durationMinutes / 60
+            "lab_hours": subj.labHours,  # computed from labDurationMinutes / 60
+            "has_lab": subj.hasLab,
+            "is_gened": bool(subj.curriculum.isActive and getattr(subj.curriculum, "is_gened", False))
+                        if getattr(subj, "curriculum", None) else False,
+            "is_priority_for_rooms": subj.isPriorityForRooms,
+            "type": getattr(subj, "type", None),
         }
+
 
     section_subjects = {s.sectionId: s.subject_id for s in sections_qs}
     gened_sections = {s.sectionId for s in sections_qs if subjects.get(s.subject_id, {}).get("is_gened", False)}
 
-    # ==== Section hours (lecture, lab) ====
+    # ==== Section hours (lecture, lab, units) ====
     section_hours = {}
     for s in sections_qs:
-        subj = subjects.get(s.subject_id, {"lecture_hours": 0, "lab_hours": 0})
+        subj = subjects.get(s.subject_id, {"lecture_hours": 0, "lab_hours": 0, "units": 0})
         lecture_h = subj.get("lecture_hours", 0)
         lab_h = subj.get("lab_hours", 0) if subj.get("has_lab", False) else 0
-        section_hours[s.sectionId] = (lecture_h, lab_h)
+        units = subj.get("units", 0)
+        section_hours[s.sectionId] = {
+            "lecture_hours": lecture_h,
+            "lab_hours": lab_h,
+            "units": units,  # 🆕 added
+        }
+
 
     # ==== Section enrollment counts ====
     section_enrollment = {s.sectionId: getattr(s, "enrollment_count", 0) for s in sections_qs}
@@ -128,8 +137,8 @@ def get_solver_data(semester):
         subj_meta = subjects.get(subj_id, {})
         if not subj_meta.get("has_lab", False):
             continue
-        lectures = [sid for sid in sec_ids if section_hours.get(sid, (0, 0))[0] > 0]
-        labs = [sid for sid in sec_ids if section_hours.get(sid, (0, 0))[1] > 0]
+        lectures = [sid for sid in sec_ids if section_hours.get(sid, {}).get("lecture_hours", 0) > 0]
+        labs = [sid for sid in sec_ids if section_hours.get(sid, {}).get("lab_hours", 0) > 0]
         for lec in lectures:
             for lab in labs:
                 if lec != lab:
@@ -146,6 +155,7 @@ def get_solver_data(semester):
         "instructors": instructors,
         "sections": sections,
         "subjects": subjects,
+        "section_hours": section_hours,
         "section_subjects": section_subjects,
         "gened_sections": gened_sections,
         "instructor_availability": {k: dict(v) for k, v in instructor_availability.items()},
