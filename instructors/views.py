@@ -135,7 +135,7 @@ def experienceCreate(request):
             experience.relatedSubjects.set(relatedSubjectIds)
 
         messages.success(request, 'Experience added successfully.')
-        return redirect('experienceList')
+        return redirect('instructorDashboard')
 
     subjects = Subject.objects.all()
     return render(request, 'instructors/experiences/create.html', {'subjects': subjects})
@@ -165,7 +165,7 @@ def experienceUpdate(request, experienceId):
         experience.relatedSubjects.set(relatedSubjectIds)
 
         messages.success(request, 'Experience updated successfully.')
-        return redirect('experienceList')
+        return redirect('instructorDashboard')
 
     subjects = Subject.objects.all()
     return render(request, 'instructors/experiences/update.html', {
@@ -188,7 +188,7 @@ def experienceDelete(request, experienceId):
     if request.method == 'POST':
         experience.delete()
         messages.success(request, 'Experience deleted.')
-        return redirect('experienceList')
+        return redirect('instructorDashboard')
 
     return render(request, 'instructors/experiences/delete.html', {'experience': experience})
 
@@ -284,7 +284,7 @@ def availabilityCreate(request):
             endTime=endTime
         )
         messages.success(request, 'Availability added successfully.')
-        return redirect('availabilityList')
+        return redirect('instructorDashboard')
 
     return render(request, 'instructors/availability/create.html', {'days': days})
 
@@ -307,7 +307,7 @@ def availabilityUpdate(request, availabilityId):
         availability.save()
 
         messages.success(request, "Availability updated successfully.")
-        return redirect('availabilityList')
+        return redirect('instructorDashboard')
 
     return render(request, 'instructors/availability/update.html', {
         'availability': availability,
@@ -326,7 +326,7 @@ def availabilityDelete(request, availabilityId):
     availability = get_object_or_404(InstructorAvailability, pk=availabilityId, instructor=login.instructor)
     availability.delete()
     messages.success(request, "Availability deleted successfully.")
-    return redirect('availabilityList')
+    return redirect('instructorDashboard')
 
 
 
@@ -440,7 +440,7 @@ def credentialCreate(request):
         credential.relatedSubjects.set(relatedSubjectIds)
 
         messages.success(request, "Credential added successfully.")
-        return redirect('credentialList')
+        return redirect('instructorDashboard')
 
     return render(request, 'instructors/credentials/create.html', {
         'types': types,
@@ -471,7 +471,7 @@ def credentialUpdate(request, credentialId):
         credential.save()
 
         messages.success(request, "Credential updated successfully.")
-        return redirect('credentialList')
+        return redirect('instructorDashboard')
 
     return render(request, 'instructors/credentials/update.html', {
         'credential': credential,
@@ -491,7 +491,7 @@ def credentialDelete(request, credentialId):
     credential = get_object_or_404(InstructorCredentials, pk=credentialId, instructor=login.instructor)
     credential.delete()
     messages.success(request, "Credential deleted successfully.")
-    return redirect('credentialList')
+    return redirect('instructorDashboard')
 
 
 # ---------- Instructor Preferences ----------
@@ -592,7 +592,7 @@ def preferenceCreate(request):
             reason=reason
         )
         messages.success(request, 'Preference added successfully.')
-        return redirect('preferenceList')
+        return redirect('instructorDashboard')
 
     return render(request, 'instructors/preferences/create.html', {
         'subjects': subjects,
@@ -616,7 +616,7 @@ def preferenceUpdate(request, preferenceId):
         preference.reason = request.POST.get('reason')
         preference.save()
         messages.success(request, 'Preference updated successfully.')
-        return redirect('preferenceList')
+        return redirect('instructorDashboard')
 
     return render(request, 'instructors/preferences/update.html', {
         'preference': preference,
@@ -637,7 +637,7 @@ def preferenceDelete(request, preferenceId):
     if request.method == 'POST':
         preference.delete()
         messages.success(request, 'Preference deleted successfully.')
-        return redirect('preferenceList')
+        return redirect('instructorDashboard')
 
     return render(request, 'instructors/preferences/delete.html', {'preference': preference})
 
@@ -744,7 +744,7 @@ def teachingHistoryCreate(request):
             messages.error(request, "Record already exists. Try updating it instead.")
         else:
             messages.success(request, "Teaching history added successfully.")
-        return redirect('teachingHistoryList')
+        return redirect('instructorDashboard')
 
     return render(request, 'instructors/teachingHistory/create.html', {
         'subjects': subjects,
@@ -768,7 +768,7 @@ def teachingHistoryUpdate(request, teachingId):
         history.semester_id = request.POST.get('semester')
         history.save()
         messages.success(request, "Teaching history updated successfully.")
-        return redirect('teachingHistoryList')
+        return redirect('instructorDashboard')
 
     subjects = Subject.objects.all()
     semesters = Semester.objects.all()
@@ -791,6 +791,6 @@ def teachingHistoryDelete(request, teachingId):
     history = get_object_or_404(TeachingHistory, pk=teachingId, instructor=login.instructor)
     history.delete()
     messages.success(request, "Teaching history deleted successfully.")
-    return redirect('teachingHistoryList')
+    return redirect('instructorDashboard')
 
 
