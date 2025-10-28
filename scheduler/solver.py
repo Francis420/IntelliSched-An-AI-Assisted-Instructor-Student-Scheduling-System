@@ -254,7 +254,7 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
     p_task_room = {}
 
     for t in tasks:
-        task_day[t] = model.NewIntVar(0, 4, f"day_{t}")
+        task_day[t] = model.NewIntVar(0, 6, f"day_{t}")
         vs = valid_starts.get(t, [])
         if vs:
             task_start[t] = model.NewIntVarFromDomain(cp_model.Domain.FromValues(vs), f"start_{t}")
@@ -277,7 +277,7 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
             model.Add(sum(start_eq[t].values()) == 1)
 
         day_eq[t] = {}
-        for d in range(5):
+        for d in range(7):
             bd = model.NewBoolVar(f"day_{t}_is_{d}")
             day_eq[t][d] = bd
             model.Add(task_day[t] == d).OnlyEnforceIf(bd)
@@ -320,7 +320,7 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
             if not allowed:
                 model.Add(p_task_instr[t][iidx] == 0)
                 continue
-            for d in range(5):
+            for d in range(7):
                 for s in valid_starts.get(t, []):
                     if (d, s) not in allowed:
                         model.AddBoolOr([p_task_instr[t][iidx].Not(), day_eq[t][d].Not(), start_eq[t][s].Not()])
@@ -365,7 +365,10 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
             if room_type.lower() != required_type.lower():
                 model.Add(p_task_room[t][r_idx] == 0)
         
-        model.Add(task_room[t] != TBA_ROOM_IDX)
+        # allow TBA if no valid room is found
+        if any(room_type.lower() == required_type.lower() for room_type in [getattr(r, "type", "").lower() for r in rooms]):
+            model.Add(task_room[t] != TBA_ROOM_IDX)
+
 
     # No-overlap per instructor and per room
     for iidx in instructors_by_index:
@@ -376,7 +379,7 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
                 continue
             b1 = p_task_instr[t1][iidx]
             b2 = p_task_instr[t2][iidx]
-            for d in range(5):
+            for d in range(7):
                 t1_after_t2 = model.NewBoolVar(f"{t1}_after_{t2}_i{iidx}_d{d}")
                 t2_after_t1 = model.NewBoolVar(f"{t2}_after_{t1}_i{iidx}_d{d}")
                 model.Add(task_start[t1] >= task_start[t2] + dur2).OnlyEnforceIf(t1_after_t2)
@@ -393,7 +396,7 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
                 continue
             b_r1 = p_task_room[t1][r_idx]
             b_r2 = p_task_room[t2][r_idx]
-            for d in range(5):
+            for d in range(7):
                 t1_after_t2 = model.NewBoolVar(f"{t1}_after_{t2}_r{r_idx}_d{d}")
                 t2_after_t1 = model.NewBoolVar(f"{t2}_after_{t1}_r{r_idx}_d{d}")
                 model.Add(task_start[t1] >= task_start[t2] + dur2).OnlyEnforceIf(t1_after_t2)
@@ -580,8 +583,12 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
 
     # ---------- Solve ----------
     solver = cp_model.CpSolver()
-    solver.parameters.max_time_in_seconds = float(time_limit_seconds)
     solver.parameters.num_search_workers = 8
+    solver.parameters.max_time_in_seconds = 300
+    solver.parameters.random_seed = 42
+    solver.parameters.log_search_progress = True
+    solver.parameters.cp_model_presolve = True
+    solver.parameters.cp_model_probing_level = 0 
     print(f"[Solver] Solving {len(tasks)} tasks with {len(instructors)} instructors and {num_rooms} rooms...")
     status = solver.Solve(model)
 
@@ -662,7 +669,7 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
 
 
 def generateSchedule():
-    return solve_schedule_for_semester(time_limit_seconds=30, interval_minutes=30)
+    return solve_schedule_for_semester(time_limit_seconds=3600, interval_minutes=30)
 
 
 if __name__ == "__main__":

@@ -1,29 +1,36 @@
 from django.core.management.base import BaseCommand
-from scheduling.models import Schedule
+from scheduling.models import Schedule, Semester
 from datetime import datetime
 
 
 class Command(BaseCommand):
-    help = "Checks for overlapping room, instructor, section, and combined room+instructor conflicts in a given semester."
-
-    def add_arguments(self, parser):
-        parser.add_argument(
-            "semester_name",
-            type=str,
-            help="Name of the semester to check for conflicts",
-        )
+    help = "Checks for overlapping room, instructor, section, and combined room+instructor conflicts for the active semester."
 
     def handle(self, *args, **options):
-        semester_name = options["semester_name"]
+        # 🧠 Try to find the active semester automatically
+        active_semester = Semester.objects.filter(isActive=True).order_by("-semesterId").first()
 
+        if not active_semester:
+            self.stdout.write("⚠️ No active semester found. Please activate one in the database.")
+            return
+
+        semester_name = active_semester.name
+        self.stdout.write(f"\n📘 Active semester detected: {semester_name}\n")
+
+        # ✅ Only include active schedules
         schedules = (
             Schedule.objects
-            .filter(semester__name=semester_name, status="active")
+            .filter(semester=active_semester, status="active")
             .select_related("room", "section", "instructor")
             .order_by("dayOfWeek", "startTime")
         )
 
-        self.stdout.write(f"\n🔍 Checking schedule conflicts for semester: {semester_name}\n")
+        total = schedules.count()
+        self.stdout.write(f"🔍 Checking {total} active schedule(s)...\n")
+
+        if total == 0:
+            self.stdout.write("⚠️ No active schedules found — nothing to check.\n")
+            return
 
         room_conf = self.check_room_conflicts(schedules)
         instr_conf = self.check_instructor_conflicts(schedules)
@@ -31,7 +38,7 @@ class Command(BaseCommand):
         combo_conf = self.check_combined_conflicts(schedules)
 
         if not any([room_conf, instr_conf, sect_conf, combo_conf]):
-            self.stdout.write("✅ No scheduling conflicts found!\n")
+            self.stdout.write("\n✅ No scheduling conflicts found among active schedules!\n")
 
     # -----------------------------
     # Room Conflicts
