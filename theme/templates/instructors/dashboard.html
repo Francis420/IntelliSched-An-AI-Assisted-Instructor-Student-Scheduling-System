@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="max-w-6xl mx-auto p-6 space-y-6">
+  <h1 class="text-3xl font-bold text-gray-800 mb-6">Instructor Dashboard</h1>
+
+  <div id="dashboardSections" class="space-y-4">
+
+    <!-- 🧩 EXPERIENCE -->
+    <section class="bg-white rounded-2xl shadow p-5 transition">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="text-lg font-semibold text-gray-700">Experiences</h2>
+        <a href="{% url 'experienceCreate' %}"
+           class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg shadow">
+          + Add
+        </a>
+      </div>
+
+      <input type="text" id="experiences-search" placeholder="Search experiences..."
+             class="w-full md:w-1/2 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none mb-4"
+             oninput="debouncedSearch('experiences')">
+
+      <div id="section-experiences">
+        <div class="text-gray-500 text-center py-4">Loading experiences...</div>
+      </div>
+
+      <div id="pagination-experiences" class="mt-4 flex justify-center items-center gap-3 text-sm"></div>
+    </section>
+
+    <!-- ⏰ AVAILABILITY -->
+    <section class="bg-white rounded-2xl shadow p-5 transition">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="text-lg font-semibold text-gray-700">Availability</h2>
+        <a href="{% url 'availabilityCreate' %}"
+           class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg shadow">
+          + Add
+        </a>
+      </div>
+
+      <input type="text" id="availability-search" placeholder="Search availability..."
+             class="w-full md:w-1/2 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none mb-4"
+             oninput="debouncedSearch('availability')">
+
+      <div id="section-availability">
+        <div class="text-gray-500 text-center py-4">Loading availability...</div>
+      </div>
+
+      <div id="pagination-availability" class="mt-4 flex justify-center items-center gap-3 text-sm"></div>
+    </section>
+
+    <!-- 🪪 CREDENTIALS -->
+    <section class="bg-white rounded-2xl shadow p-5 transition">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="text-lg font-semibold text-gray-700">Credentials</h2>
+        <a href="{% url 'credentialCreate' %}"
+           class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg shadow">
+          + Add
+        </a>
+      </div>
+
+      <input type="text" id="credentials-search" placeholder="Search credentials..."
+             class="w-full md:w-1/2 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none mb-4"
+             oninput="debouncedSearch('credentials')">
+
+      <div id="section-credentials">
+        <div class="text-gray-500 text-center py-4">Loading credentials...</div>
+      </div>
+
+      <div id="pagination-credentials" class="mt-4 flex justify-center items-center gap-3 text-sm"></div>
+    </section>
+
+    <!-- 📚 PREFERENCES -->
+    <section class="bg-white rounded-2xl shadow p-5 transition">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="text-lg font-semibold text-gray-700">Preferences</h2>
+        <a href="{% url 'preferenceCreate' %}"
+           class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg shadow">
+          + Add
+        </a>
+      </div>
+
+      <input type="text" id="preferences-search" placeholder="Search preferences..."
+             class="w-full md:w-1/2 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none mb-4"
+             oninput="debouncedSearch('preferences')">
+
+      <div id="section-preferences">
+        <div class="text-gray-500 text-center py-4">Loading preferences...</div>
+      </div>
+
+      <div id="pagination-preferences" class="mt-4 flex justify-center items-center gap-3 text-sm"></div>
+    </section>
+
+    <!-- 🏫 TEACHING HISTORY -->
+    <section class="bg-white rounded-2xl shadow p-5 transition">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="text-lg font-semibold text-gray-700">Teaching History</h2>
+        <a href="{% url 'teachingHistoryCreate' %}"
+           class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg shadow">
+          + Add
+        </a>
+      </div>
+
+      <input type="text" id="history-search" placeholder="Search teaching history..."
+             class="w-full md:w-1/2 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none mb-4"
+             oninput="debouncedSearch('history')">
+
+      <div id="section-history">
+        <div class="text-gray-500 text-center py-4">Loading teaching history...</div>
+      </div>
+
+      <div id="pagination-history" class="mt-4 flex justify-center items-center gap-3 text-sm"></div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const endpoints = {
+        experiences: "{% url 'experienceListLive' %}",
+        availability: "{% url 'availabilityListLive' %}",
+        credentials: "{% url 'credentialListLive' %}",
+        preferences: "{% url 'preferenceListLive' %}",
+        history: "{% url 'teachingHistoryListLive' %}",
+    };
+
+    function loadSection(key, query = "", page = 1) {
+        const url = new URL(endpoints[key], window.location.origin);
+        if (query) url.searchParams.append("q", query);
+        url.searchParams.append("page", page);
+
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById(`section-${key}`).innerHTML = data.html;
+
+                const pagDiv = document.getElementById(`pagination-${key}`);
+                pagDiv.innerHTML = `
+                    <button ${data.has_previous ? '' : 'disabled'}
+                        class="px-4 py-1.5 rounded-full font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 transition disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+                        onclick="changePage('${key}', ${data.page - 1})">
+                        Previous
+                    </button>
+                    <span class="text-gray-500 font-medium select-none">Page ${data.page} of ${data.num_pages}</span>
+                    <button ${data.has_next ? '' : 'disabled'}
+                        class="px-4 py-1.5 rounded-full font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+                        onclick="changePage('${key}', ${data.page + 1})">
+                        Next
+                    </button>
+                `;
+            })
+            .catch(() => {
+                document.getElementById(`section-${key}`).innerHTML =
+                  `<p class='text-red-500 text-center'>Error loading ${key}.</p>`;
+            });
+    }
+
+    // Debounce helper for search
+    let debounceTimeout;
+    function debouncedSearch(key) {
+        clearTimeout(debounceTimeout);
+        debounceTimeout = setTimeout(() => {
+            const query = document.getElementById(`${key}-search`).value.trim();
+            loadSection(key, query);
+        }, 400);
+    }
+    window.debouncedSearch = debouncedSearch;
+
+    // Pagination control
+    function changePage(key, page) {
+        const query = document.getElementById(`${key}-search`).value.trim();
+        loadSection(key, query, page);
+    }
+    window.changePage = changePage;
+
+    // Initial load
+    Object.keys(endpoints).forEach(key => loadSection(key));
+});
+</script>
+{% endblock %}

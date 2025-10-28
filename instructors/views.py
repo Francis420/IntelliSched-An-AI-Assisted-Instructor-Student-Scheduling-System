@@ -19,6 +19,12 @@ from django.template.loader import render_to_string
 from django.core.paginator import Paginator
 from django.db.models import Q
 
+# ---------- Instructor Dashboard ----------
+@login_required
+@has_role('instructor')
+def instructorDashboard(request):
+    return render(request, 'instructors/dashboard.html')
+
 
 # ---------- Instructor Experience ----------
 @login_required
@@ -47,7 +53,7 @@ def experienceList(request):
             Q(relatedSubjects__code__icontains=query)
         ).distinct()
 
-    paginator = Paginator(experiences, 10)
+    paginator = Paginator(experiences, 5)
     page_obj = paginator.get_page(page)
 
     return render(request, "instructors/experiences/list.html", {
@@ -81,7 +87,7 @@ def experienceListLive(request):
             Q(relatedSubjects__code__icontains=query)
         ).distinct()
 
-    paginator = Paginator(experiences, 10)
+    paginator = Paginator(experiences, 5)
     page_obj = paginator.get_page(page)
 
     html = render_to_string("instructors/experiences/_cards.html", {
@@ -210,7 +216,7 @@ def availabilityList(request):
             Q(endTime__icontains=query)
         )
 
-    paginator = Paginator(availabilities, 10)
+    paginator = Paginator(availabilities, 5)
     page_obj = paginator.get_page(page)
 
     return render(request, "instructors/availability/list.html", {
@@ -239,7 +245,7 @@ def availabilityListLive(request):
             Q(endTime__icontains=query)
         )
 
-    paginator = Paginator(availabilities, 10)
+    paginator = Paginator(availabilities, 5)
     page_obj = paginator.get_page(page)
 
     html = render_to_string("instructors/availability/_cards.html", {
@@ -351,7 +357,7 @@ def credentialList(request):
             Q(relatedSubjects__name__icontains=query)
         ).distinct()
 
-    paginator = Paginator(credentials, 10)
+    paginator = Paginator(credentials, 5)
     page_obj = paginator.get_page(page)
 
     return render(request, "instructors/credentials/list.html", {
@@ -385,7 +391,7 @@ def credentialListLive(request):
             Q(relatedSubjects__name__icontains=query)
         ).distinct()
 
-    paginator = Paginator(credentials, 10)
+    paginator = Paginator(credentials, 5)
     page_obj = paginator.get_page(page)
 
     html = render_to_string("instructors/credentials/_table.html", {
@@ -513,7 +519,7 @@ def preferenceList(request):
             Q(reason__icontains=query)
         )
 
-    paginator = Paginator(preferences, 10)
+    paginator = Paginator(preferences, 5)
     page_obj = paginator.get_page(page)
 
     return render(request, "instructors/preferences/list.html", {
@@ -545,7 +551,7 @@ def preferenceListLive(request):
             Q(reason__icontains=query)
         )
 
-    paginator = Paginator(preferences, 10)
+    paginator = Paginator(preferences, 5)
     page_obj = paginator.get_page(page)
 
     html = render_to_string("instructors/preferences/_table.html", {
@@ -661,7 +667,7 @@ def teachingHistoryList(request):
             Q(semester__name__icontains=query)
         )
 
-    paginator = Paginator(histories, 10)
+    paginator = Paginator(histories, 5)
     page_obj = paginator.get_page(page)
 
     return render(request, "instructors/teachingHistory/list.html", {
@@ -692,7 +698,7 @@ def teachingHistoryListLive(request):
             Q(semester__name__icontains=query)
         )
 
-    paginator = Paginator(histories, 10)
+    paginator = Paginator(histories, 5)
     page_obj = paginator.get_page(page)
 
     html = render_to_string("instructors/teachingHistory/_table.html", {

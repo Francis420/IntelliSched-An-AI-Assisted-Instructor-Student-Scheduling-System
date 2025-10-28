@@ -2,6 +2,9 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # Instructor Dashboard
+    path('', views.instructorDashboard, name='instructorDashboard'),
+
     # Instructor Experience
     path('experiences/', views.experienceList, name='experienceList'),
     path('experiences/live/', views.experienceListLive, name="experienceListLive"),
