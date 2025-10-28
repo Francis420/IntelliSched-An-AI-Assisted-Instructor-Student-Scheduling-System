@@ -350,15 +350,22 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
     for t in tasks:
         sec_id = task_to_section[t]
         subj = Section.objects.get(pk=sec_id).subject
-        subj_type = getattr(subj, "type", None)
-        if subj_type is None:
-            continue
+
+        # Determine what kind of room is needed
+        if t.endswith("__lab"):
+            required_type = "Laboratory"
+        else:
+            required_type = "Lecture"
+
         for r_idx, room in enumerate(rooms):
             room_type = getattr(room, "type", None)
             if room_type is None:
                 continue
-            if room_type != subj_type:
+            # If the room type does not match what’s required, forbid assignment
+            if room_type.lower() != required_type.lower():
                 model.Add(p_task_room[t][r_idx] == 0)
+        
+        model.Add(task_room[t] != TBA_ROOM_IDX)
 
     # No-overlap per instructor and per room
     for iidx in instructors_by_index:
