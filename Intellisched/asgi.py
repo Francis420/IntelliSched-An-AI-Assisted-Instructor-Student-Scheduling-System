@@ -6,16 +6,17 @@ from channels.auth import AuthMiddlewareStack
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "Intellisched.settings")
 
-# Make sure Django is fully loaded
 django.setup()
 
-import aimatching.routing  # <-- import AFTER django.setup()
+import aimatching.routing 
+import scheduler.routing
 
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),
     "websocket": AuthMiddlewareStack(
         URLRouter(
-            aimatching.routing.websocket_urlpatterns
+            aimatching.routing.websocket_urlpatterns +
+            scheduler.routing.websocket_urlpatterns 
         )
     ),
 })

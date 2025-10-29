@@ -4,6 +4,12 @@ from scheduling.models import Schedule, Semester
 from core.models import Instructor, UserLogin
 from django.contrib.auth.decorators import login_required
 from collections import defaultdict
+from django.http import JsonResponse
+from scheduler.tasks import run_scheduler_task
+from scheduler.models import SchedulerProgress
+from celery import current_app
+import uuid
+from scheduler.models import SchedulerProgress
 
 # Scheduler Output View
 def scheduleOutput(request):
@@ -77,3 +83,32 @@ def instructorScheduleView(request):
         "grouped_schedules": grouped_schedules,
     }
     return render(request, "scheduler/instructorSchedule.html", context)
+
+
+# Scdeduler Dashboard View
+def scheduler_dashboard(request):
+    batch_id = str(uuid.uuid4())
+    return render(request, "scheduler/schedulerDashboard.html", {"batch_id": batch_id})
+
+def start_scheduler(request):
+    batch_id = request.GET.get("batch_id")
+    progress, _ = SchedulerProgress.objects.get_or_create(batch_id=batch_id)
+    task = run_scheduler_task.delay(batch_id=batch_id)
+    progress.task_id = task.id
+    progress.status = "running"
+    progress.save()
+    return JsonResponse({"message": "Scheduling started.", "batch_id": batch_id, "task_id": task.id})
+
+def stop_scheduler(request):
+    batch_id = request.GET.get("batch_id")
+    try:
+        progress = SchedulerProgress.objects.get(batch_id=batch_id)
+        if progress.task_id:
+            # ✅ Correct modern revoke call
+            current_app.control.revoke(progress.task_id, terminate=True, signal="SIGTERM")
+        progress.status = "stopped"
+        progress.message = "Scheduler manually stopped."
+        progress.save()
+        return JsonResponse({"status": "stopped", "message": "Scheduler has been stopped."})
+    except SchedulerProgress.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "No running scheduler found."})

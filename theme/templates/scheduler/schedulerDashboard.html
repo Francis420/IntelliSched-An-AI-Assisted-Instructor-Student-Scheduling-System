@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="max-w-4xl mx-auto p-6 space-y-6">
+  <h1 class="text-3xl font-bold text-gray-800 mb-6">Scheduler Dashboard</h1>
+
+  <div class="flex space-x-4">
+    <button id="startBtn"
+      class="bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700 transition">
+      ▶ Start Scheduling
+    </button>
+    <button id="stopBtn"
+      class="bg-red-600 text-white px-4 py-2 rounded-lg shadow hover:bg-red-700 transition hidden">
+      ⏹ Stop Scheduler
+    </button>
+  </div>
+
+  <div class="mt-6 bg-white rounded-2xl shadow border border-gray-100 p-6">
+    <div class="flex justify-between items-center">
+      <h2 class="text-lg font-semibold text-gray-700">Progress</h2>
+      <span id="statusText" class="text-sm text-gray-500">Idle</span>
+    </div>
+    <div class="w-full bg-gray-200 h-4 rounded-full mt-3 overflow-hidden">
+      <div id="progressBar" class="h-full bg-indigo-600 w-0 transition-all duration-300"></div>
+    </div>
+    <p id="log" class="mt-4 text-sm text-gray-600 h-40 overflow-y-auto border-t pt-2 font-mono"></p>
+  </div>
+</div>
+
+<script>
+  const batchId = "{{ batch_id }}";
+  const progressBar = document.getElementById("progressBar");
+  const log = document.getElementById("log");
+  const statusText = document.getElementById("statusText");
+  const startBtn = document.getElementById("startBtn");
+  const stopBtn = document.getElementById("stopBtn");
+
+  const socket = new WebSocket(`ws://${window.location.host}/ws/scheduler/${batchId}/`);
+  socket.onmessage = function (event) {
+    const data = JSON.parse(event.data);
+    const msg = `[${data.status}] ${data.message}`;
+    log.innerText += msg + "\n";
+    log.scrollTop = log.scrollHeight;
+    progressBar.style.width = (data.progress || 0) + "%";
+    statusText.innerText = data.status;
+
+    if (data.status === "done" || data.status === "error" || data.status === "stopped") {
+      startBtn.disabled = false;
+      stopBtn.classList.add("hidden");
+    }
+  };
+
+  startBtn.onclick = () => {
+    startBtn.disabled = true;
+    stopBtn.classList.remove("hidden");
+    fetch(`/scheduler/start/?batch_id=${batchId}`)
+      .then(res => res.json())
+      .then(data => {
+        log.innerText += `\n▶ ${data.message}\n`;
+      });
+  };
+
+  stopBtn.onclick = () => {
+    fetch(`/scheduler/stop/?batch_id=${batchId}`)
+      .then(res => res.json())
+      .then(data => {
+        log.innerText += `\n⏹ ${data.message}\n`;
+        statusText.innerText = "stopped";
+        stopBtn.classList.add("hidden");
+        startBtn.disabled = false;
+      });
+  };
+</script>
+{% endblock %}
