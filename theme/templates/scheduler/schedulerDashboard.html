@@ -1,8 +1,9 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="max-w-4xl mx-auto p-6 space-y-6">
+<div class="max-w-5xl mx-auto p-6 space-y-6">
   <h1 class="text-3xl font-bold text-gray-800 mb-6">Scheduler Dashboard</h1>
 
+  <!-- Control Buttons -->
   <div class="flex space-x-4">
     <button id="startBtn"
       class="bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700 transition">
@@ -14,15 +15,23 @@
     </button>
   </div>
 
+  <!-- Progress Section -->
   <div class="mt-6 bg-white rounded-2xl shadow border border-gray-100 p-6">
-    <div class="flex justify-between items-center">
-      <h2 class="text-lg font-semibold text-gray-700">Progress</h2>
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-lg font-semibold text-gray-700">Live Logs</h2>
       <span id="statusText" class="text-sm text-gray-500">Idle</span>
     </div>
-    <div class="w-full bg-gray-200 h-4 rounded-full mt-3 overflow-hidden">
+
+    <!-- Optional progress bar (hidden by default) -->
+    <div id="progressWrapper" class="w-full bg-gray-200 h-4 rounded-full overflow-hidden hidden">
       <div id="progressBar" class="h-full bg-indigo-600 w-0 transition-all duration-300"></div>
     </div>
-    <p id="log" class="mt-4 text-sm text-gray-600 h-40 overflow-y-auto border-t pt-2 font-mono"></p>
+
+    <!-- Live log output -->
+    <div id="log"
+         class="mt-4 text-sm text-gray-100 font-mono bg-gray-900 rounded-lg p-4 h-96 overflow-y-auto border border-gray-700 shadow-inner">
+      <p class="text-gray-500 italic">Waiting for scheduler output...</p>
+    </div>
   </div>
 </div>
 
@@ -33,41 +42,101 @@
   const statusText = document.getElementById("statusText");
   const startBtn = document.getElementById("startBtn");
   const stopBtn = document.getElementById("stopBtn");
+  const MAX_LOG_LINES = 200;
 
-  const socket = new WebSocket(`ws://${window.location.host}/ws/scheduler/${batchId}/`);
-  socket.onmessage = function (event) {
-    const data = JSON.parse(event.data);
-    const msg = `[${data.status}] ${data.message}`;
-    log.innerText += msg + "\n";
+  function appendLog(text) {
+    const lines = log.innerText.trim().split("\n");
+    lines.push(text);
+    if (lines.length > MAX_LOG_LINES) lines.splice(0, lines.length - MAX_LOG_LINES);
+    log.innerText = lines.join("\n");
     log.scrollTop = log.scrollHeight;
-    progressBar.style.width = (data.progress || 0) + "%";
-    statusText.innerText = data.status;
+  }
 
-    if (data.status === "done" || data.status === "error" || data.status === "stopped") {
-      startBtn.disabled = false;
-      stopBtn.classList.add("hidden");
+  // 🧩 Function to restore previous state when reloading
+  async function loadStatus() {
+    try {
+      const res = await fetch(`/scheduler/status/?batch_id=${batchId}`);
+      const data = await res.json();
+
+      if (data.logs) {
+        log.innerText = data.logs.join("\n") + "\n";
+        log.scrollTop = log.scrollHeight;
+      }
+
+      progressBar.style.width = (data.progress || 0) + "%";
+      statusText.innerText = data.status || "idle";
+
+      if (data.status === "running") {
+        startBtn.disabled = true;
+        stopBtn.classList.remove("hidden");
+      } else {
+        startBtn.disabled = false;
+        stopBtn.classList.add("hidden");
+      }
+    } catch (e) {
+      console.error("Failed to fetch scheduler status:", e);
     }
-  };
+  }
 
-  startBtn.onclick = () => {
+  // 🧩 Setup WebSocket with auto-reconnect
+  function connectWebSocket() {
+    const socket = new WebSocket(`ws://${window.location.host}/ws/scheduler/${batchId}/`);
+
+    socket.onopen = () => console.log("WebSocket connected");
+    socket.onclose = () => {
+      console.warn("WebSocket disconnected, retrying in 3s...");
+      setTimeout(connectWebSocket, 3000);
+    };
+
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      const msg = `[${data.status}] ${data.message}`;
+      appendLog(msg);
+
+      progressBar.style.width = (data.progress || 0) + "%";
+      statusText.innerText = data.status;
+
+      // 🔍 Detect keywords from actual scheduler log lines
+      const lowerMsg = (data.message || "").toLowerCase();
+      if (lowerMsg.includes("[running]")) {
+        startBtn.disabled = true;
+        stopBtn.classList.remove("hidden");
+      } 
+      else if (lowerMsg.includes("[done]") || lowerMsg.includes("✅ scheduling complete")) {
+        stopBtn.classList.add("hidden");
+        startBtn.disabled = false;
+      } 
+      else if (lowerMsg.includes("error") || lowerMsg.includes("❌")) {
+        stopBtn.classList.add("hidden");
+        startBtn.disabled = false;
+      }
+    };
+  }
+
+  // 🧩 Button handlers
+  startBtn.onclick = async () => {
     startBtn.disabled = true;
     stopBtn.classList.remove("hidden");
-    fetch(`/scheduler/start/?batch_id=${batchId}`)
+    appendLog("▶ Starting scheduler...");
+    await fetch(`/scheduler/start/?batch_id=${batchId}`)
       .then(res => res.json())
-      .then(data => {
-        log.innerText += `\n▶ ${data.message}\n`;
-      });
+      .then(data => appendLog(`▶ ${data.message}`));
   };
 
-  stopBtn.onclick = () => {
-    fetch(`/scheduler/stop/?batch_id=${batchId}`)
+  stopBtn.onclick = async () => {
+    if (!confirm("Are you sure you want to stop the scheduler?")) return;
+    await fetch(`/scheduler/stop/?batch_id=${batchId}`)
       .then(res => res.json())
       .then(data => {
-        log.innerText += `\n⏹ ${data.message}\n`;
+        appendLog(`⏹ ${data.message}`);
         statusText.innerText = "stopped";
         stopBtn.classList.add("hidden");
         startBtn.disabled = false;
       });
   };
+
+  loadStatus();
+  connectWebSocket();
 </script>
+
 {% endblock %}

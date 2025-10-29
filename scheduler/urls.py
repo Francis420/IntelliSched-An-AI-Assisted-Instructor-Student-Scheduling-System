@@ -8,4 +8,6 @@ urlpatterns = [
     path("dashboard/", views.scheduler_dashboard, name="schedulerDashboard"),
     path("start/", views.start_scheduler, name="startScheduler"),
     path("stop/", views.stop_scheduler, name="stopScheduler"),
+    path("status/", views.scheduler_status, name="schedulerStatus"),
+
 ]

@@ -9,7 +9,7 @@ from scheduler.tasks import run_scheduler_task
 from scheduler.models import SchedulerProgress
 from celery import current_app
 import uuid
-from scheduler.models import SchedulerProgress
+import os, signal
 
 # Scheduler Output View
 def scheduleOutput(request):
@@ -103,12 +103,40 @@ def stop_scheduler(request):
     batch_id = request.GET.get("batch_id")
     try:
         progress = SchedulerProgress.objects.get(batch_id=batch_id)
+
+        # Kill subprocess if still running
+        if progress.process_pid:
+            try:
+                os.kill(progress.process_pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass  # Process already exited
+
+        # Also revoke Celery task to stop any background logic
         if progress.task_id:
-            # ✅ Correct modern revoke call
             current_app.control.revoke(progress.task_id, terminate=True, signal="SIGTERM")
+
         progress.status = "stopped"
         progress.message = "Scheduler manually stopped."
         progress.save()
+
         return JsonResponse({"status": "stopped", "message": "Scheduler has been stopped."})
     except SchedulerProgress.DoesNotExist:
         return JsonResponse({"status": "error", "message": "No running scheduler found."})
+    
+
+def scheduler_status(request):
+    batch_id = request.GET.get("batch_id")
+    if not batch_id:
+        return JsonResponse({"error": "Missing batch_id"}, status=400)
+
+    try:
+        progress = SchedulerProgress.objects.get(batch_id=batch_id)
+    except SchedulerProgress.DoesNotExist:
+        return JsonResponse({"status": "idle", "message": "No progress found."})
+
+    return JsonResponse({
+        "status": progress.status,
+        "message": progress.message,
+        "progress": progress.progress,
+        "logs": progress.logs[-20:],
+    })

@@ -1,10 +1,10 @@
-from celery import shared_task, current_app
+# scheduler/tasks.py
+from celery import shared_task
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from scheduling.models import Semester
 from scheduler.models import SchedulerProgress
-from scheduler.solver import solve_schedule_for_semester
-import time
+import subprocess, sys
 
 @shared_task(bind=True)
 def run_scheduler_task(self, batch_id=None):
@@ -12,57 +12,75 @@ def run_scheduler_task(self, batch_id=None):
     progress = SchedulerProgress.objects.get(batch_id=batch_id)
     progress.task_id = self.request.id
     progress.status = "running"
+    progress.message = "Starting scheduler..."
     progress.save()
+
+    async_to_sync(channel_layer.group_send)(
+        f"scheduler_{batch_id}",
+        {"type": "progress.update", "data": {"status": "running", "message": "Scheduler started", "progress": 0}},
+    )
 
     semester = Semester.objects.filter(isActive=True).first()
     if not semester:
         progress.status = "error"
         progress.message = "❌ No active semester found."
+        progress.add_log(progress.message)
         progress.save()
         async_to_sync(channel_layer.group_send)(
             f"scheduler_{batch_id}",
-            {"type": "progress.update", "data": {"status": "error", "message": progress.message, "progress": 0}},
+            {"type": "progress.update", "data": {"status": "error", "message": progress.message}},
         )
         return
 
     try:
-        for i in range(0, 101, 10):
-            # Check if task was revoked
+        cmd = [sys.executable, "manage.py", "test_scheduler", str(semester.semesterId)]
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+            bufsize=1,
+        )
+
+        progress.process_pid = process.pid
+        progress.save()
+
+        for line in process.stdout:
+            line = line.strip()
+            if not line:
+                continue
+
             refreshed = SchedulerProgress.objects.get(batch_id=batch_id)
             if refreshed.status == "stopped":
+                process.terminate()
+                refreshed.add_log("⏹ Scheduler stopped by user.")
                 async_to_sync(channel_layer.group_send)(
                     f"scheduler_{batch_id}",
-                    {"type": "progress.update", "data": {"status": "stopped", "message": "⏹ Scheduler stopped by user.", "progress": i}},
+                    {"type": "progress.update", "data": {"status": "stopped", "message": "Scheduler stopped by user."}},
                 )
                 return
 
-            progress.progress = i
-            progress.message = f"Scheduling progress: {i}%"
-            progress.save()
-
+            refreshed.add_log(line)  # 🧩 Log live updates
             async_to_sync(channel_layer.group_send)(
                 f"scheduler_{batch_id}",
-                {"type": "progress.update", "data": {"status": "running", "message": progress.message, "progress": i}},
+                {"type": "progress.update", "data": {"status": "running", "message": line}},
             )
 
-            time.sleep(1)
-
-        # Run actual solver (optional)
-        solve_schedule_for_semester(semester, time_limit_seconds=60)
-
-        progress.status = "completed"
-        progress.progress = 100
-        progress.message = "✅ Scheduling complete!"
+        process.wait()
+        progress.status = "done"
+        progress.message = "✅ Scheduling completed!"
+        progress.add_log(progress.message)
         progress.save()
 
         async_to_sync(channel_layer.group_send)(
             f"scheduler_{batch_id}",
-            {"type": "progress.update", "data": {"status": "done", "message": progress.message, "progress": 100}},
+            {"type": "progress.update", "data": {"status": "done", "message": progress.message}},
         )
 
     except Exception as e:
         progress.status = "error"
-        progress.message = str(e)
+        progress.message = f"❌ Error: {str(e)}"
+        progress.add_log(progress.message)
         progress.save()
         async_to_sync(channel_layer.group_send)(
             f"scheduler_{batch_id}",
