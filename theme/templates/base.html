@@ -10,78 +10,75 @@
 
   <div class="relative min-h-screen flex">
 
-    <!-- Sidebar -->
-    <div id="sidebar" class="w-64 bg-white shadow-md h-screen fixed top-0 left-0 overflow-y-auto transform -translate-x-full transition-transform duration-300 z-40">
+    <!-- Sidebar (DeptHead Only) -->
+    {% if request.user.is_authenticated and 'deptHead' in request.user.get_roles %}
+    <div id="sidebar" class="w-64 bg-white shadow-md h-screen fixed top-0 left-0 overflow-y-auto transform transition-transform duration-300 z-40">
       <div class="flex justify-between items-center p-4 border-b">
         <span class="text-lg font-bold">IntelliSched</span>
         <button id="closeSidebar" class="text-2xl text-gray-700 focus:outline-none">☰</button>
       </div>
+
       <nav class="p-4 space-y-4 text-sm">
-        <div class="space-y-1">
-            <a href="{% url 'home' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800 font-medium">🏠 Home</a>
+        <a href="{% url 'home' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800 font-medium">🏠 Home</a>
+
+        <div class="pt-4 border-t border-gray-200 space-y-1">
+          <span class="text-xs text-gray-500 uppercase tracking-wide px-4">User Management</span>
+          <a href="{% url 'deptHeadDashboard' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📊 Dashboard</a>
+          <a href="{% url 'instructorAccountList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">👨‍🏫 Instructor Accounts</a>
+          <a href="{% url 'auditlogView' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">⚙️ Audit Log</a>
         </div>
 
-        {% if request.user.is_authenticated %}
-          {% if 'deptHead' in request.user.get_roles %}
-          <div class="pt-4 border-t border-gray-200 space-y-1">
-            <span class="text-xs text-gray-500 uppercase tracking-wide px-4">User Management</span>
-            <a href="{% url 'deptHeadDashboard' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📊 Dashboard</a>
-            <a href="{% url 'instructorAccountList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">👨‍🏫 Instructor Accounts</a>
-            <a href="{% url 'studentAccountList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🧑‍🎓 Student Accounts</a>
-          </div>
+        <div class="pt-4 border-t border-gray-200 space-y-1">
+          <span class="text-xs text-gray-500 uppercase tracking-wide px-4">Scheduling Config</span>
+          <a href="{% url 'curriculumList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📘 Curriculums</a>
+          <a href="{% url 'subjectList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📚 Subjects</a>
+          <a href="{% url 'semesterList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🗓️ Semesters</a>
+          <a href="{% url 'roomList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🏫 Rooms</a>
+          <a href="{% url 'genedScheduleList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">⚙️ GenEd Schedules</a>
+          <a href="{% url 'subjectOfferingList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📝 Set Sections</a>
+        </div>
 
-          <div class="pt-4 border-t border-gray-200 space-y-1">
-            <span class="text-xs text-gray-500 uppercase tracking-wide px-4">Scheduling Config</span>
-            <a href="{% url 'curriculumList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📘 Curriculums</a>
-            <a href="{% url 'subjectList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📚 Subjects</a>
-            <a href="{% url 'semesterList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🗓️ Semesters</a>
-            <a href="{% url 'roomList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🏫 Rooms</a>
-            <a href="{% url 'genedScheduleList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">⚙️ GenEd Schedules</a>
-            <a href="{% url 'subjectOfferingList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📝 Set Sections</a>
-          </div>
+        <div class="pt-4 border-t border-gray-200 space-y-1">
+          <span class="text-xs text-gray-500 uppercase tracking-wide px-4">AI Matching</span>
+          <a href="{% url 'matchingDashboard' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🤖 Dashboard</a>
+          <a href="{% url 'configList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">⚙️ Configurations</a>
+          <a href="{% url 'matchingStart' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🚀 Start Matching</a>
+        </div>
 
-          <div class="pt-4 border-t border-gray-200 space-y-1">
-            <span class="text-xs text-gray-500 uppercase tracking-wide px-4">AI Matching</span>
-            <a href="{% url 'matchingDashboard' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🤖 Dashboard</a>
-            <a href="{% url 'configList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">⚙️ Configurations</a>
-            <a href="{% url 'matchingStart' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🚀 Start Matching</a>
-          </div>
-          {% endif %}
-
-          {% if 'instructor' in request.user.get_roles %}
-          <div class="pt-4 border-t border-gray-200 space-y-1">
-            <span class="text-xs text-gray-500 uppercase tracking-wide px-4">Instructor</span>
-            <a href="{% url 'instructorDashboard' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📊 Dashboard</a>
-            <a href="{% url 'experienceList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🧠 Experiences</a>
-            <a href="{% url 'credentialList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📄 Credentials</a>
-            <a href="{% url 'availabilityList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🕒 Availability</a>
-            <a href="{% url 'preferenceList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🎯 Preferences</a>
-            <a href="{% url 'teachingHistoryList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📖 Teaching History</a>
-          </div>
-          {% endif %}
-
-          {% if 'student' in request.user.get_roles %}
-          <div class="pt-4 border-t border-gray-200 space-y-1">
-            <span class="text-xs text-gray-500 uppercase tracking-wide px-4">Student</span>
-            <a href="{% url 'studentDashboard' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📊 Dashboard</a>
-            <a href="{% url 'enrollmentList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📝 Enrollments</a>
-          </div>
-          {% endif %}
-        {% endif %}
+        <div class="pt-4 border-t border-gray-200 space-y-1">
+          <span class="text-xs text-gray-500 uppercase tracking-wide px-4">Scheduler</span>
+          <a href="{% url 'schedulerDashboard' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🚀 Start Scheduler</a>
+          <a href="{% url 'scheduleOutput' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">⚙️ Scheduler Results</a>
+        </div>
       </nav>
     </div>
+    {% endif %}
 
     <!-- Main Content -->
-    <div id="mainContent" class="flex-1 flex flex-col transition-all duration-300 ml-0">
+    <div id="mainContent" class="flex-1 flex flex-col transition-all duration-300 {% if request.user.is_authenticated and 'deptHead' in request.user.get_roles %}ml-64{% endif %}">
       <header class="flex items-center justify-between bg-white shadow px-4 py-3">
-        <div id="menuToggle" class="flex items-center gap-3">
-          <button id="openSidebar" class="text-2xl text-gray-700 focus:outline-none">
-            ☰ <span id="openSidebarText" class="text-xl font-bold text-gray-800">IntelliSched {% block header %}{% endblock %}</span>
-          </button>
+        <div class="flex items-center gap-3">
+          {% if request.user.is_authenticated and 'deptHead' in request.user.get_roles %}
+            <button id="openSidebar" class="text-2xl text-gray-700 focus:outline-none">☰</button>
+          {% endif %}
+          <span class="text-xl font-bold text-gray-800">IntelliSched {% block header %}{% endblock %}</span>
         </div>
 
         {% if request.user.is_authenticated %}
-        <div>
+        <div class="flex items-center space-x-3">
+          <!-- Instructor Profile (only if Instructor) -->
+          {% if 'instructor' in request.user.get_roles %}
+          <a href="{% url 'instructorDashboard' %}" 
+             class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-3 py-1.5 rounded-md shadow-md text-sm transition duration-150">
+             Profile
+          </a>
+          <a href="{% url 'instructorScheduleView' %}" 
+             class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-3 py-1.5 rounded-md shadow-md text-sm transition duration-150">
+             My Schedule
+          </a>
+          {% endif %}
+
+          <!-- Logout -->
           <a href="{% url 'logout' %}" 
              onclick="return confirm('Are you sure you want to logout?');"
              class="inline-block bg-red-600 hover:bg-red-700 text-white font-semibold px-3 py-1.5 rounded-md shadow-md text-sm transition duration-150">
@@ -107,28 +104,17 @@
     const closeSidebarBtn = document.getElementById('closeSidebar');
     const mainContent = document.getElementById('mainContent');
 
-    // Restore sidebar state
-    if (localStorage.getItem("sidebarOpen") === "true") {
-        sidebar.classList.remove('-translate-x-full');
-        mainContent.classList.add('ml-64');
-        openSidebarBtn.classList.add('hidden');
-    }
+    if (openSidebarBtn && closeSidebarBtn) {
+      openSidebarBtn.addEventListener('click', () => {
+        sidebar.classList.toggle('-translate-x-full');
+        mainContent.classList.toggle('ml-64');
+      });
 
-    // Open sidebar
-    openSidebarBtn.addEventListener('click', () => {
-        sidebar.classList.remove('-translate-x-full');
-        mainContent.classList.add('ml-64');
-        openSidebarBtn.classList.add('hidden');
-        localStorage.setItem("sidebarOpen", "true");
-    });
-
-    // Close sidebar
-    closeSidebarBtn.addEventListener('click', () => {
+      closeSidebarBtn.addEventListener('click', () => {
         sidebar.classList.add('-translate-x-full');
         mainContent.classList.remove('ml-64');
-        openSidebarBtn.classList.remove('hidden');
-        localStorage.setItem("sidebarOpen", "false");
-    });
+      });
+    }
   </script>
 </body>
 </html>

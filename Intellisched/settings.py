@@ -22,23 +22,25 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    'rest_framework', 
+    'rest_framework',
     'rest_framework.authtoken',
 
     'tailwind',
-    'theme', 
+    'theme',
     'django_browser_reload',
     'channels',
 
-    'core',
+    'core.apps.CoreConfig',
     'students',
-    'instructors',
-    'scheduling',
+    'instructors.apps.InstructorsConfig',
+    'scheduling.apps.SchedulingConfig',
     'adminpanel',
     'authapi',
-    'aimatching', 
-    'scheduler',      
+    'aimatching.apps.AimatchingConfig',
+    'scheduler.apps.SchedulerConfig',
+    'auditlog',
 ]
+
 
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'

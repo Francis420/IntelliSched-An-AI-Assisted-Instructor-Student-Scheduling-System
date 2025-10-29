@@ -23,6 +23,7 @@ from django.views.decorators.http import require_GET
 from django.core.paginator import Paginator
 from django.template.loader import render_to_string
 from django.db.models import Q
+from auditlog.models import LogEntry
 
 
 
@@ -55,6 +56,14 @@ def checkStudentIdAvailability(request):
         'isAvailable': not exists,
         'message': 'Student ID available.' if not exists else 'Student ID already taken.'
     })
+
+
+@login_required
+@has_role('deptHead')
+def auditlog_view(request):
+    logs = LogEntry.objects.select_related('actor', 'content_type').order_by('-timestamp')[:100]
+
+    return render(request, 'auditlog/auditlogList.html', {'logs': logs})
 
 
 # ---------- Subjects ----------
