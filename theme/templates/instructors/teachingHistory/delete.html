@@ -13,7 +13,7 @@
   <form method="post" class="flex gap-3">
     {% csrf_token %}
     <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded">Yes, Delete</button>
-    <a href="{% url 'teachingHistoryList' %}" class="bg-gray-300 hover:bg-gray-400 text-black font-semibold px-4 py-2 rounded">Cancel</a>
+    <a href="javascript:history.back()" class="bg-gray-300 hover:bg-gray-400 text-black font-semibold px-4 py-2 rounded">Cancel</a>
   </form>
 </div>
 {% endblock %}

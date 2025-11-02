@@ -84,7 +84,8 @@ class Instructor(models.Model):
     employmentType = models.CharField(max_length=20,
         choices=[
             ('permanent', 'Permanent'),
-            ('temporary', 'Temporary')
+            ('part-time', 'Part-Time'),
+            ('overload', 'Part-Time (Overload)'),
         ]
     )
     createdAt = models.DateTimeField(auto_now_add=True)

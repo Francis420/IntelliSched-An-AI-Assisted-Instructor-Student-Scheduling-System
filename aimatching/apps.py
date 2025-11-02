@@ -14,7 +14,6 @@ class AimatchingConfig(AppConfig):
             MatchingProgress,
         )
 
-        # Register models for automatic audit logging
         auditlog.register(InstructorSubjectMatch)
         auditlog.register(InstructorSubjectMatchHistory)
         auditlog.register(MatchingConfig)

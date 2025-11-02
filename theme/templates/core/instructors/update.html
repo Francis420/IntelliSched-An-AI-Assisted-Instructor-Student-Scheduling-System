@@ -44,7 +44,8 @@
               class="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md bg-white focus:ring-indigo-500 focus:border-indigo-500">
         <option value="">Select Type</option>
         <option value="permanent" {% if instructor.employmentType == 'permanent' %}selected{% endif %}>Permanent</option>
-        <option value="temporary" {% if instructor.employmentType == 'temporary' %}selected{% endif %}>Temporary</option>
+        <option value="part-time" {% if instructor.employmentType == 'part-time' %}selected{% endif %}>Part-time</option>
+        <option value="overload" {% if instructor.employmentType == 'overload' %}selected{% endif %}>Part-time(Overload)</option>
       </select>
     </div>
 
@@ -90,12 +91,16 @@
       </select>
     </div>
 
-    <!-- Submit -->
-    <div>
+    <div class="flex space-x-3">
       <button type="submit"
-              class="w-full bg-indigo-600 text-white font-medium py-2 px-4 rounded-md hover:bg-indigo-700 transition">
+              class="flex-1 bg-indigo-600 text-white font-medium py-2 px-4 rounded-md hover:bg-indigo-700 transition opacity-50">
         Update Account
       </button>
+
+      <a href="javascript:history.back()" 
+        class="flex-1 text-center bg-gray-300 text-black font-medium py-2 px-4 rounded-md hover:bg-gray-400 transition">
+        Back
+      </a>
     </div>
   </form>
 </div>

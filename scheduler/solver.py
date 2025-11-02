@@ -586,6 +586,7 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
     solver.parameters.num_search_workers = 8
     solver.parameters.max_time_in_seconds = 300
     solver.parameters.random_seed = 42
+    solver.parameters.symmetry_level = 0
     solver.parameters.log_search_progress = True
     solver.parameters.cp_model_presolve = True
     solver.parameters.cp_model_probing_level = 0 

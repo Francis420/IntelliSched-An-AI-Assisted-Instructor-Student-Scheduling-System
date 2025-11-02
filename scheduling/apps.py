@@ -18,7 +18,6 @@ class SchedulingConfig(AppConfig):
             SubjectOffering,
         )
 
-        # Register models for automatic audit logging
         auditlog.register(Curriculum)
         auditlog.register(Subject)
         auditlog.register(Semester)

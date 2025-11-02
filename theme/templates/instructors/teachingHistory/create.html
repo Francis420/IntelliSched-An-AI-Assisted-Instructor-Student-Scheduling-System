@@ -29,9 +29,16 @@
       <input type="number" name="timesTaught" min="1" value="1" class="w-full border border-gray-300 rounded px-3 py-2" required>
     </div>
 
-    <div class="flex gap-3">
-      <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded">Save</button>
-      <a href="{% url 'teachingHistoryList' %}" class="bg-gray-300 hover:bg-gray-400 text-black font-semibold px-4 py-2 rounded">Cancel</a>
+    <div class="flex space-x-3">
+      <button type="submit"
+              class="flex-1 bg-indigo-600 text-white font-medium py-2 px-4 rounded-md hover:bg-indigo-700 transition opacity-50">
+        Save
+      </button>
+
+      <a href="javascript:history.back()" 
+        class="flex-1 text-center bg-gray-300 text-black font-medium py-2 px-4 rounded-md hover:bg-gray-400 transition">
+        Back
+      </a>
     </div>
   </form>
 </div>
