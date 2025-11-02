@@ -42,7 +42,7 @@
 
     <div>
       <label for="relatedSubjects" class="block font-semibold mb-1">Related Subjects</label>
-      <select name="relatedSubjects" multiple class="w-full border border-gray-300 rounded-md px-3 py-2" size="6">
+      <select name="relatedSubjects" multiple class="related-subjects w-full" size="6">
         {% for subject in subjects %}
           <option value="{{ subject.subjectId }}"
             {% if subject in experience.relatedSubjects.all %}selected{% endif %}>
@@ -50,11 +50,12 @@
           </option>
         {% endfor %}
       </select>
+      <p class="text-sm text-gray-500 mt-1">You can search and select multiple related subjects.</p>
     </div>
 
     <div class="flex space-x-3">
       <button type="submit"
-              class="flex-1 bg-indigo-600 text-white font-medium py-2 px-4 rounded-md hover:bg-indigo-700 transition opacity-50">
+              class="flex-1 bg-indigo-600 text-white font-medium py-2 px-4 rounded-md hover:bg-indigo-700 transition">
         Update
       </button>
 
@@ -65,4 +66,14 @@
     </div>
   </form>
 </div>
+
+<script>
+  $(document).ready(function() {
+    $('.related-subjects').select2({
+      placeholder: "Search and select related subjects...",
+      allowClear: true,
+      width: '100%'
+    });
+  });
+</script>
 {% endblock %}

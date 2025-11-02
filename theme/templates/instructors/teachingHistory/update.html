@@ -8,43 +8,78 @@
 
     <div class="mb-4">
       <label for="subject" class="block text-sm font-medium text-gray-700">Subject</label>
-      <select name="subject" id="subject" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
+      <select name="subject" id="subject" class="subject-select w-full" required>
+        <option value="" disabled>Select a subject</option>
         {% for subject in subjects %}
-        <option value="{{ subject.subjectId }}" {% if subject == history.subject %}selected{% endif %}>
-          {{ subject.code }} - {{ subject.name }}
-        </option>
+          <option value="{{ subject.subjectId }}" {% if subject == history.subject %}selected{% endif %}>
+            {{ subject.code }} - {{ subject.name }}
+          </option>
         {% endfor %}
       </select>
     </div>
 
     <div class="mb-4">
       <label for="semester" class="block text-sm font-medium text-gray-700">Semester</label>
-      <select name="semester" id="semester" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
+      <select name="semester" id="semester" class="semester-select w-full" required>
+        <option value="" disabled>Select a semester</option>
         {% for sem in semesters %}
-        <option value="{{ sem.semesterId }}" {% if sem == history.semester %}selected{% endif %}>
-          {{ sem.name }}
-        </option>
+          <option value="{{ sem.semesterId }}" {% if sem == history.semester %}selected{% endif %}>
+            {{ sem.name }}
+          </option>
         {% endfor %}
       </select>
     </div>
 
+    <!-- Times Taught -->
     <div class="mb-4">
       <label for="timesTaught" class="block text-sm font-medium text-gray-700">Times Taught</label>
-      <input type="number" name="timesTaught" id="timesTaught" value="{{ history.timesTaught }}" min="1" required
-             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+      <input type="number" name="timesTaught" id="timesTaught"
+             value="{{ history.timesTaught }}" min="1" required
+             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
     </div>
 
+    <!-- Buttons -->
     <div class="flex space-x-3">
       <button type="submit"
-              class="flex-1 bg-indigo-600 text-white font-medium py-2 px-4 rounded-md hover:bg-indigo-700 transition opacity-50">
+              class="flex-1 bg-indigo-600 text-white font-medium py-2 px-4 rounded-md hover:bg-indigo-700 transition">
         Update
       </button>
 
       <a href="javascript:history.back()" 
-        class="flex-1 text-center bg-gray-300 text-black font-medium py-2 px-4 rounded-md hover:bg-gray-400 transition">
+         class="flex-1 text-center bg-gray-300 text-black font-medium py-2 px-4 rounded-md hover:bg-gray-400 transition">
         Back
       </a>
     </div>
   </form>
 </div>
+
+<script>
+  $(document).ready(function() {
+    // Initialize Select2
+    $('.subject-select').select2({
+      placeholder: "Select a subject",
+      allowClear: true,
+      width: '100%'
+    });
+    $('.semester-select').select2({
+      placeholder: "Select a semester",
+      allowClear: true,
+      width: '100%'
+    });
+
+    function enableKeyboardSearch(selector) {
+      $(selector).on('select2:open', function() {y
+        document.querySelector('.select2-search__field').focus();
+      });
+
+      $(selector).on('focus', function() {
+        $(this).select2('open');
+      });
+    }
+
+    enableKeyboardSearch('.subject-select');
+    enableKeyboardSearch('.semester-select');
+  });
+</script>
+
 {% endblock %}

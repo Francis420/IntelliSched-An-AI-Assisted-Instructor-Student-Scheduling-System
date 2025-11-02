@@ -8,38 +8,73 @@
 
     <div class="mb-4">
       <label class="block font-medium mb-1">Subject</label>
-      <select name="subject" class="w-full border border-gray-300 rounded px-3 py-2" required>
+      <select name="subject" class="subject-select w-full" required>
+        <option value="" disabled selected>Select a subject</option>
         {% for subject in subjects %}
-        <option value="{{ subject.subjectId }}">{{ subject.code }} - {{ subject.name }}</option>
+          <option value="{{ subject.subjectId }}">{{ subject.code }} - {{ subject.name }}</option>
         {% endfor %}
       </select>
     </div>
 
     <div class="mb-4">
       <label class="block font-medium mb-1">Semester</label>
-      <select name="semester" class="w-full border border-gray-300 rounded px-3 py-2" required>
+      <select name="semester" class="semester-select w-full" required>
+        <option value="" disabled selected>Select a semester</option>
         {% for sem in semesters %}
-        <option value="{{ sem.semesterId }}">{{ sem.name }}</option>
+          <option value="{{ sem.semesterId }}">{{ sem.name }}</option>
         {% endfor %}
       </select>
     </div>
 
     <div class="mb-4">
       <label class="block font-medium mb-1">Times Taught</label>
-      <input type="number" name="timesTaught" min="1" value="1" class="w-full border border-gray-300 rounded px-3 py-2" required>
+      <input type="number" name="timesTaught" min="1" value="1"
+             class="w-full border border-gray-300 rounded px-3 py-2" required>
     </div>
 
     <div class="flex space-x-3">
       <button type="submit"
-              class="flex-1 bg-indigo-600 text-white font-medium py-2 px-4 rounded-md hover:bg-indigo-700 transition opacity-50">
+              class="flex-1 bg-indigo-600 text-white font-medium py-2 px-4 rounded-md hover:bg-indigo-700 transition">
         Save
       </button>
 
       <a href="javascript:history.back()" 
-        class="flex-1 text-center bg-gray-300 text-black font-medium py-2 px-4 rounded-md hover:bg-gray-400 transition">
+         class="flex-1 text-center bg-gray-300 text-black font-medium py-2 px-4 rounded-md hover:bg-gray-400 transition">
         Back
       </a>
     </div>
   </form>
 </div>
+
+<script>
+  $(document).ready(function() {
+    // Initialize Select2
+    $('.subject-select').select2({
+      placeholder: "Select a subject",
+      allowClear: true,
+      width: '100%'
+    });
+    $('.semester-select').select2({
+      placeholder: "Select a semester",
+      allowClear: true,
+      width: '100%'
+    });
+
+    // 👇 This makes single-select searchable immediately when tabbed into
+    function enableKeyboardSearch(selector) {
+      $(selector).on('select2:open', function() {
+        // Focus the search field automatically
+        document.querySelector('.select2-search__field').focus();
+      });
+
+      // Open dropdown when element gains focus via tab
+      $(selector).on('focus', function() {
+        $(this).select2('open');
+      });
+    }
+
+    enableKeyboardSearch('.subject-select');
+    enableKeyboardSearch('.semester-select');
+  });
+</script>
 {% endblock %}
