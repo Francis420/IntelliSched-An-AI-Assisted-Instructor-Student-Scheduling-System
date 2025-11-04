@@ -46,6 +46,7 @@
         <option value="permanent" {% if instructor.employmentType == 'permanent' %}selected{% endif %}>Permanent</option>
         <option value="part-time" {% if instructor.employmentType == 'part-time' %}selected{% endif %}>Part-time</option>
         <option value="overload" {% if instructor.employmentType == 'overload' %}selected{% endif %}>Part-time(Overload)</option>
+        <option value="on-leave/retired" {% if instructor.employmentType == 'on-leave/retired' %}selected{% endif %}>On-Leave/Retired</option>
       </select>
     </div>
 
