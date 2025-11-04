@@ -1,3 +1,4 @@
+#scheduling\models.py
 from django.db import models
 from core.models import Student, User
 from django.utils import timezone

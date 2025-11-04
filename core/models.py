@@ -1,3 +1,4 @@
+#core\models.py
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 
@@ -120,7 +121,26 @@ class Instructor(models.Model):
     def user(self):
         login = self.userlogin_set.select_related("user").first()
         return login.user if login else None
+    
+    @property
+    def total_teaching_experience(self):
+        from instructors.models import TeachingHistory, InstructorExperience
 
+        external_years = sum(
+            exp.durationInYears()
+            for exp in InstructorExperience.objects.filter(
+                instructor=self, experienceType="Teaching Experience"
+            )
+        )
+
+        institutional_years = (
+            TeachingHistory.objects.filter(instructor=self)
+            .values("semester__academicYear")
+            .distinct()
+            .count()
+        )
+
+        return round(external_years + institutional_years, 2)
 
     def __str__(self):
         return self.instructorId

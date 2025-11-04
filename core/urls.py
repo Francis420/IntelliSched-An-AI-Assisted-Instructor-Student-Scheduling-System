@@ -28,5 +28,9 @@ urlpatterns = [
     path("students/live/", views.studentAccountListLive, name="studentAccountListLive"),
     path('students/create/', views.studentAccountCreate, name='studentAccountCreate'),
     path('students/update/<int:userId>/', views.studentAccountUpdate, name='studentAccountUpdate'),
+
+    # Recommendation Dashboard
+    path('recommendation/', views.recommendation_dashboard, name='recommendationDashboard'),
+    path('recommendation/data/', views.recommendation_data, name='recommendation_data'),
 ]
 

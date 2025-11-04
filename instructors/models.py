@@ -1,3 +1,4 @@
+#instructors\models.py
 from django.db import models
 from core.models import Instructor
 from django.core.validators import MinValueValidator
@@ -9,12 +10,13 @@ from django.core.exceptions import ValidationError
 # This model tracks the professional experiences of instructors, including work experience, academic positions, and research roles.
 class InstructorExperience(models.Model):
     EXPERIENCE_TYPE_CHOICES = [
-        ('Academic Position', 'Academic Position'),           # Professor, Lecturer, Dean
-        ('Work Experience', 'Work Experience'),               # Industry-related roles
-        ('Research Role', 'Research Role'),                   # Project Researcher, Lab Staff
-        ('Administrative Role', 'Administrative Role'),       # Coordinator, Department Head
-        ('Extension Service', 'Extension Service'),           # Community outreach, seminars
-        ('Consultancy', 'Consultancy'),                       # External expert engagements
+        ('Academic Position', 'Academic Position'), 
+        ('Teaching Experience', 'Teaching Experience'),    
+        ('Work Experience', 'Work Experience'),               
+        ('Research Role', 'Research Role'),                   
+        ('Administrative Role', 'Administrative Role'),       
+        ('Extension Service', 'Extension Service'),           
+        ('Consultancy', 'Consultancy'),                      
     ]
 
     experienceId = models.AutoField(primary_key=True)
