@@ -87,6 +87,7 @@ class Instructor(models.Model):
             ('permanent', 'Permanent'),
             ('part-time', 'Part-Time'),
             ('overload', 'Part-Time (Overload)'),
+            ('on-leave/retired', 'On Leave/retired'),
         ]
     )
     createdAt = models.DateTimeField(auto_now_add=True)

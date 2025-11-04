@@ -1,133 +1,112 @@
+# scheduler/data_extractors.py
 from collections import defaultdict
-from scheduling.models import (
-    Subject, Section, SubjectOffering, Curriculum, ScheduleControl, Room
-)
+from scheduling.models import Subject, Section, Room
 from core.models import Instructor
 from aimatching.models import InstructorSubjectMatch
 
 
 def get_solver_data(semester):
     """
-    Returns a dict with normalized solver data:
-    - instructor_index: {instructor_id: idx}
-    - section_index: {section_id: idx}
-    - instructors: [instructor_id,...]
-    - sections: [section_id,...]
-    - subjects: {subject_id: {has_lab, lecture_hours, lab_hours, is_gened, is_priority_for_rooms}}
-    - section_subjects: {section_id: subject_id}
-    - gened_sections: set(section_id,...)
-    - instructor_availability: {instr_id: {day: [(start_min, end_min), ...]}}
-    - instructor_loads: {instr_id: (normal_hours, overload_hours)}
-    - matches: {section_id: [(instr_id, score), ...]}
-    - section_hours: {section_id: (lecture_hours, lab_hours)}
-    - lecture_lab_pairs: [(lecture_section_id, lab_section_id), ...]
-    - rooms: [room_id,...]
-    - room_index: {room_id: idx}
-    - rooms_qs: list of Room instances
-    - section_enrollment: {section_id: enrolled_students_count}
+    Updated 'get_solver_data' (aligned with new solver rules).
+    This is optional, meant for diagnostics or pre-solver inspection.
+
+    Returns dict with:
+      - instructors_qs, sections_qs, rooms_qs (querysets)
+      - instructor_index / section_index / room_index
+      - instructor_caps: {instr_id: {normal_limit_min, overload_limit_min, employment, has_designation}}
+      - subjects: {subject_id: {durationMinutes, labDurationMinutes, has_lab, ...}}
+      - section_hours: {section_id: {lecture_min, lab_min, units}}
+      - matches: {section_id: [(instr_id, score), ...]}
+      - lecture_lab_pairs: [(lecture_section_id, lab_section_id)]
     """
 
-    # ==== Instructors ====
-    instructors_qs = list(Instructor.objects.all())
+    # -------------------- Instructors --------------------
+    instructors_qs = [
+        i for i in Instructor.objects.all()
+        if (i.employmentType or "").lower() != "on-leave/retired"
+    ]
     instructors = [i.instructorId for i in instructors_qs]
     instructor_index = {i.instructorId: idx for idx, i in enumerate(instructors_qs)}
 
-    # ==== Sections ====
-    sections_qs = list(Section.objects.filter(semester=semester))
+    # -------------------- Sections --------------------
+    sections_qs = list(Section.objects.filter(semester=semester).select_related("subject"))
     sections = [s.sectionId for s in sections_qs]
     section_index = {s.sectionId: idx for idx, s in enumerate(sections_qs)}
 
-    # ==== Subjects & Properties ====
+    # -------------------- Subjects --------------------
     subject_ids = {s.subject_id for s in sections_qs}
     subjects_qs = Subject.objects.filter(subjectId__in=subject_ids).select_related("curriculum")
     subjects = {}
     for subj in subjects_qs:
         subjects[subj.subjectId] = {
-            "units": getattr(subj, "units", 0),  # 🆕 added
-            "lecture_hours": subj.lectureHours,  # computed from durationMinutes / 60
-            "lab_hours": subj.labHours,  # computed from labDurationMinutes / 60
-            "has_lab": subj.hasLab,
-            "is_gened": bool(subj.curriculum.isActive and getattr(subj.curriculum, "is_gened", False))
-                        if getattr(subj, "curriculum", None) else False,
-            "is_priority_for_rooms": subj.isPriorityForRooms,
+            "durationMinutes": int(getattr(subj, "durationMinutes", 0) or 0),
+            "labDurationMinutes": int(getattr(subj, "labDurationMinutes", 0) or 0),
+            "has_lab": bool(getattr(subj, "hasLab", False)),
+            "is_gened": bool(
+                getattr(subj.curriculum, "is_gened", False)
+                if getattr(subj, "curriculum", None) else False
+            ),
+            "is_priority_for_rooms": bool(getattr(subj, "isPriorityForRooms", False)),
+            "units": int(getattr(subj, "units", 0) or 0),
             "type": getattr(subj, "type", None),
         }
 
-
-    section_subjects = {s.sectionId: s.subject_id for s in sections_qs}
-    gened_sections = {s.sectionId for s in sections_qs if subjects.get(s.subject_id, {}).get("is_gened", False)}
-
-    # ==== Section hours (lecture, lab, units) ====
+    # -------------------- Section Hours --------------------
     section_hours = {}
     for s in sections_qs:
-        subj = subjects.get(s.subject_id, {"lecture_hours": 0, "lab_hours": 0, "units": 0})
-        lecture_h = subj.get("lecture_hours", 0)
-        lab_h = subj.get("lab_hours", 0) if subj.get("has_lab", False) else 0
-        units = subj.get("units", 0)
+        subj = subjects.get(s.subject_id, {})
         section_hours[s.sectionId] = {
-            "lecture_hours": lecture_h,
-            "lab_hours": lab_h,
-            "units": units,  # 🆕 added
+            "lecture_min": subj.get("durationMinutes", 0),
+            "lab_min": subj.get("labDurationMinutes", 0) if subj.get("has_lab") else 0,
+            "units": subj.get("units", 0),
         }
 
-
-    # ==== Section enrollment counts ====
-    section_enrollment = {s.sectionId: getattr(s, "enrollment_count", 0) for s in sections_qs}
-
-    # ==== Instructor loads ====
-    instructor_loads = {}
-
-    for inst in instructors_qs:
-        # --- NORMAL LOAD ---
-        # Priority: Designation > Rank > Fallback
-        if inst.designation and getattr(inst.designation, "normalLoad", None) is not None:
-            normal = inst.designation.normalLoad
-        elif inst.rank and getattr(inst.rank, "normalLoad", None) is not None:
-            normal = inst.rank.normalLoad
+    # -------------------- Instructor Load Caps --------------------
+    def resolve_caps(i):
+        emp = (i.employmentType or "permanent").lower()
+        has_designation = bool(i.designation)
+        # Determine normal instruction hours
+        normal_h = None
+        if i.designation and getattr(i.designation, "instructionHours", None):
+            normal_h = i.designation.instructionHours
+        elif i.rank and getattr(i.rank, "instructionHours", None):
+            normal_h = i.rank.instructionHours
         else:
-            normal = 18  # default fallback if neither rank nor designation has one
-
-        # --- OVERLOAD ---
-        # Based on Academic Attainment (and may vary if has designation)
-        if inst.academicAttainment:
-            overload = getattr(inst.academicAttainment, "overLoad", 3)
+            normal_h = 18
+        # Overload cap
+        if emp == "permanent":
+            overload_h = 9 if has_designation else 12
         else:
-            overload = 6 # default if no attainment assigned
+            overload_h = 10_000  # effectively unlimited
+        return {
+            "normal_limit_min": int(normal_h * 60),
+            "overload_limit_min": int(overload_h * 60),
+            "employment": emp,
+            "has_designation": has_designation,
+        }
 
-        instructor_loads[inst.instructorId] = (int(normal), int(overload))
+    instructor_caps = {i.instructorId: resolve_caps(i) for i in instructors_qs}
 
-    # ==== Instructor availability ====
-    instructor_availability = defaultdict(lambda: defaultdict(list))
-    controls = ScheduleControl.objects.filter(schedule__instructor__in=instructors_qs)
+    # -------------------- Matches --------------------
+    match_qs = InstructorSubjectMatch.objects.filter(
+        subject_id__in=subject_ids
+    ).select_related("instructor", "subject")
 
-    for c in controls:
-        day = int(c.schedule.dayOfWeek) if isinstance(c.schedule.dayOfWeek, int) else \
-              {"Monday":0, "Tuesday":1, "Wednesday":2, "Thursday":3, "Friday":4,
-               "Saturday":5, "Sunday":6}.get(c.schedule.dayOfWeek, 0)
-        start = c.schedule.startTime.hour * 60 + c.schedule.startTime.minute
-        end = c.schedule.endTime.hour * 60 + c.schedule.endTime.minute
-        instructor_availability[c.schedule.instructor_id][day].append((start, end))
-
-    # ==== Matches (InstructorSubjectMatch) ====
-    # Get subject IDs for filtering matches
-    subject_ids = {s.subject_id for s in sections_qs}
-    match_qs = InstructorSubjectMatch.objects.filter(subject_id__in=subject_ids)
-    
-    # Build matches dict mapping section_id -> list of (instructor_id, score)
-    matches = defaultdict(list)
-    # Because InstructorSubjectMatch relates to subject, but we want matches per section,
-    # and each section has subject_id, so we assign matches to all sections with matching subject.
     subj_to_section_ids = defaultdict(list)
     for s in sections_qs:
         subj_to_section_ids[s.subject_id].append(s.sectionId)
-    
-    for m in match_qs.select_related("instructor", "subject"):
+
+    matches = defaultdict(list)
+    for m in match_qs:
         instr_id = m.instructor.instructorId
         subj_id = m.subject.subjectId
+        score = getattr(m, "confidenceScore", None)
+        if score is None:
+            score = 1.0 if getattr(m, "isRecommended", False) else 0.0
         for sec_id in subj_to_section_ids.get(subj_id, []):
-            matches[sec_id].append((instr_id, float(m.isRecommended)))  # or m.score if you have score field
+            matches[sec_id].append((instr_id, float(score)))
 
-    # ==== Lecture/Lab pairs ====
+    # -------------------- Lecture/Lab Pairs --------------------
     lecture_lab_pairs = []
     subj_to_sections = defaultdict(list)
     for s in sections_qs:
@@ -137,34 +116,30 @@ def get_solver_data(semester):
         subj_meta = subjects.get(subj_id, {})
         if not subj_meta.get("has_lab", False):
             continue
-        lectures = [sid for sid in sec_ids if section_hours.get(sid, {}).get("lecture_hours", 0) > 0]
-        labs = [sid for sid in sec_ids if section_hours.get(sid, {}).get("lab_hours", 0) > 0]
+        lectures = [sid for sid in sec_ids if section_hours[sid]["lecture_min"] > 0]
+        labs = [sid for sid in sec_ids if section_hours[sid]["lab_min"] > 0]
         for lec in lectures:
             for lab in labs:
                 if lec != lab:
                     lecture_lab_pairs.append((lec, lab))
 
-    # ==== Rooms ====
+    # -------------------- Rooms --------------------
     rooms_qs = list(Room.objects.filter(isActive=True))
     rooms = [r.roomId for r in rooms_qs]
     room_index = {r.roomId: idx for idx, r in enumerate(rooms_qs)}
 
+    # -------------------- Output --------------------
     return {
+        "instructors_qs": instructors_qs,
+        "sections_qs": sections_qs,
+        "rooms_qs": rooms_qs,
         "instructor_index": instructor_index,
         "section_index": section_index,
-        "instructors": instructors,
-        "sections": sections,
+        "room_index": room_index,
+        "instructor_caps": instructor_caps,
         "subjects": subjects,
         "section_hours": section_hours,
-        "section_subjects": section_subjects,
-        "gened_sections": gened_sections,
-        "instructor_availability": {k: dict(v) for k, v in instructor_availability.items()},
-        "instructor_loads": instructor_loads,
         "matches": dict(matches),
-        "section_hours": section_hours,
         "lecture_lab_pairs": lecture_lab_pairs,
         "rooms": rooms,
-        "room_index": room_index,
-        "rooms_qs": rooms_qs,
-        "section_enrollment": section_enrollment,
     }
