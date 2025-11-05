@@ -534,6 +534,8 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
 
     is_normal = {}
     is_overload = {}
+
+
   
     task_start_day_allowed = {}
     for t in tasks:
@@ -770,6 +772,14 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
         instr_total_overload_minutes[iidx] = total_overload_min_var
         instr_total_minutes[iidx] = total_min
 
+    perm_normal_gap_terms = []
+    for iidx, instr in instructors_by_index.items():
+        if instr_caps[iidx]["employment"] == "permanent":
+            limit = instr_caps[iidx]["normal_limit_min"]
+            gap = model.NewIntVar(0, limit, f"perm_gap_i{iidx}")
+            model.Add(gap == limit - instr_total_normal_minutes[iidx])
+            perm_normal_gap_terms.append(gap)
+
 
     match_score_terms = []
     room_priority_terms = []
@@ -824,22 +834,55 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
         model.AddAbsEquality(dev, diff)
         deviation_vars.append(dev)
 
-        
+    # Prefer normal time slots and days    
+    NORMAL_SLOT_REWARD = 10000   # reward per normal minute
+    # Penalize overload time slots and days
+    OVERLOAD_SLOT_PENALTY = 10000 # penalty per overload minute
 
-    PERM_NORMAL_REWARD = 50
-    PERM_OVERLOAD_REWARD = 20
-    PT_NORMAL_PENALTY = 40
-    PT_OVERLOAD_PENALTY = 30
+    # Severe penalty for each particular day's usage
+    DAY_COSTS = {
+        0: 0,   # Mon
+        1: 0,   # Tue
+        2: 0,   # Wed
+        3: 0,   # Thu
+        4: 0,   # Fri (adjust later if needed)
+        5: 300000, # Sat
+        6: 300000  # Sun
+    }
 
+    # ---- Time + day preference objective terms ----
+    for t in tasks:
+        dur = task_duration_min[t]
+
+        objective_terms.append(NORMAL_SLOT_REWARD * dur * is_normal[t])
+        objective_terms.append(-OVERLOAD_SLOT_PENALTY * dur * is_overload[t])
+
+        for d in range(7):
+            objective_terms.append(-DAY_COSTS[d] * day_eq[t][d])
+
+    # ==================================================
+    # Strong load priority weights (lexicographic style)
+    # ==================================================
+    W_PERM_NORMAL_FILL     = 1000000
+    W_PERM_NORMAL_GAP      = 900000
+    W_AVOID_PT_BEFORE_PERM = 500000
+    W_BALANCE_OVERLOAD     = 5000
+    # ==================================================
+
+    # Reward permanent normal minutes, discourage PT normal until perms full
     for iidx, instr in instructors_by_index.items():
         employment = instr_caps[iidx]["employment"]
+        normal = instr_total_normal_minutes[iidx]
 
         if employment == "permanent":
-            objective_terms.append(PERM_NORMAL_REWARD * instr_total_normal_minutes[iidx])
-            objective_terms.append(PERM_OVERLOAD_REWARD * instr_total_overload_minutes[iidx])
+            objective_terms.append(W_PERM_NORMAL_FILL * normal)
         else:
-            objective_terms.append(-PT_NORMAL_PENALTY * instr_total_normal_minutes[iidx])
-            objective_terms.append(-PT_OVERLOAD_PENALTY * instr_total_overload_minutes[iidx])
+            objective_terms.append(-W_AVOID_PT_BEFORE_PERM * normal)
+
+    # Penalize permanent normal load not filled
+    if perm_normal_gap_terms:
+        objective_terms.append(-W_PERM_NORMAL_GAP * sum(perm_normal_gap_terms))
+
 
     if match_score_terms:
         objective_terms.append(sum(match_score_terms))
@@ -849,7 +892,7 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
     if overload_excess_vars:
         objective_terms.append(- SOFT_OVERLOAD_PENALTY * sum(overload_excess_vars))
     if deviation_vars:
-        objective_terms.append(- FAIRNESS_PENALTY * sum(deviation_vars))
+        objective_terms.append(- W_BALANCE_OVERLOAD * sum(deviation_vars))
 
     YEAR_TBA_PENALTY = {1: 1000, 2: 500, 3: 200, 4: 50}
 
@@ -925,8 +968,6 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
         if typ == "overload":
             is_overtime = True
 
-        print(f"[Assign] Task {t} ({kind}) -> Section {sec_id} | Instr {instr_obj.instructorId} | Day {assigned_day} ({weekday[assigned_day]}) | Start {start_time} | Dur {dur} | Room {getattr(room_obj, 'roomCode', None)} | Overtime={is_overtime}")
-
         schedules_to_create.append(Schedule(
             subject=subj_obj,
             instructor=instr_obj,
@@ -953,9 +994,6 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
             excess_val = solver.Value(model.GetVarFromProtoName(f"overload_excess_i{iidx}"))
         except Exception:
             excess_val = None
-        print(f" - {instr.instructorId}: normal_limit={normal_limit_min}min ({normal_limit_min/60:.2f}h), "
-              f"overload_limit={overload_limit_min}min ({overload_limit_min/60:.2f}h), assigned_normal={assigned_normal_min}min ({assigned_normal_min/60:.2f}h), "
-              f"assigned_overload={assigned_overload_min}min ({assigned_overload_min/60:.2f}h), total_minutes={total_min}min ({total_min/60:.2f}h), overload_excess={excess_val}")
 
 
     with transaction.atomic():
