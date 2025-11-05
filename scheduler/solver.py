@@ -51,15 +51,20 @@ def minutes_to_time(mins):
 
 def window_name_for_start(start_min, dur_min):
     end = start_min + dur_min
-    if start_min < GLOBAL_DAY_START or end > GLOBAL_DAY_END:
+
+    if start_min < 480 or end > 1200:
         return None
-    if not (end <= LUNCH_START or start_min >= LUNCH_END):
+
+    if not (end <= 720 or start_min >= 780):
         return None
-    if (GLOBAL_DAY_START <= start_min and end <= LUNCH_START) or (LUNCH_END <= start_min and end <= 17 * 60):
+
+    if end <= 17 * 60:  # 5 PM
         return "normal"
-    if start_min >= 17 * 60 and end <= GLOBAL_DAY_END:
+    elif start_min >= 17 * 60:
         return "overload"
+
     return None
+
 
 
 def make_task_id(section_id, kind, part=None):
@@ -69,25 +74,46 @@ def make_task_id(section_id, kind, part=None):
 
 
 def is_instructor_available(instructor, day_name, start_time, end_time):
-    employment = getattr(instructor, "employmentType", "").upper()
+    employment = (getattr(instructor, "employmentType", "") or "").strip().lower()
+    day_name = (day_name or "").upper()
+
+    weekday = day_name in ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"]
+    weekend = day_name in ["SATURDAY", "SUNDAY"]
+
+    if not (end_time <= 720 or start_time >= 780):
+        return False
+
+    if start_time < 480 or end_time > 1200:
+        return False
+
+    if employment in ["on-leave", "on-leave/retired", "retired"]:
+        return False
 
     if employment == "permanent":
-        return True
+        if weekday and end_time <= 17 * 60:
+            return True
+        if (weekday and start_time >= 17 * 60) or (weekend and end_time <= 20 * 60):
+            return True
+        return False
 
-    if employment == "part-time":
-        morning = (480 <= start_time < 720)
-        afternoon = (780 <= start_time < 1200)
-        return morning or afternoon
+    elif employment == "part-time":
+        if weekday and end_time <= 20 * 60:
+            return True
+        if weekend and end_time <= 20 * 60:
+            return True
+        return False
 
     elif employment == "overload":
-        if day_name in ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"]:
-            return 1020 <= start_time < 1200
-        else:
-            morning = (480 <= start_time < 720)
-            afternoon = (780 <= start_time < 1200)
-            return morning or afternoon
-        
+        # Weekdays 5–8 PM
+        if weekday and (17 * 60 <= start_time < 20 * 60):
+            return True
+        # Sat/Sun 8–12 + 1–8
+        if weekend and ((480 <= start_time < 720) or (780 <= start_time < 1200)):
+            return True
+        return False
+
     return False
+
 
 
 def resolve_instructor_limits(instr: Instructor):
@@ -202,6 +228,44 @@ class StopAfterFeasibleSolution(cp_model.CpSolverSolutionCallback):
         print("[Solver] Feasible solution found — stopping search early.")
         self.solution_found = True
         self.StopSearch()
+
+from collections import Counter
+
+def debug_instructor_availability(instructors):
+    """
+    Prints all instructors with their employment type, rank, and designation.
+    Also shows totals per employment type.
+    """
+    print("--------------------------------------------------")
+    print("[DEBUG] Listing all instructors with type, rank, and designation...\n")
+
+    seen = set()
+    counts = Counter()
+
+    for instr in instructors:
+        # Basic fields
+        name = getattr(instr, "full_name", None) or str(instr)
+        employment = (getattr(instr, "employmentType", "") or "").strip().upper()
+
+        # Optional related fields (safe handling if None)
+        rank = getattr(instr.rank, "name", None) if instr.rank else "—"
+        designation = getattr(instr.designation, "name", None) if instr.designation else "—"
+
+        key = (name, employment, rank, designation)
+        if key in seen:
+            continue
+        seen.add(key)
+        counts[employment] += 1
+
+        print(f"- {name} ({employment}) | Rank: {rank} | Designation: {designation}")
+
+    print("\n[DEBUG] Totals by type:")
+    for etype, num in counts.items():
+        print(f"  {etype}: {num}")
+
+    print(f"\n[DEBUG] Total unique instructors found: {len(seen)}")
+    print("--------------------------------------------------\n")
+
 
 def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_minutes=30):
     if semester is None:
@@ -343,6 +407,8 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
         print(f"{idx}: {getattr(r, 'roomCode', 'TBA')} - {getattr(r, 'type', 'Any')}")
     print("-" * 50)
 
+
+    debug_instructor_availability(instructors)
 
     model = cp_model.CpModel()
 
