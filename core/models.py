@@ -92,8 +92,6 @@ class Instructor(models.Model):
     )
     createdAt = models.DateTimeField(auto_now_add=True)
     updatedAt = models.DateTimeField(auto_now=True)
-    normalLoad = models.IntegerField(default=18, help_text="Default Normal Load", null=True, blank=True)
-    overLoad = models.IntegerField(default=6, help_text="Default Overload", null=True, blank=True)
 
     @property
     def activeWorkloadSource(self):
