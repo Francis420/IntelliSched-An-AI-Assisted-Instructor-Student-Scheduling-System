@@ -91,6 +91,13 @@ class Section(models.Model):
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
     semester = models.ForeignKey(Semester, on_delete=models.CASCADE)
     sectionCode = models.CharField(max_length=50)
+
+    units = models.IntegerField()
+    lectureMinutes = models.IntegerField()
+    hasLab = models.BooleanField(default=False)
+    labMinutes = models.IntegerField(default=0)
+    isPriorityForRooms = models.BooleanField(default=False)
+
     createdAt = models.DateTimeField(auto_now_add=True)
     status = models.CharField(
         max_length=20,
@@ -101,6 +108,31 @@ class Section(models.Model):
     def __str__(self):
         return f"{self.subject.code} - Section {self.sectionCode}"
 
+    def save(self, *args, **kwargs):
+        """
+        Automatically copies relevant data from the Subject model
+        so that schedulers don't need to perform extra joins.
+        """
+        if self.subject:
+            self.units = self.subject.units
+            self.lectureMinutes = self.subject.durationMinutes
+            self.hasLab = self.subject.hasLab
+            self.labMinutes = self.subject.labDurationMinutes or 0
+            self.isPriorityForRooms = self.subject.isPriorityForRooms
+        super().save(*args, **kwargs)
+
+    @property
+    def lectureHours(self):
+        return round(self.lectureMinutes / 60, 2)
+
+    @property
+    def labHours(self):
+        return round(self.labMinutes / 60, 2) if self.hasLab else 0
+
+    @property
+    def totalHours(self):
+        return self.lectureHours + (self.labHours if self.hasLab else 0)
+
 
 # ---------- Room Table ---------- 50 check notes for info
 # This model represents rooms available for scheduling classes, including their code, building, capacity, and type.
@@ -109,7 +141,13 @@ class Room(models.Model):
     roomCode = models.CharField(max_length=20)
     building = models.CharField(max_length=100)
     capacity = models.IntegerField()
-    type = models.CharField(max_length=50)
+    # type = models.CharField(max_length=50)
+    type = models.CharField(max_length=20,
+        choices=[
+            ('lecture', 'Lecture'),
+            ('laboratory', 'Laboratory'),
+        ]
+    )
     isActive = models.BooleanField(default=True)
     notes = models.TextField(blank=True, null=True)
     createdAt = models.DateTimeField(auto_now_add=True)

@@ -27,3 +27,5 @@ class SchedulingConfig(AppConfig):
         auditlog.register(ScheduleControl)
         auditlog.register(GenEdSchedule)
         auditlog.register(SubjectOffering)
+
+        import scheduling.signals

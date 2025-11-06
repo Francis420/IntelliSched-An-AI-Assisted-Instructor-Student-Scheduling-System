@@ -76,7 +76,7 @@
           </td>
           <td class="px-6 py-3">{{ sched.instructor.full_name }}</td>
           <td class="px-6 py-3">{{ sched.section.sectionCode }}</td>
-          <td class="px-6 py-3">{{ sched.room.name|default:"—" }}</td>
+          <td class="px-6 py-3">{{ sched.room.roomCode|default:"TBA" }}</td>
           <td class="px-6 py-3">{{ sched.semester.name }}</td>
           <td class="px-6 py-3">{{ sched.dayOfWeek }}</td>
           <td class="px-6 py-3">

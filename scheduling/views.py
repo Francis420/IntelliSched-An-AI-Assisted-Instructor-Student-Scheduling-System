@@ -337,25 +337,28 @@ def semesterListLive(request):
         "has_previous": page_obj.has_previous(),
     })
 
+
 @login_required
 @has_role('deptHead')
 def semesterCreate(request):
     if request.method == 'POST':
         academicYear = request.POST.get('academicYear')
         term = request.POST.get('term')
-        isActive = bool(request.POST.get('isActive'))
         name = f"{term} Semester {academicYear}"
 
         if Semester.objects.filter(academicYear=academicYear, term=term).exists():
             messages.error(request, 'Semester for this academic year and term already exists.')
         else:
+            Semester.objects.update(isActive=False)
+
             Semester.objects.create(
                 name=name,
                 academicYear=academicYear,
                 term=term,
-                isActive=isActive
+                isActive=True
             )
-            messages.success(request, 'Semester created successfully.')
+
+            messages.success(request, f'{name} created and set as active.')
             return redirect('semesterList')
 
     return render(request, 'scheduling/semesters/create.html')
@@ -368,17 +371,25 @@ def semesterUpdate(request, semesterId):
     if request.method == 'POST':
         academicYear = request.POST.get('academicYear')
         term = request.POST.get('term')
-        isActive = bool(request.POST.get('isActive'))
+        isActive = request.POST.get('isActive') == 'on'  # ✅ checkbox logic
         name = f"{term} Semester {academicYear}"
 
-        if Semester.objects.exclude(semesterId=semester.semesterId).filter(academicYear=academicYear, term=term).exists():
+        # Prevent duplicate (same term + year)
+        if Semester.objects.exclude(semesterId=semester.semesterId).filter(
+            academicYear=academicYear, term=term
+        ).exists():
             messages.error(request, 'Another semester with this academic year and term already exists.')
         else:
+            # ✅ If this semester is being activated, deactivate others
+            if isActive:
+                Semester.objects.exclude(semesterId=semester.semesterId).update(isActive=False)
+
             semester.name = name
             semester.academicYear = academicYear
             semester.term = term
             semester.isActive = isActive
             semester.save()
+
             messages.success(request, 'Semester updated successfully.')
             return redirect('semesterList')
 
@@ -717,7 +728,6 @@ def subjectOfferingList(request):
         "selected_semester": selected_semester,
         "grouped_offerings": grouped_offerings,
     })
-3
 
 
 @login_required
