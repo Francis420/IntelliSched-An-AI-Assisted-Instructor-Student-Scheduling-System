@@ -90,7 +90,7 @@ def experienceListLive(request):
     paginator = Paginator(experiences, 5)
     page_obj = paginator.get_page(page)
 
-    html = render_to_string("instructors/experiences/_cards.html", {
+    html = render_to_string("instructors/experiences/_table.html", {
         "experiences": page_obj,
     }, request=request)
 
@@ -182,15 +182,10 @@ def experienceDelete(request, experienceId):
         messages.error(request, "Instructor account not found.")
         return redirect('home')
 
-    instructor = login.instructor
-    experience = get_object_or_404(InstructorExperience, pk=experienceId, instructor=instructor)
-
-    if request.method == 'POST':
-        experience.delete()
-        messages.success(request, 'Experience deleted.')
-        return redirect('instructorDashboard')
-
-    return render(request, 'instructors/experiences/delete.html', {'experience': experience})
+    experience = get_object_or_404(InstructorExperience, pk=experienceId, instructor=login.instructor)
+    experience.delete()
+    messages.success(request, "Experience deleted successfully.")
+    return redirect('instructorDashboard')
 
 
 

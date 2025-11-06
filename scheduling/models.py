@@ -3,6 +3,7 @@ from django.db import models
 from core.models import Student, User
 from django.utils import timezone
 from django.apps import apps
+from datetime import datetime
 
 
 # ---------- Curriculum Table ----------
@@ -154,6 +155,12 @@ class Schedule(models.Model):
 
     def __str__(self):
         return f"{self.subject.code} - {self.dayOfWeek} ({self.startTime}-{self.endTime})"
+    
+    @property
+    def teaching_hours(self):
+        start = datetime.combine(datetime.today(), self.startTime)
+        end = datetime.combine(datetime.today(), self.endTime)
+        return round((end - start).seconds / 3600, 2)
 
 
 # ---------- Schedule Control ----------

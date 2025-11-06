@@ -46,8 +46,6 @@ class InstructorSubjectMatchHistory(models.Model):
     generatedBy = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     generatedAt = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return f"[History] {self.instructor.instructorId} - {self.subject.code} (Rank {self.rank})"
     
 
 class MatchingConfig(models.Model):

@@ -66,23 +66,23 @@ def get_experience_text(instructor, max_tokens=200):
 
 #     return chunk_text(full_text, max_tokens=max_tokens)
 
-def get_preference_score(instructor, subject):
-    preference = instructor.preferences.filter(subject=subject).first()
-    if not preference:
-        return 0.0
-    if preference.preferenceType == "Prefer":
-        return 1.0
-    if preference.preferenceType == "Avoid":
-        return -1.0
-    return 0.0
+# def get_preference_score(instructor, subject):
+#     preference = instructor.preferences.filter(subject=subject).first()
+#     if not preference:
+#         return 0.0
+#     if preference.preferenceType == "Prefer":
+#         return 1.0
+#     if preference.preferenceType == "Avoid":
+#         return -1.0
+#     return 0.0
 
 
 
-def get_preference_reason_text(instructor, subject):
-    pref = instructor.preferences.filter(subject=subject).first()
-    if not pref:
-        return "No preference recorded."
-    return f"{pref.preferenceType}: {(pref.reason or 'No reason provided.').strip()}"
+# def get_preference_reason_text(instructor, subject):
+#     pref = instructor.preferences.filter(subject=subject).first()
+#     if not pref:
+#         return "No preference recorded."
+#     return f"{pref.preferenceType}: {(pref.reason or 'No reason provided.').strip()}"
 
 
 def get_subject_text(subject, max_tokens=200):
@@ -102,7 +102,7 @@ def build_instructor_text_profile(instructor, subject, max_tokens=200):
     profile_chunks += get_teaching_text(instructor, max_tokens)
     profile_chunks += get_experience_text(instructor, max_tokens)
     profile_chunks += get_credentials_text(instructor, max_tokens)
-    profile_chunks += chunk_text(get_preference_reason_text(instructor, subject), max_tokens=max_tokens)
+    # profile_chunks += chunk_text(get_preference_reason_text(instructor, subject), max_tokens=max_tokens)
 
     if not subject_chunks:
         return []

@@ -5,8 +5,8 @@ from aimatching.matcher.data_extractors import (
     get_teaching_text,
     get_credentials_text,
     get_experience_text,
-    get_preference_score,
-    get_preference_reason_text,
+    # get_preference_score,
+    # get_preference_reason_text,
     get_subject_text,
 )
 from aimatching.matcher.explain_match import generate_mistral_explanation
@@ -58,10 +58,11 @@ def run_matching(semester_id, batch_id, generated_by=None):
             "teaching": config.teachingWeight,
             "credentials": config.credentialsWeight,
             "experience": config.experienceWeight,
-            "preference": config.preferenceWeight,
+            # "preference": config.preferenceWeight,
         }
     except MatchingConfig.DoesNotExist:
-        weights = {"teaching": 0.2, "credentials": 0.3, "experience": 0.3, "preference": 0.2}
+        # weights = {"teaching": 0.2, "credentials": 0.3, "experience": 0.3, "preference": 0.2}
+        weights = {"teaching": 0.2, "credentials": 0.3, "experience": 0.3}
 
     progress = MatchingProgress.objects.get(batchId=batch_id)
 
@@ -102,14 +103,14 @@ def run_matching(semester_id, batch_id, generated_by=None):
             credential_score = extract_entailment_prob(credential_scores)
             experience_score = extract_entailment_prob(experience_scores)
 
-            preference_score = get_preference_score(instructor, subject)
+            # preference_score = get_preference_score(instructor, subject)
 
             # Weighted confidence
             confidence_score = (
                 teaching_score * weights["teaching"]
                 + credential_score * weights["credentials"]
                 + experience_score * weights["experience"]
-                + preference_score * weights["preference"]
+                # + preference_score * weights["preference"]
             )
 
             # Determine strongest factor
@@ -117,7 +118,7 @@ def run_matching(semester_id, batch_id, generated_by=None):
                 "Teaching": teaching_score,
                 "Credentials": credential_score,
                 "Experience": experience_score,
-                "Preference": preference_score,
+                # "Preference": preference_score,
             }
             primary_factor = max(factors, key=factors.get)
 
@@ -126,7 +127,7 @@ def run_matching(semester_id, batch_id, generated_by=None):
                 "Teaching": "\n".join(teaching_text),
                 "Credentials": "\n".join(credentials_text),
                 "Experience": "\n".join(experience_text),
-                "Preference": get_preference_reason_text(instructor, subject),
+                # "Preference": get_preference_reason_text(instructor, subject),
             }
             primary_evidence = factor_evidence_map.get(primary_factor, "")
 
@@ -140,7 +141,7 @@ def run_matching(semester_id, batch_id, generated_by=None):
                     teachingScore=teaching_score,
                     credentialScore=credential_score,
                     experienceScore=experience_score,
-                    preferenceScore=preference_score,
+                    preferenceScore=0.0,
                     primaryFactor=primary_factor,
                     explanation=explanation,
                     modelVersion="crossenc-nli-deberta-v3-large",

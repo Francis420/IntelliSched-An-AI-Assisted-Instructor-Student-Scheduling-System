@@ -4,118 +4,213 @@
   <meta charset="UTF-8">
   <title>{% block title %}IntelliSched{% endblock %}</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
   {% block extra_head %}{% endblock %}
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col">
 
-  <div class="relative min-h-screen flex">
+<body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col font-sans overflow-x-hidden">
+
+  {% if messages %}
+  <div id="flash-messages" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md px-4">
+    {% for message in messages %}
+    <div class="flash-message p-3 mb-3 rounded-lg text-center shadow-md text-[15px]
+      {% if message.tags == 'success' %}bg-green-100 text-green-800
+      {% elif message.tags == 'error' %}bg-red-100 text-red-800
+      {% elif message.tags == 'warning' %}bg-yellow-100 text-yellow-800
+      {% else %}bg-blue-100 text-blue-800{% endif %}">
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+
+  <script>
+    setTimeout(() => {
+      document.querySelectorAll('.flash-message').forEach(msg => {
+        msg.style.transition = "opacity 0.8s ease, transform 0.8s ease";
+        msg.style.opacity = "0";
+        msg.style.transform = "translateY(-10px)";
+        setTimeout(() => msg.remove(), 800);
+      });
+    }, 4000);
+  </script>
+  {% endif %}
+
+  <div class="flex flex-1">
 
     {% if request.user.is_authenticated and 'deptHead' in request.user.get_roles %}
-    <div id="sidebar" class="w-64 bg-white shadow-md h-screen fixed top-0 left-0 overflow-y-auto transform transition-transform duration-300 z-40">
-      <div class="flex justify-between items-center p-4 border-b">
-        <span class="text-lg font-bold">IntelliSched</span>
-        <button id="closeSidebar" class="text-2xl text-gray-700 focus:outline-none">☰</button>
+    <!-- Overlay for mobile -->
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black/30 hidden z-30 md:hidden transition-opacity duration-300"></div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar"
+      class="bg-white shadow-md w-64 h-screen flex flex-col fixed top-0 left-0 z-40
+             transform transition-all duration-300 ease-in-out
+             overflow-y-auto overflow-x-hidden -translate-x-full md:translate-x-0">
+
+      <!-- Sidebar Header -->
+      <div class="flex items-center justify-between p-4 border-b border-gray-200 sticky top-0 bg-white z-10">
+        <h1 class="text-lg font-bold text-blue-700 sidebar-text">IntelliSched</h1>
+        <div class="flex items-center gap-2">
+          <button id="collapseSidebar"
+                  class="hidden md:inline-block text-gray-600 hover:text-blue-700 text-lg"
+                  title="Collapse sidebar">⮜</button>
+          <button id="closeSidebar" class="text-gray-600 text-2xl md:hidden hover:text-red-600">✕</button>
+        </div>
       </div>
 
-      <nav class="p-4 space-y-4 text-sm">
-        <a href="{% url 'home' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800 font-medium">🏠 Home</a>
+      <!-- Navigation -->
+      <nav class="flex-1 p-3 text-[15px] space-y-1">
+        <a href="{% url 'home' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50 transition
+           {% if request.resolver_match.url_name == 'home' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
+          🏠 <span class="sidebar-text">Home</span>
+        </a>
 
-        <div class="pt-4 border-t border-gray-200 space-y-1">
-          <span class="text-xs text-gray-500 uppercase tracking-wide px-4">Department Head Only</span>
-          <a href="{% url 'deptHeadDashboard' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📊 Dashboard</a>
-          <a href="{% url 'recommendationDashboard' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📈 Recommendation Dashboard</a>
-          <a href="{% url 'instructorAccountList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">👨‍🏫 Instructor Accounts</a>
-          <a href="{% url 'auditlogView' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">⚙️ Audit Log</a>
+        <div class="pt-4 border-t border-gray-200">
+          <p class="text-xs uppercase text-gray-500 px-4 mb-1 sidebar-text">Department Head</p>
+          <a href="{% url 'deptHeadDashboard' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
+             {% if request.resolver_match.url_name == 'deptHeadDashboard' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
+            📊 <span class="sidebar-text">Dashboard</span>
+          </a>
+          <a href="{% url 'recommendationDashboard' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
+             {% if request.resolver_match.url_name == 'recommendationDashboard' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
+            📈 <span class="sidebar-text">Recommendation Dashboard</span>
+          </a>
+          <a href="{% url 'instructorAccountList' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
+             {% if request.resolver_match.url_name == 'instructorAccountList' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
+            👨‍🏫 <span class="sidebar-text">Instructor Accounts</span>
+          </a>
+          <a href="{% url 'auditlogView' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
+             {% if request.resolver_match.url_name == 'auditlogView' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
+            ⚙️ <span class="sidebar-text">Audit Log</span>
+          </a>
         </div>
 
-        <div class="pt-4 border-t border-gray-200 space-y-1">
-          <span class="text-xs text-gray-500 uppercase tracking-wide px-4">Scheduling Config</span>
-          <a href="{% url 'curriculumList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📘 Curriculums</a>
-          <a href="{% url 'subjectList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📚 Subjects</a>
-          <a href="{% url 'semesterList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🗓️ Semesters</a>
-          <a href="{% url 'roomList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🏫 Rooms</a>
-          <a href="{% url 'genedScheduleList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">⚙️ GenEd Schedules</a>
-          <a href="{% url 'subjectOfferingList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">📝 Set Sections</a>
+        <div class="pt-4 border-t border-gray-200">
+          <p class="text-xs uppercase text-gray-500 px-4 mb-1 sidebar-text">Scheduling Config</p>
+          <a href="{% url 'curriculumList' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
+             {% if request.resolver_match.url_name == 'curriculumList' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
+            📘 <span class="sidebar-text">Curriculums</span>
+          </a>
+          <a href="{% url 'subjectList' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
+             {% if request.resolver_match.url_name == 'subjectList' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
+            📚 <span class="sidebar-text">Subjects</span>
+          </a>
+          <a href="{% url 'semesterList' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
+             {% if request.resolver_match.url_name == 'semesterList' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
+            🗓️ <span class="sidebar-text">Semesters</span>
+          </a>
+          <a href="{% url 'roomList' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
+             {% if request.resolver_match.url_name == 'roomList' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
+            🏫 <span class="sidebar-text">Rooms</span>
+          </a>
+          <a href="{% url 'genedScheduleList' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
+             {% if request.resolver_match.url_name == 'genedScheduleList' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
+            ⚙️ <span class="sidebar-text">GenEd Schedules</span>
+          </a>
+          <a href="{% url 'subjectOfferingList' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
+             {% if request.resolver_match.url_name == 'subjectOfferingList' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
+            📝 <span class="sidebar-text">Set Sections</span>
+          </a>
         </div>
 
-        <div class="pt-4 border-t border-gray-200 space-y-1">
-          <span class="text-xs text-gray-500 uppercase tracking-wide px-4">AI Matching</span>
-          <a href="{% url 'matchingDashboard' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🤖 Dashboard</a>
-          <a href="{% url 'configList' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">⚙️ Configurations</a>
-          <a href="{% url 'matchingStart' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🚀 Start Matching</a>
+        <div class="pt-4 border-t border-gray-200">
+          <p class="text-xs uppercase text-gray-500 px-4 mb-1 sidebar-text">AI Matching</p>
+          <a href="{% url 'matchingDashboard' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
+             {% if request.resolver_match.url_name == 'matchingDashboard' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
+            🤖 <span class="sidebar-text">Dashboard</span>
+          </a>
+          <a href="{% url 'configList' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
+             {% if request.resolver_match.url_name == 'configList' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
+            ⚙️ <span class="sidebar-text">Configurations</span>
+          </a>
+          <a href="{% url 'matchingStart' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
+             {% if request.resolver_match.url_name == 'matchingStart' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
+            🚀 <span class="sidebar-text">Start Matching</span>
+          </a>
         </div>
 
-        <div class="pt-4 border-t border-gray-200 space-y-1">
-          <span class="text-xs text-gray-500 uppercase tracking-wide px-4">Scheduler</span>
-          <a href="{% url 'schedulerDashboard' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">🚀 Start Scheduler</a>
-          <a href="{% url 'scheduleOutput' %}" class="block px-4 py-2 rounded-lg hover:bg-blue-100 text-gray-800">⚙️ Scheduler Results</a>
+        <div class="pt-4 border-t border-gray-200 mb-3">
+          <p class="text-xs uppercase text-gray-500 px-4 mb-1 sidebar-text">Scheduler</p>
+          <a href="{% url 'schedulerDashboard' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
+             {% if request.resolver_match.url_name == 'schedulerDashboard' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
+            🚀 <span class="sidebar-text">Start Scheduler</span>
+          </a>
+          <a href="{% url 'scheduleOutput' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
+             {% if request.resolver_match.url_name == 'scheduleOutput' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
+            📋 <span class="sidebar-text">Scheduler Results</span>
+          </a>
         </div>
       </nav>
-    </div>
+    </aside>
     {% endif %}
 
     <!-- Main Content -->
-    <div id="mainContent" class="flex-1 flex flex-col transition-all duration-300 {% if request.user.is_authenticated and 'deptHead' in request.user.get_roles %}ml-64{% endif %}">
-      <header class="flex items-center justify-between bg-white shadow px-4 py-3">
+    <div id="mainContent"
+         class="flex-1 flex flex-col transition-all duration-300
+         {% if request.user.is_authenticated and 'deptHead' in request.user.get_roles %}md:ml-64{% endif %}">
+      <header class="sticky top-0 bg-white shadow flex items-center justify-between px-6 py-3 z-30">
         <div class="flex items-center gap-3">
           {% if request.user.is_authenticated and 'deptHead' in request.user.get_roles %}
-            <button id="openSidebar" class="text-2xl text-gray-700 focus:outline-none">☰</button>
+          <button id="openSidebar" class="text-2xl text-gray-700 md:hidden">☰</button>
           {% endif %}
-          <span class="text-xl font-bold text-gray-800">IntelliSched {% block header %}{% endblock %}</span>
+          <h2 class="text-xl font-bold text-blue-700">IntelliSched {% block header %}{% endblock %}</h2>
         </div>
 
         {% if request.user.is_authenticated %}
-        <div class="flex items-center space-x-3">
-          <!-- Instructor Profile (only if Instructor) -->
+        <div class="flex items-center gap-3">
           {% if 'instructor' in request.user.get_roles %}
-          <a href="{% url 'instructorDashboard' %}" 
-             class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-3 py-1.5 rounded-md shadow-md text-sm transition duration-150">
-             Profile
-          </a>
-          <a href="{% url 'instructorScheduleView' %}" 
-             class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-3 py-1.5 rounded-md shadow-md text-sm transition duration-150">
-             My Schedule
-          </a>
+          <a href="{% url 'instructorDashboard' %}" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm font-medium shadow">Profile</a>
+          <a href="{% url 'instructorScheduleView' %}" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm font-medium shadow">My Schedule</a>
           {% endif %}
-
-          <!-- Logout -->
-          <a href="{% url 'logout' %}" 
-             onclick="return confirm('Are you sure you want to logout?');"
-             class="inline-block bg-red-600 hover:bg-red-700 text-white font-semibold px-3 py-1.5 rounded-md shadow-md text-sm transition duration-150">
-             Logout
-          </a>
+          <a href="{% url 'logout' %}" onclick="return confirm('Are you sure you want to logout?');" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-md text-sm font-medium shadow">Logout</a>
         </div>
         {% endif %}
       </header>
 
-      <main class="flex-1 p-6">
+      <main class="flex-1 p-6 overflow-y-auto text-[15px]">
         {% block content %}{% endblock %}
       </main>
 
-      <footer class="bg-white border-t text-center text-sm text-gray-500 p-4">
+      <footer class="bg-white border-t text-center text-sm text-gray-500 py-3">
         &copy; {% now "Y" %} IntelliSched. All rights reserved.
       </footer>
     </div>
   </div>
 
+  <!-- Sidebar Script -->
   <script>
     const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
     const openSidebarBtn = document.getElementById('openSidebar');
     const closeSidebarBtn = document.getElementById('closeSidebar');
+    const collapseSidebarBtn = document.getElementById('collapseSidebar');
     const mainContent = document.getElementById('mainContent');
 
-    if (openSidebarBtn && closeSidebarBtn) {
-      openSidebarBtn.addEventListener('click', () => {
-        sidebar.classList.toggle('-translate-x-full');
-        mainContent.classList.toggle('ml-64');
-      });
+    // Mobile open/close
+    if (openSidebarBtn) openSidebarBtn.addEventListener('click', () => {
+      sidebar.classList.remove('-translate-x-full');
+      overlay.classList.remove('hidden');
+    });
+    if (closeSidebarBtn) closeSidebarBtn.addEventListener('click', () => {
+      sidebar.classList.add('-translate-x-full');
+      overlay.classList.add('hidden');
+    });
+    if (overlay) overlay.addEventListener('click', () => {
+      sidebar.classList.add('-translate-x-full');
+      overlay.classList.add('hidden');
+    });
 
-      closeSidebarBtn.addEventListener('click', () => {
-        sidebar.classList.add('-translate-x-full');
-        mainContent.classList.remove('ml-64');
+    // Desktop collapse/expand
+    if (collapseSidebarBtn) {
+      collapseSidebarBtn.addEventListener('click', () => {
+        const isCollapsed = sidebar.classList.toggle('w-20');
+        sidebar.classList.toggle('w-64', !isCollapsed);
+        document.querySelectorAll('.sidebar-text').forEach(el => el.classList.toggle('hidden', isCollapsed));
+        collapseSidebarBtn.textContent = isCollapsed ? '⮞' : '⮜';
+        mainContent.classList.toggle('md:ml-64', !isCollapsed);
+        mainContent.classList.toggle('md:ml-20', isCollapsed);
       });
     }
   </script>

@@ -5,7 +5,6 @@
       <tr>
         <th class="px-4 py-3 border-b">Code</th>
         <th class="px-4 py-3 border-b">Building</th>
-        <th class="px-4 py-3 border-b">Capacity</th>
         <th class="px-4 py-3 border-b">Type</th>
         <th class="px-4 py-3 border-b">Active</th>
         <th class="px-4 py-3 border-b text-center">Actions</th>
@@ -16,7 +15,6 @@
         <tr class="hover:bg-gray-50">
           <td class="px-4 py-3 border-b">{{ room.roomCode }}</td>
           <td class="px-4 py-3 border-b">{{ room.building }}</td>
-          <td class="px-4 py-3 border-b">{{ room.capacity }}</td>
           <td class="px-4 py-3 border-b">{{ room.type }}</td>
           <td class="px-4 py-3 border-b">
             {% if room.isActive %}
