@@ -39,9 +39,12 @@ def generate_timeslots():
     for day in DAYS:
         # Weekday (Mon–Fri)
         if day in DAYS[:5]:
-            # Morning
+            # Morning (08:00–12:00, skip 12:00)
             for hour in range(MORNING_RANGE[0], MORNING_RANGE[1]):
                 for minute in (0, 30):
+                    start_min = hour * 60 + minute
+                    if 720 <= start_min < 780:  # Skip 12:00–13:00
+                        continue
                     start = f"{hour:02d}:{minute:02d}"
                     end_time = datetime.strptime(start, "%H:%M") + timedelta(minutes=INTERVAL_MINUTES)
                     end = end_time.strftime("%H:%M")
@@ -49,7 +52,7 @@ def generate_timeslots():
                     window_map[slot_index] = "morning"
                     slot_index += 1
 
-            # Afternoon
+            # Afternoon (13:00–17:00)
             for hour in range(AFTERNOON_RANGE[0], AFTERNOON_RANGE[1]):
                 for minute in (0, 30):
                     start = f"{hour:02d}:{minute:02d}"
@@ -165,6 +168,16 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
 
         # Instructor assignment (index from data["instructor_index"])
         section_instructor[sec_id] = model.NewIntVar(0, num_instructors - 1, f"instr_{sec_id}")
+
+    
+    # # -------------------- Define overtime flag per section --------------------
+    # # True if scheduled outside normal hours (Mon–Fri 08:00–17:00)
+    # is_overtime_section = {}
+    # NORMAL_LOAD_END_SLOT = int((17 - 8) * 60 / INTERVAL_MINUTES)
+
+    # for sec_id in sections:
+    #     is_ot = model.NewBoolVar(f"is_overtime_{sec_id}")
+    #     is_overtime_section[sec_id] = is_ot
     
     
     # Optional: helper dicts for readability
@@ -272,9 +285,6 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
         model.Add(section_room[sec_id] != TBA_ROOM_IDX).OnlyEnforceIf(is_tba.Not())
         is_tba_section[sec_id] = is_tba
 
-    # -------------------- No-overlap Constraints --------------------
-    # Enforces that no instructor or room handles overlapping sections on the same day.
-
     import math
     section_ids = list(sections)
     num_sections = len(section_ids)
@@ -284,6 +294,9 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
         s: data["section_hours"][s]["lecture_min"] + data["section_hours"][s]["lab_min"]
         for s in section_ids
     }
+
+    # -------------------- No-overlap Constraints --------------------
+    # Enforces that no instructor or room handles overlapping sections on the same day.
 
     for i1, i2 in combinations(section_ids, 2):
         dur1 = section_duration[i1]
@@ -445,11 +458,31 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
             room = None if room_idx == data["TBA_ROOM_IDX"] else room_objs[data["rooms"][room_idx]]
 
             # Parse timeslot label (e.g., "Mon 08:00–08:30")
-            slot_label = TIMESLOTS[slot_idx]
+            slot_idx = solver.Value(section_slot[sec_id])
+            slot_label = TIMESLOTS[slot_idx]  # e.g., "Mon 08:00–08:30"
+
+            # Extract only the time portion from the label
             _, time_range = slot_label.split(" ")
-            start_str, end_str = time_range.split("–")
-            start_time = datetime.strptime(start_str, "%H:%M").time()
-            end_time = datetime.strptime(end_str, "%H:%M").time()
+            start_str, _ = time_range.split("–")  # ignore the old end time
+
+            # Compute start datetime
+            start_dt = datetime.strptime(start_str, "%H:%M")
+
+            # Duration in minutes for this section
+            if sec_obj.hasLab:
+                # Lab section — use lab minutes only
+                dur_min = data["section_hours"][sec_id]["lab_min"]
+            else:
+                # Lecture section — use lecture minutes only
+                dur_min = data["section_hours"][sec_id]["lecture_min"]
+
+            # Compute real end time
+            end_dt = start_dt + timedelta(minutes=dur_min)
+
+
+            start_time = start_dt.time()
+            end_time = end_dt.time()
+
 
             schedule_type = "lab" if sec_obj.hasLab else "lecture"
             is_overtime = WINDOW_MAP[slot_idx] == "overload"
@@ -464,6 +497,7 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
                 startTime=start_time,
                 endTime=end_time,
                 scheduleType=schedule_type,
+                # isOvertime=bool(solver.Value(is_overtime_section[sec_id])),
                 isOvertime=is_overtime,
                 status='active'
             ))

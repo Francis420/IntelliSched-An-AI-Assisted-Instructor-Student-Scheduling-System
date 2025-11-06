@@ -105,11 +105,11 @@
              {% if request.resolver_match.url_name == 'roomList' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
             🏫 <span class="sidebar-text">Rooms</span>
           </a>
-          <!--
+
           <a href="{% url 'genedScheduleList' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
              {% if request.resolver_match.url_name == 'genedScheduleList' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
             ⚙️ <span class="sidebar-text">GenEd Schedules</span>
-          </a> -->
+          </a>
           <a href="{% url 'subjectOfferingList' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
              {% if request.resolver_match.url_name == 'subjectOfferingList' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
             📝 <span class="sidebar-text">Set Sections</span>

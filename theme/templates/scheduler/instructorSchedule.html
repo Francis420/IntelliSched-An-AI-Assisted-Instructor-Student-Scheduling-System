@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
-{% block content %}
 {% block header %}| {{ instructor.full_name }}’s Weekly Schedule{% endblock %}
+{% block content %}
 <div class="max-w-7xl mx-auto p-6 space-y-8">
   {% if error %}
     <p class="text-red-500 mt-4">{{ error }}</p>

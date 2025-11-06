@@ -13,7 +13,6 @@
           <th class="px-4 py-2">Teaching</th>
           <th class="px-4 py-2">Credentials</th>
           <th class="px-4 py-2">Experience</th>
-          <th class="px-4 py-2">Preference</th>
           <th class="px-4 py-2">Actions</th>
         </tr>
       </thead>
@@ -24,7 +23,6 @@
           <td class="px-4 py-2">{{ config.teachingWeight }}</td>
           <td class="px-4 py-2">{{ config.credentialsWeight }}</td>
           <td class="px-4 py-2">{{ config.experienceWeight }}</td>
-          <td class="px-4 py-2">{{ config.preferenceWeight }}</td>
           <td class="px-4 py-2">
             <a href="{% url 'configUpdate' config.semester.semesterId %}"
              class="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded-md text-xs font-medium">
