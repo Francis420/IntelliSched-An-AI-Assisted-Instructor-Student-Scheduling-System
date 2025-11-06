@@ -925,8 +925,11 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=30, interval_m
 
     print(f"[Solver] Solving {len(tasks)} tasks with {len(instructors)} instructors and {num_rooms} rooms...")
 
-    cb = StopAfterFeasibleSolution()
-    status = solver.Solve(model, cb)
+    cb = StopAfterFeasibleSolution() #comment this out to disable early stopping
+    status = solver.Solve(model, cb) #this too
+
+    # status = solver.Solve(model) # to run without early stopping use 'solver.parameters.max_time_in_seconds' to control time
+
 
     if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         print("[Solver] No feasible solution found.")
