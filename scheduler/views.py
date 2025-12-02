@@ -1,6 +1,6 @@
 # scheduling/views.py
 from django.shortcuts import render
-from scheduling.models import Schedule, Semester
+from scheduling.models import Schedule, Semester, Section, Room
 from core.models import Instructor, UserLogin
 from django.contrib.auth.decorators import login_required
 from collections import defaultdict
@@ -11,42 +11,85 @@ from celery import current_app
 import uuid
 import os, signal
 
-# Scheduler Output View
+
 def scheduleOutput(request):
-    # Retrieve filter parameters
+    # 1. Retrieve filter parameters
     semester_id = request.GET.get("semester")
     instructor_id = request.GET.get("instructor")
+    section_id = request.GET.get("section")
+    room_id = request.GET.get("room")  # <--- NEW
     day = request.GET.get("day")
+    start_time = request.GET.get("start_time")
+    schedule_type = request.GET.get("schedule_type")
 
-    # Base queryset
+    # 2. Base queryset
     schedules = Schedule.objects.select_related(
         "subject", "instructor", "section", "room", "semester"
     ).filter(status="active")
 
-    # Apply filters
+    # 3. Apply filters
     if semester_id:
         schedules = schedules.filter(semester__semesterId=semester_id)
     if instructor_id:
         schedules = schedules.filter(instructor__instructorId=instructor_id)
+    if section_id:
+        schedules = schedules.filter(section__sectionId=section_id)
+    if room_id:
+        schedules = schedules.filter(room__roomId=room_id) # <--- NEW
     if day:
         schedules = schedules.filter(dayOfWeek=day)
+    if start_time:
+        schedules = schedules.filter(startTime=start_time)
+    if schedule_type:
+        schedules = schedules.filter(scheduleType=schedule_type)
 
-    # Order neatly
-    schedules = schedules.order_by("dayOfWeek", "startTime")
+    # 4. Order neatly
+    # Current Sort Order: Subject -> Section -> Instructor Name -> Room
+    schedules = schedules.order_by(
+        "subject__code",
+        "section__sectionCode",
+        "instructor__userlogin__user__lastName", 
+        "instructor__userlogin__user__firstName",
+        "room__roomCode" 
+    ).distinct()
 
-    # Dropdown data
+    # 5. Dropdown data
     semesters = Semester.objects.all().order_by("-createdAt")
-    instructors = Instructor.objects.all().order_by("instructorId")
+    
+    # Instructors sorted by name
+    instructors = Instructor.objects.all().order_by(
+        "userlogin__user__lastName", 
+        "userlogin__user__firstName"
+    ).distinct()
+    
+    sections = Section.objects.filter(status="active").order_by("sectionCode")
+    
+    # Rooms sorted by code (NEW)
+    rooms = Room.objects.filter(isActive=True).order_by("roomCode")
+
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+    # distinct values for dropdowns
+    times = Schedule.objects.values_list('startTime', flat=True).distinct().order_by('startTime')
+    types = Schedule.objects.values_list('scheduleType', flat=True).distinct().order_by('scheduleType')
 
     context = {
         "schedules": schedules,
         "semesters": semesters,
         "instructors": instructors,
+        "sections": sections,
+        "rooms": rooms,     # <--- Pass rooms to template
         "days": days,
+        "times": times,
+        "types": types,
+        # Maintain selection state
         "selected_semester": semester_id,
         "selected_instructor": instructor_id,
+        "selected_section": section_id,
+        "selected_room": room_id, # <--- Maintain state
         "selected_day": day,
+        "selected_time": start_time,
+        "selected_type": schedule_type,
     }
     return render(request, "scheduler/scheduleOutput.html", context)
 

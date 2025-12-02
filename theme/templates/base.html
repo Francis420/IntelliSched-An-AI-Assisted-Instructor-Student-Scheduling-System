@@ -2,218 +2,327 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}IntelliSched{% endblock %}</title>
+  
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#4f46e5', // Indigo 600
+            secondary: '#3730a3', // Indigo 800
+            bgLight: '#f3f4f6',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Smooth sidebar transition */
+    .sidebar-transition {
+      transition: width 0.3s ease, transform 0.3s ease;
+    }
+    .content-transition {
+      transition: margin-left 0.3s ease;
+    }
+    /* Hide scrollbar for sidebar but allow scroll */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
   {% block extra_head %}{% endblock %}
 </head>
 
-<body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col font-sans overflow-x-hidden">
+<body class="bg-bgLight text-gray-800 h-screen flex overflow-hidden font-sans">
 
   {% if messages %}
-  <div id="flash-messages" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md px-4">
+  <div id="flash-container" class="fixed top-5 left-1/2 transform -translate-x-1/2 z-[70] w-full max-w-md px-4 space-y-3">
     {% for message in messages %}
-    <div class="flash-message p-3 mb-3 rounded-lg text-center shadow-md text-[15px]
-      {% if message.tags == 'success' %}bg-green-100 text-green-800
-      {% elif message.tags == 'error' %}bg-red-100 text-red-800
-      {% elif message.tags == 'warning' %}bg-yellow-100 text-yellow-800
-      {% else %}bg-blue-100 text-blue-800{% endif %}">
-      {{ message }}
+    <div class="flash-message flex items-center p-4 rounded-lg shadow-lg border-l-4 opacity-0 transform -translate-y-4 transition-all duration-500
+      {% if message.tags == 'success' %}bg-white border-green-500 text-green-700
+      {% elif message.tags == 'error' %}bg-white border-red-500 text-red-700
+      {% elif message.tags == 'warning' %}bg-white border-yellow-500 text-yellow-700
+      {% else %}bg-white border-blue-500 text-blue-700{% endif %}">
+      <span class="flex-1 font-medium text-sm">{{ message }}</span>
+      <button onclick="this.parentElement.remove()" class="text-gray-400 hover:text-gray-600 ml-3">✕</button>
     </div>
     {% endfor %}
   </div>
-
-  <script>
-    setTimeout(() => {
-      document.querySelectorAll('.flash-message').forEach(msg => {
-        msg.style.transition = "opacity 0.8s ease, transform 0.8s ease";
-        msg.style.opacity = "0";
-        msg.style.transform = "translateY(-10px)";
-        setTimeout(() => msg.remove(), 800);
-      });
-    }, 4000);
-  </script>
   {% endif %}
 
-  <div class="flex flex-1">
+  <div id="sidebar-overlay" class="fixed inset-0 bg-gray-900/50 z-30 hidden transition-opacity duration-300 backdrop-blur-sm md:hidden"></div>
 
-    {% if request.user.is_authenticated and 'deptHead' in request.user.get_roles %}
-    <!-- Overlay for mobile -->
-    <div id="sidebar-overlay" class="fixed inset-0 bg-black/30 hidden z-30 md:hidden transition-opacity duration-300"></div>
-
-    <!-- Sidebar -->
-    <aside id="sidebar"
-      class="bg-white shadow-md w-64 h-screen flex flex-col fixed top-0 left-0 z-40
-             transform transition-all duration-300 ease-in-out
-             overflow-y-auto overflow-x-hidden -translate-x-full md:translate-x-0">
-
-      <!-- Sidebar Header -->
-      <div class="flex items-center justify-between p-4 border-b border-gray-200 sticky top-0 bg-white z-10">
-        <h1 class="text-lg font-bold text-blue-700 sidebar-text">IntelliSched</h1>
-        <div class="flex items-center gap-2">
-          <button id="collapseSidebar"
-                  class="hidden md:inline-block text-gray-600 hover:text-blue-700 text-lg"
-                  title="Collapse sidebar">⮜</button>
-          <button id="closeSidebar" class="text-gray-600 text-2xl md:hidden hover:text-red-600">✕</button>
+  {% if request.user.is_authenticated and 'deptHead' in request.user.get_roles %}
+  <aside id="sidebar" class="bg-white border-r border-gray-200 h-full flex flex-col fixed top-0 left-0 z-40 sidebar-transition w-64 -translate-x-full md:translate-x-0">
+      
+      <div class="h-16 flex items-center justify-between px-4 border-b border-gray-100 shrink-0">
+        <div class="flex items-center gap-2 overflow-hidden whitespace-nowrap">
+            <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-xl shrink-0">
+                I
+            </div>
+            <span class="text-xl font-bold text-gray-800 tracking-tight sidebar-text">IntelliSched</span>
         </div>
+        <button id="closeSidebar" class="md:hidden text-gray-500 hover:text-red-500">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
       </div>
 
-      <!-- Navigation -->
-      <nav class="flex-1 p-3 text-[15px] space-y-1">
-        <a href="{% url 'home' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50 transition
-           {% if request.resolver_match.url_name == 'home' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
-          🏠 <span class="sidebar-text">Home</span>
-        </a>
+      <nav class="flex-1 overflow-y-auto no-scrollbar py-4 space-y-6">
+        
+        <div class="px-3">
+            <a href="{% url 'home' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors
+               {% if request.resolver_match.url_name == 'home' %}bg-primary/10 text-primary{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                <span class="sidebar-text">Home</span>
+            </a>
+            
+            <a href="{% url 'deptHeadDashboard' %}" class="flex items-center gap-3 px-3 py-2 mt-1 rounded-lg text-sm font-medium transition-colors
+               {% if request.resolver_match.url_name == 'deptHeadDashboard' %}bg-primary/10 text-primary{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                <span class="sidebar-text">Dashboard</span>
+            </a>
 
-        <div class="pt-4 border-t border-gray-200">
-          <p class="text-xs uppercase text-gray-500 px-4 mb-1 sidebar-text">Department Head</p>
-          <a href="{% url 'deptHeadDashboard' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
-             {% if request.resolver_match.url_name == 'deptHeadDashboard' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
-            📊 <span class="sidebar-text">Dashboard</span>
-          </a>
-          <a href="{% url 'recommendationDashboard' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
-             {% if request.resolver_match.url_name == 'recommendationDashboard' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
-            📈 <span class="sidebar-text">Recommendation Dashboard</span>
-          </a>
-          <a href="{% url 'instructorAccountList' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
-             {% if request.resolver_match.url_name == 'instructorAccountList' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
-            👨‍🏫 <span class="sidebar-text">Instructor Accounts</span>
-          </a>
-          <a href="{% url 'auditlogView' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
-             {% if request.resolver_match.url_name == 'auditlogView' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
-            ⚙️ <span class="sidebar-text">Audit Log</span>
-          </a>
+            <a href="{% url 'recommendationDashboard' %}" class="flex items-center gap-3 px-3 py-2 mt-1 rounded-lg text-sm font-medium transition-colors
+               {% if request.resolver_match.url_name == 'recommendationDashboard' %}bg-primary/10 text-primary{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+               <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+               <span class="sidebar-text">Recommendation DB</span>
+            </a>
         </div>
 
-        <div class="pt-4 border-t border-gray-200">
-          <p class="text-xs uppercase text-gray-500 px-4 mb-1 sidebar-text">Scheduling Config</p>
-          <a href="{% url 'curriculumList' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
-             {% if request.resolver_match.url_name == 'curriculumList' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
-            📘 <span class="sidebar-text">Curriculums</span>
-          </a>
-          <a href="{% url 'subjectList' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
-             {% if request.resolver_match.url_name == 'subjectList' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
-            📚 <span class="sidebar-text">Subjects</span>
-          </a>
-          <a href="{% url 'semesterList' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
-             {% if request.resolver_match.url_name == 'semesterList' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
-            🗓️ <span class="sidebar-text">Semesters</span>
-          </a>
-          <a href="{% url 'roomList' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
-             {% if request.resolver_match.url_name == 'roomList' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
-            🏫 <span class="sidebar-text">Rooms</span>
-          </a>
+        <div class="px-3">
+            <p class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 sidebar-text">Data Management</p>
+            
+            <a href="{% url 'instructorAccountList' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900
+               {% if request.resolver_match.url_name == 'instructorAccountList' %}bg-primary/10 text-primary{% endif %}">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                <span class="sidebar-text">Instructors</span>
+            </a>
 
-          <a href="{% url 'genedScheduleList' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
-             {% if request.resolver_match.url_name == 'genedScheduleList' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
-            ⚙️ <span class="sidebar-text">GenEd Schedules</span>
-          </a>
-          <a href="{% url 'subjectOfferingList' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
-             {% if request.resolver_match.url_name == 'subjectOfferingList' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
-            📝 <span class="sidebar-text">Set Sections</span>
-          </a>
+            <a href="{% url 'auditlogView' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900
+               {% if request.resolver_match.url_name == 'auditlogView' %}bg-primary/10 text-primary{% endif %}">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                <span class="sidebar-text">Audit Log</span>
+            </a>
+
+            <a href="{% url 'curriculumList' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900
+               {% if request.resolver_match.url_name == 'curriculumList' %}bg-primary/10 text-primary{% endif %}">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                <span class="sidebar-text">Curriculums</span>
+            </a>
+
+            <a href="{% url 'subjectList' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900
+               {% if request.resolver_match.url_name == 'subjectList' %}bg-primary/10 text-primary{% endif %}">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                <span class="sidebar-text">Subjects</span>
+            </a>
+
+            <a href="{% url 'semesterList' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900
+               {% if request.resolver_match.url_name == 'semesterList' %}bg-primary/10 text-primary{% endif %}">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                <span class="sidebar-text">Semesters</span>
+            </a>
+
+            <a href="{% url 'roomList' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900
+               {% if request.resolver_match.url_name == 'roomList' %}bg-primary/10 text-primary{% endif %}">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                <span class="sidebar-text">Rooms</span>
+            </a>
+            
+            <a href="{% url 'genedScheduleList' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900
+               {% if request.resolver_match.url_name == 'genedScheduleList' %}bg-primary/10 text-primary{% endif %}">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span class="sidebar-text">GenEd Schedules</span>
+            </a>
+            
+            <a href="{% url 'subjectOfferingList' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900
+               {% if request.resolver_match.url_name == 'subjectOfferingList' %}bg-primary/10 text-primary{% endif %}">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+                <span class="sidebar-text">Set Sections</span>
+            </a>
         </div>
 
-        <div class="pt-4 border-t border-gray-200">
-          <p class="text-xs uppercase text-gray-500 px-4 mb-1 sidebar-text">AI Matching</p>
-          <a href="{% url 'matchingDashboard' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
-             {% if request.resolver_match.url_name == 'matchingDashboard' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
-            🤖 <span class="sidebar-text">Dashboard</span>
-          </a>
-          <a href="{% url 'configList' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
-             {% if request.resolver_match.url_name == 'configList' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
-            ⚙️ <span class="sidebar-text">Configurations</span>
-          </a>
-          <a href="{% url 'matchingStart' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
-             {% if request.resolver_match.url_name == 'matchingStart' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
-            🚀 <span class="sidebar-text">Start Matching</span>
-          </a>
-        </div>
+        <div class="px-3">
+             <p class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 sidebar-text">AI & Scheduler</p>
+             
+             <a href="{% url 'matchingDashboard' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900
+                {% if request.resolver_match.url_name == 'matchingDashboard' %}bg-primary/10 text-primary{% endif %}">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+                <span class="sidebar-text">AI Dashboard</span>
+             </a>
 
-        <div class="pt-4 border-t border-gray-200 mb-3">
-          <p class="text-xs uppercase text-gray-500 px-4 mb-1 sidebar-text">Scheduler</p>
-          <a href="{% url 'schedulerDashboard' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
-             {% if request.resolver_match.url_name == 'schedulerDashboard' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
-            🚀 <span class="sidebar-text">Start Scheduler</span>
-          </a>
-          <a href="{% url 'scheduleOutput' %}" class="sidebar-link flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-blue-50
-             {% if request.resolver_match.url_name == 'scheduleOutput' %}bg-blue-100 text-blue-700 font-semibold{% endif %}">
-            📋 <span class="sidebar-text">Scheduler Results</span>
-          </a>
+             <a href="{% url 'configList' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900
+                {% if request.resolver_match.url_name == 'configList' %}bg-primary/10 text-primary{% endif %}">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                <span class="sidebar-text">Configurations</span>
+             </a>
+             
+             <a href="{% url 'matchingStart' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900
+                {% if request.resolver_match.url_name == 'matchingStart' %}bg-primary/10 text-primary{% endif %}">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                <span class="sidebar-text">Start Matching</span>
+             </a>
+
+             <a href="{% url 'schedulerDashboard' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900
+                {% if request.resolver_match.url_name == 'schedulerDashboard' %}bg-primary/10 text-primary{% endif %}">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                <span class="sidebar-text">Start Scheduler</span>
+             </a>
+
+             <a href="{% url 'scheduleOutput' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900
+                {% if request.resolver_match.url_name == 'scheduleOutput' %}bg-primary/10 text-primary{% endif %}">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                <span class="sidebar-text">Output Results</span>
+             </a>
         </div>
       </nav>
-    </aside>
-    {% endif %}
 
-    <!-- Main Content -->
-    <div id="mainContent"
-         class="flex-1 flex flex-col transition-all duration-300
-         {% if request.user.is_authenticated and 'deptHead' in request.user.get_roles %}md:ml-64{% endif %}">
-      <header class="sticky top-0 bg-white shadow flex items-center justify-between px-6 py-3 z-30">
-        <div class="flex items-center gap-3">
+      <div class="p-4 border-t border-gray-100 hidden md:block shrink-0">
+        <button id="toggleSidebar" class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-lg transition-colors">
+            <svg id="collapseIcon" class="w-5 h-5 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/></svg>
+            <span class="sidebar-text text-sm font-medium">Collapse</span>
+        </button>
+      </div>
+    </aside>
+  {% endif %}
+
+  <div id="mainContent" class="flex-1 flex flex-col h-full overflow-hidden content-transition w-full
+       {% if request.user.is_authenticated and 'deptHead' in request.user.get_roles %}md:ml-64{% endif %}">
+      
+      <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0 z-20">
+        <div class="flex items-center gap-4">
           {% if request.user.is_authenticated and 'deptHead' in request.user.get_roles %}
-          <button id="openSidebar" class="text-2xl text-gray-700 md:hidden">☰</button>
+          <button id="mobileMenuBtn" class="md:hidden text-gray-600 hover:text-primary">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
           {% endif %}
-          <h2 class="text-xl font-bold text-blue-700">IntelliSched {% block header %}{% endblock %}</h2>
+          <h2 class="text-lg font-bold text-gray-800">{% block header %}{% endblock %}</h2>
         </div>
 
         {% if request.user.is_authenticated %}
-        <div class="flex items-center gap-3">
-          {% if 'instructor' in request.user.get_roles %}
-          <a href="{% url 'instructorDashboard' %}" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm font-medium shadow">Profile</a>
-          <a href="{% url 'instructorScheduleView' %}" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm font-medium shadow">My Schedule</a>
-          {% endif %}
-          <a href="{% url 'logout' %}" onclick="return confirm('Are you sure you want to logout?');" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-md text-sm font-medium shadow">Logout</a>
+        <div class="relative group h-full flex items-center">
+            <button class="flex items-center gap-3 focus:outline-none">
+                <div class="text-right hidden sm:block">
+                    <p class="text-sm font-semibold text-gray-800">{{ request.user.username }}</p>
+                    <p class="text-xs text-gray-500 uppercase">{{ request.user.get_roles.0|default:"User" }}</p>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg border border-primary/20">
+                    {{ request.user.username|slice:":1"|upper }}
+                </div>
+            </button>
+            
+            <div class="absolute right-0 top-12 pt-4 w-48 hidden group-hover:block hover:block z-50">
+                <div class="bg-white rounded-lg shadow-xl border border-gray-100 py-2">
+                    {% if 'instructor' in request.user.get_roles %}
+                    <a href="{% url 'instructorDashboard' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary">Profile</a>
+                    <a href="{% url 'instructorScheduleView' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary">My Schedule</a>
+                    <div class="border-t border-gray-100 my-1"></div>
+                    {% endif %}
+                    <a href="{% url 'logout' %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50">Sign Out</a>
+                </div>
+            </div>
         </div>
         {% endif %}
       </header>
 
-      <main class="flex-1 p-6 overflow-y-auto text-[15px]">
-        {% block content %}{% endblock %}
+      <main class="flex-1 overflow-y-auto overflow-x-hidden p-6 relative flex flex-col">
+        <div class="flex-1">
+            {% block content %}{% endblock %}
+        </div>
+        
+        <footer class="mt-auto pt-6 text-center text-xs text-gray-400">
+            &copy; {% now "Y" %} IntelliSched System. All rights reserved.
+        </footer>
       </main>
 
-      <footer class="bg-white border-t text-center text-sm text-gray-500 py-3">
-        &copy; {% now "Y" %} IntelliSched. All rights reserved.
-      </footer>
-    </div>
   </div>
 
-  <!-- Sidebar Script -->
   <script>
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sidebar-overlay');
-    const openSidebarBtn = document.getElementById('openSidebar');
-    const closeSidebarBtn = document.getElementById('closeSidebar');
-    const collapseSidebarBtn = document.getElementById('collapseSidebar');
-    const mainContent = document.getElementById('mainContent');
+    document.addEventListener("DOMContentLoaded", function () {
+        // --- Flash Messages Animation ---
+        const messages = document.querySelectorAll('.flash-message');
+        if (messages.length > 0) {
+            messages.forEach((msg, index) => {
+                setTimeout(() => {
+                    msg.classList.remove('opacity-0', '-translate-y-4');
+                }, index * 100); 
 
-    // Mobile open/close
-    if (openSidebarBtn) openSidebarBtn.addEventListener('click', () => {
-      sidebar.classList.remove('-translate-x-full');
-      overlay.classList.remove('hidden');
-    });
-    if (closeSidebarBtn) closeSidebarBtn.addEventListener('click', () => {
-      sidebar.classList.add('-translate-x-full');
-      overlay.classList.add('hidden');
-    });
-    if (overlay) overlay.addEventListener('click', () => {
-      sidebar.classList.add('-translate-x-full');
-      overlay.classList.add('hidden');
-    });
+                setTimeout(() => {
+                    msg.classList.add('opacity-0', '-translate-y-4');
+                    setTimeout(() => msg.remove(), 500);
+                }, 4000 + (index * 500));
+            });
+        }
 
-    // Desktop collapse/expand
-    if (collapseSidebarBtn) {
-      collapseSidebarBtn.addEventListener('click', () => {
-        const isCollapsed = sidebar.classList.toggle('w-20');
-        sidebar.classList.toggle('w-64', !isCollapsed);
-        document.querySelectorAll('.sidebar-text').forEach(el => el.classList.toggle('hidden', isCollapsed));
-        collapseSidebarBtn.textContent = isCollapsed ? '⮞' : '⮜';
-        mainContent.classList.toggle('md:ml-64', !isCollapsed);
-        mainContent.classList.toggle('md:ml-20', isCollapsed);
-      });
-    }
+        // --- Sidebar Logic ---
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.getElementById('mainContent');
+        const overlay = document.getElementById('sidebar-overlay');
+        const toggleBtn = document.getElementById('toggleSidebar');
+        const mobileBtn = document.getElementById('mobileMenuBtn');
+        const closeBtn = document.getElementById('closeSidebar');
+        const collapseIcon = document.getElementById('collapseIcon');
+        const textElements = document.querySelectorAll('.sidebar-text');
+
+        if (sidebar) {
+            const isCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+            
+            if (isCollapsed && window.innerWidth >= 768) {
+                applyCollapsedState(true);
+            }
+
+            if(toggleBtn) {
+                toggleBtn.addEventListener('click', () => {
+                    const currentlyCollapsed = sidebar.classList.contains('w-20');
+                    applyCollapsedState(!currentlyCollapsed);
+                    localStorage.setItem('sidebar-collapsed', !currentlyCollapsed);
+                });
+            }
+
+            function applyCollapsedState(collapse) {
+                if (collapse) {
+                    sidebar.classList.remove('w-64');
+                    sidebar.classList.add('w-20');
+                    mainContent.classList.remove('md:ml-64');
+                    mainContent.classList.add('md:ml-20');
+                    textElements.forEach(el => el.classList.add('hidden'));
+                    if(collapseIcon) collapseIcon.style.transform = 'rotate(180deg)';
+                } else {
+                    sidebar.classList.add('w-64');
+                    sidebar.classList.remove('w-20');
+                    mainContent.classList.add('md:ml-64');
+                    mainContent.classList.remove('md:ml-20');
+                    textElements.forEach(el => el.classList.remove('hidden'));
+                    if(collapseIcon) collapseIcon.style.transform = 'rotate(0deg)';
+                }
+            }
+
+            if(mobileBtn) {
+                mobileBtn.addEventListener('click', () => {
+                    sidebar.classList.remove('-translate-x-full');
+                    overlay.classList.remove('hidden');
+                });
+            }
+
+            const closeSidebar = () => {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            };
+
+            if(closeBtn) closeBtn.addEventListener('click', closeSidebar);
+            if(overlay) overlay.addEventListener('click', closeSidebar);
+        }
+    });
   </script>
 </body>
 </html>
