@@ -26,7 +26,7 @@ def get_solver_data(semester):
     section_hours = {
         s.sectionId: {
             "lecture_min": int(s.lectureMinutes or 0),
-            "lab_min": int(s.labMinutes or 0 if s.hasLab else 0),
+            "lab_min": int((s.labMinutes or 0) if s.hasLab else 0),
             "units": int(s.units or 0),
         }
         for s in sections_qs
