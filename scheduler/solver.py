@@ -16,15 +16,16 @@ DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sun
 INTERVAL_MINUTES = 30
 WEEK_MINUTES = 7 * 24 * 60
 
-# Tuning weights (adjust to taste)
-MATCH_WEIGHT_SCALE = 100       # match score * this
-TBA_PENALTY = 50               # penalty per task assigned to TBA
-REAL_ROOM_REWARD = 10          # small reward for non-TBA room
+# Weights & Rewards
+MATCH_WEIGHT_SCALE = 100
+REAL_ROOM_REWARD = 10          # Small bonus for finding a physical room
 
-# <--- CHANGED: Increased penalties to force Normal Load utilization first
-WEEKEND_TIME_PENALTY_PER_MINUTE = 10000   # Huge penalty for Weekends
-WEEKDAY_EVENING_PENALTY_PER_MINUTE = 500  # High penalty for Weekday Evenings (prev. 100)
-GLOBAL_OVERLOAD_COST_PER_MIN = 1000       # NEW: Direct penalty for every minute in the "Overload" bucket
+# Penalties
+TBA_PENALTY_NORMAL = 50        # Low penalty: Use TBA if rooms are full
+TBA_PENALTY_PRIORITY = 100000  # Huge penalty: Priority sections MUST get a room
+WEEKEND_TIME_PENALTY_PER_MINUTE = 5000 
+WEEKDAY_EVENING_PENALTY_PER_MINUTE = 100
+GLOBAL_OVERLOAD_COST_PER_MIN = 500
 
 # -------------------- Timeslot metadata --------------------
 def generate_timeslot_meta():
@@ -32,7 +33,7 @@ def generate_timeslot_meta():
     MORNING_RANGE = (8, 12)
     AFTERNOON_RANGE = (13, 17)
     
-    # Overload ranges
+    # Strict 5 PM - 8 PM Overload Block
     OVERLOAD_RANGE_WEEKDAYS = (17, 20) 
     OVERLOAD_RANGE_WEEKENDS = [(8, 12), (13, 20)]
 
@@ -57,7 +58,6 @@ def generate_timeslot_meta():
             # Overload period: 17:00-20:00
             start_h = int(OVERLOAD_RANGE_WEEKDAYS[0])
             end_h = int(OVERLOAD_RANGE_WEEKDAYS[1])
-            
             hour = start_h
             minute = 0
             while hour * 60 + minute + INTERVAL_MINUTES <= end_h * 60 + 1e-9:
@@ -65,13 +65,11 @@ def generate_timeslot_meta():
                 label = f"{day} {hour:02d}:{minute:02d}"
                 minute_of_week = day_idx * 1440 + minute_of_day
                 slot_meta.append((label, day_idx, minute_of_day, minute_of_week))
-                
                 minute += INTERVAL_MINUTES
                 if minute == 60:
                     minute = 0
                     hour += 1
-
-        else:  # Sat-Sun
+        else:  # Sat-Sun (All Overload)
             for start_h, end_h in OVERLOAD_RANGE_WEEKENDS:
                 hour = int(start_h)
                 minute = 0
@@ -98,7 +96,6 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
     if semester is None:
         semester = Semester.objects.order_by('-createdAt').first()
         if not semester:
-            print("[Solver] No semesters found.")
             return []
     elif isinstance(semester, int):
         semester = Semester.objects.get(pk=semester)
@@ -110,20 +107,51 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
     sections = list(data["sections"])
     rooms = list(data["rooms"])
     instructors = list(data["instructors"])
-
+    instructor_caps = data["instructor_caps"]
+    
+    # --- Data Handling ---
+    room_types = data.get("room_types", {i: 'lecture' for i in range(len(rooms))}) 
+    section_priority_map = data.get("section_priority_map", {}) 
+    
     num_rooms = len(rooms)
     num_instructors = len(instructors)
-    TBA_ROOM_IDX = data.get("TBA_ROOM_IDX", num_rooms - 1)
+    
+    # Ensure we have a valid TBA index
+    if "TBA_ROOM_IDX" in data:
+        TBA_ROOM_IDX = data["TBA_ROOM_IDX"]
+    else:
+        # Fallback if not provided
+        TBA_ROOM_IDX = num_rooms - 1 
+
+    # --- Robust Room Domains ---
+    # We explicitly include TBA_ROOM_IDX in both sets to prevent Empty Domain errors
+    lecture_room_indices = {TBA_ROOM_IDX}
+    lab_room_indices = {TBA_ROOM_IDX}
+
+    for i in range(num_rooms):
+        rtype = room_types.get(i, 'lecture')
+        if rtype in ('lecture', 'universal'):
+            lecture_room_indices.add(i)
+        if rtype in ('laboratory', 'universal'):
+            lab_room_indices.add(i)
+            
+    # Convert back to sorted lists for the solver
+    lecture_room_indices = sorted(list(lecture_room_indices))
+    lab_room_indices = sorted(list(lab_room_indices))
+
+    print(f"[Solver] Found {len(lecture_room_indices)} Lecture-capable rooms (including TBA)")
+    print(f"[Solver] Found {len(lab_room_indices)} Lab-capable rooms (including TBA)")
 
     model = cp_model.CpModel()
 
-    # Tasks creation
+    # --- Task Generation ---
     tasks = []
     for s in sections:
         sec_hours = data["section_hours"].get(s, {"lecture_min": 0, "lab_min": 0})
         lecture_d = int(sec_hours.get("lecture_min", 0) or 0)
         lab_d = int(sec_hours.get("lab_min", 0) or 0)
 
+        # Split long lectures
         if lecture_d > 120:
             half = lecture_d // 2
             other_half = lecture_d - half
@@ -142,38 +170,28 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
                 "task_id": f"{s}_LAB", "section": s, "kind": "lab", "dur": lab_d
             })
 
-    # Decision vars
-    task_start = {}
-    task_end = {}
-    task_slot = {}
-    task_day = {}
-    task_interval = {}
-    task_instr_var = {}
-    task_room_var = {}
-
-    assigned_instr = {}
+    # --- Variables & Domain Definitions ---
+    task_vars = {} 
+    assigned_instr = defaultdict(list)
+    assigned_room = defaultdict(list)
     instr_intervals = defaultdict(list)
-    assigned_room = {}
-    room_intervals = defaultdict(list)
+    room_intervals = defaultdict(list) 
 
-    # Allowed slots helper
+    # Helper: Allowed Slots
     allowed_slots_for_duration = {}
-    def slot_allowed_for_duration(slot_idx, duration_min):
-        day = SLOT_META[slot_idx][1]
-        minute_of_day = SLOT_META[slot_idx][2]
-        start = minute_of_day
-        end = minute_of_day + duration_min
-        if end > 20*60: return False 
-        if not (end <= 12*60 or start >= 13*60): return False # Lunch break
-        if start < 8*60 or (12*60 <= start < 13*60): return False
-        return True
-
     def get_allowed_slots(dur):
         if dur not in allowed_slots_for_duration:
             lst = []
             for i in range(NUM_SLOTS):
-                if slot_allowed_for_duration(i, dur):
-                    lst.append(i)
+                day = SLOT_META[i][1]
+                minute_of_day = SLOT_META[i][2]
+                end = minute_of_day + dur
+                
+                if end > 20*60: continue
+                if not (end <= 12*60 or minute_of_day >= 13*60): continue 
+                if minute_of_day < 8*60 or (12*60 <= minute_of_day < 13*60): continue
+                
+                lst.append(i)
             allowed_slots_for_duration[dur] = lst
         return allowed_slots_for_duration[dur]
 
@@ -184,262 +202,269 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
         dur = int(t["dur"])
         allowed_slots = get_allowed_slots(dur)
 
-        task_slot[tid] = model.NewIntVarFromDomain(
-            cp_model.Domain.FromValues(allowed_slots), f"slot_{tid}"
-        )
-        allowed_slot_start_pairs_filtered = [(i, SLOT_TO_GLOBAL_MIN[i]) for i in allowed_slots]
-        allowed_slot_day_pairs_filtered = [(i, SLOT_TO_DAY[i]) for i in allowed_slots]
-        
-        task_start[tid] = model.NewIntVar(0, WEEK_MINUTES - 1, f"start_{tid}")
-        task_end[tid] = model.NewIntVar(0, WEEK_MINUTES, f"end_{tid}")
-        task_day[tid] = model.NewIntVar(0, 6, f"day_{tid}")
+        # CRITICAL SAFETY CHECK
+        if not allowed_slots:
+            print(f"[Solver] ERROR: Task {tid} with duration {dur}min fits NO allowed time slots! Skipping to avoid crash.")
+            continue # Skip this task or it will crash the solver
 
-        model.AddAllowedAssignments([task_slot[tid], task_start[tid]], allowed_slot_start_pairs_filtered)
-        model.AddAllowedAssignments([task_slot[tid], task_day[tid]], allowed_slot_day_pairs_filtered)
-        model.Add(task_end[tid] == task_start[tid] + dur)
+        # 1. Time Variables
+        slot_var = model.NewIntVarFromDomain(cp_model.Domain.FromValues(allowed_slots), f"slot_{tid}")
+        start_var = model.NewIntVar(0, WEEK_MINUTES - 1, f"start_{tid}")
+        end_var = model.NewIntVar(0, WEEK_MINUTES, f"end_{tid}")
+        day_var = model.NewIntVar(0, 6, f"day_{tid}")
+
+        model.AddAllowedAssignments([slot_var, start_var], [(i, SLOT_TO_GLOBAL_MIN[i]) for i in allowed_slots])
+        model.AddAllowedAssignments([slot_var, day_var], [(i, SLOT_TO_DAY[i]) for i in allowed_slots])
+        model.Add(end_var == start_var + dur)
 
         # Enforce finish by 20:00
-        for day_idx in range(7):
-            cond = model.NewBoolVar(f"{tid}_day{day_idx}")
-            model.Add(task_day[tid] == day_idx).OnlyEnforceIf(cond)
-            model.Add(task_day[tid] != day_idx).OnlyEnforceIf(cond.Not())
-            allowed_end_global = day_idx*1440 + latest_end_by_day[day_idx]
-            model.Add(task_end[tid] <= allowed_end_global).OnlyEnforceIf(cond)
+        for d in range(7):
+            cond = model.NewBoolVar(f"{tid}_day{d}")
+            model.Add(day_var == d).OnlyEnforceIf(cond)
+            model.Add(day_var != d).OnlyEnforceIf(cond.Not())
+            allowed_end = d*1440 + latest_end_by_day[d]
+            model.Add(end_var <= allowed_end).OnlyEnforceIf(cond)
 
-        # "No Straddle" Constraint
+        # "No Straddle" Logic
         is_weekday = model.NewBoolVar(f"{tid}_is_weekday")
-        model.Add(task_day[tid] <= 4).OnlyEnforceIf(is_weekday)
-        model.Add(task_day[tid] >= 5).OnlyEnforceIf(is_weekday.Not())
+        model.Add(day_var <= 4).OnlyEnforceIf(is_weekday)
+        model.Add(day_var >= 5).OnlyEnforceIf(is_weekday.Not())
 
-        start_min_of_day = model.NewIntVar(0, 1440, f"{tid}_start_mod")
-        model.AddModuloEquality(start_min_of_day, task_start[tid], 1440)
-        
-        end_min_of_day = model.NewIntVar(0, 1440, f"{tid}_end_mod")
-        model.AddModuloEquality(end_min_of_day, task_end[tid], 1440)
+        start_mod = model.NewIntVar(0, 1440, f"{tid}_start_mod")
+        model.AddModuloEquality(start_mod, start_var, 1440)
+        end_mod = model.NewIntVar(0, 1440, f"{tid}_end_mod")
+        model.AddModuloEquality(end_mod, end_var, 1440)
 
         ends_early = model.NewBoolVar(f"{tid}_ends_early")
-        model.Add(end_min_of_day <= 1020).OnlyEnforceIf(ends_early) # <= 17:00
-        model.Add(end_min_of_day > 1020).OnlyEnforceIf(ends_early.Not())
+        model.Add(end_mod <= 1020).OnlyEnforceIf(ends_early) 
+        model.Add(end_mod > 1020).OnlyEnforceIf(ends_early.Not())
 
         starts_late = model.NewBoolVar(f"{tid}_starts_late")
-        model.Add(start_min_of_day >= 1020).OnlyEnforceIf(starts_late) # >= 17:00
-        model.Add(start_min_of_day < 1020).OnlyEnforceIf(starts_late.Not())
+        model.Add(start_mod >= 1020).OnlyEnforceIf(starts_late)
+        model.Add(start_mod < 1020).OnlyEnforceIf(starts_late.Not())
 
         model.AddBoolOr([ends_early, starts_late]).OnlyEnforceIf(is_weekday)
 
-        task_interval[tid] = model.NewIntervalVar(task_start[tid], dur, task_end[tid], f"iv_{tid}")
-        task_instr_var[tid] = model.NewIntVar(0, max(0, num_instructors - 1), f"instr_{tid}")
-        task_room_var[tid] = model.NewIntVar(0, max(0, num_rooms - 1), f"room_{tid}")
+        # 2. Room Variables (Robust)
+        valid_indices = lab_room_indices if t["kind"] == "lab" else lecture_room_indices
+        room_var = model.NewIntVarFromDomain(cp_model.Domain.FromValues(valid_indices), f"room_{tid}")
+        
+        # 3. Instructor Variable
+        instr_var = model.NewIntVar(0, max(0, num_instructors - 1), f"instr_{tid}")
 
-        # Assignment Logic
+        task_vars[tid] = {
+            "start": start_var, "end": end_var, "day": day_var, 
+            "room": room_var, "instr": instr_var, "dur": dur,
+            "kind": t["kind"], "section": t["section"]
+        }
+
+        # --- Intervals ---
+        # Instructor
         for i_idx in range(num_instructors):
             b = model.NewBoolVar(f"assign_{tid}_instr{i_idx}")
-            assigned_instr[(tid, i_idx)] = b
-            model.Add(task_instr_var[tid] == i_idx).OnlyEnforceIf(b)
-            model.Add(task_instr_var[tid] != i_idx).OnlyEnforceIf(b.Not())
-            iv = model.NewOptionalIntervalVar(task_start[tid], dur, task_end[tid], b, f"iv_{tid}_instr{i_idx}")
+            assigned_instr[(tid, i_idx)] = b 
+            model.Add(instr_var == i_idx).OnlyEnforceIf(b)
+            model.Add(instr_var != i_idx).OnlyEnforceIf(b.Not())
+            iv = model.NewOptionalIntervalVar(start_var, dur, end_var, b, f"iv_i_{tid}")
             instr_intervals[i_idx].append(iv)
-        model.Add(sum(assigned_instr[(tid, i_idx)] for i_idx in range(num_instructors)) == 1)
+        model.Add(sum(assigned_instr[(tid, i)] for i in range(num_instructors)) == 1)
 
         # Rooms
         for r_idx in range(num_rooms):
             b = model.NewBoolVar(f"assign_{tid}_room{r_idx}")
             assigned_room[(tid, r_idx)] = b
-            model.Add(task_room_var[tid] == r_idx).OnlyEnforceIf(b)
-            model.Add(task_room_var[tid] != r_idx).OnlyEnforceIf(b.Not())
+            model.Add(room_var == r_idx).OnlyEnforceIf(b)
+            model.Add(room_var != r_idx).OnlyEnforceIf(b.Not())
             if r_idx != TBA_ROOM_IDX:
-                iv = model.NewOptionalIntervalVar(task_start[tid], dur, task_end[tid], b, f"iv_{tid}_room{r_idx}")
+                iv = model.NewOptionalIntervalVar(start_var, dur, end_var, b, f"iv_r_{tid}")
                 room_intervals[r_idx].append(iv)
-        model.Add(sum(assigned_room[(tid, r_idx)] for r_idx in range(num_rooms)) == 1)
+        model.Add(sum(assigned_room[(tid, r)] for r in range(num_rooms)) == 1)
 
-    # No Overlap
+        # 4. Weekend Room Lockout
+        is_weekend_check = model.NewBoolVar(f"{tid}_check_weekend")
+        model.Add(day_var >= 5).OnlyEnforceIf(is_weekend_check)
+        model.Add(day_var < 5).OnlyEnforceIf(is_weekend_check.Not())
+        model.Add(room_var == TBA_ROOM_IDX).OnlyEnforceIf(is_weekend_check)
+
+    # --- Overlap Constraints ---
     for i_idx, ivs in instr_intervals.items():
         if ivs: model.AddNoOverlap(ivs)
-    # UNCOMMENT TO FIX ROOM OVERLAPS
-    # for r_idx, ivs in room_intervals.items():
-    #     if ivs: model.AddNoOverlap(ivs)
+    
+    for r_idx, ivs in room_intervals.items():
+        if ivs: model.AddNoOverlap(ivs)
 
-    # Links & Gaps
+    # --- Linking & Gaps ---
     section_to_tasks = defaultdict(list)
-    for t in tasks: section_to_tasks[t["section"]].append(t)
+    for t in tasks:
+        # Check if task was skipped due to error
+        if t["task_id"] in task_vars:
+            section_to_tasks[t["section"]].append(t)
 
     for sec, tlist in section_to_tasks.items():
-        lectures = [t for t in tlist if t["kind"] == "lecture"]
+        lects = [t for t in tlist if t["kind"] == "lecture"]
         labs = [t for t in tlist if t["kind"] == "lab"]
-        for lab_task in labs:
-            for lect_task in lectures:
-                model.Add(task_instr_var[lect_task["task_id"]] == task_instr_var[lab_task["task_id"]])
         
-        split_lects = [t for t in lectures if t["task_id"].endswith("_LECT_A") or t["task_id"].endswith("_LECT_B")]
+        for l_task in labs:
+            for lect_task in lects:
+                model.Add(task_vars[l_task["task_id"]]["instr"] == task_vars[lect_task["task_id"]]["instr"])
+        
+        split_lects = [t for t in lects if "_LECT_A" in t["task_id"] or "_LECT_B" in t["task_id"]]
         if len(split_lects) == 2:
-            lectA, lectB = split_lects
-            model.Add(task_instr_var[lectA["task_id"]] == task_instr_var[lectB["task_id"]])
-            
-            # <--- CHANGED: True Gap Logic (EndA -> StartB >= 30 mins)
-            # This is equivalent to |StartA - StartB| >= Duration + 30
-            # (Assuming A and B have roughly same duration, which is true for split halves)
-            durA = lectA["dur"]
-            min_gap_start = durA + 30
-            
-            diff = model.NewIntVar(0, WEEK_MINUTES, f"diff_{lectA['task_id']}_{lectB['task_id']}")
-            model.AddAbsEquality(diff, task_start[lectA["task_id"]] - task_start[lectB["task_id"]])
-            model.Add(diff >= min_gap_start)
+            lA, lB = split_lects
+            vA = task_vars[lA["task_id"]]
+            vB = task_vars[lB["task_id"]]
+            model.Add(vA["instr"] == vB["instr"])
+            durA = lA["dur"]
+            min_gap = durA + 30
+            diff = model.NewIntVar(0, WEEK_MINUTES, f"gap_{sec}")
+            model.AddAbsEquality(diff, vA["start"] - vB["start"])
+            model.Add(diff >= min_gap)
 
-    # GenEd Blocks
-    for g_day, g_start_min, g_end_min in data.get("gened_blocks", []):
-        g_start_global = g_day * 1440 + g_start_min
-        g_end_global = g_day * 1440 + g_end_min
-        for t in tasks:
-            tid = t["task_id"]
-            diff_day = model.NewBoolVar(f"{tid}_diffday_g{g_day}")
-            model.Add(task_day[tid] != g_day).OnlyEnforceIf(diff_day)
-            model.Add(task_day[tid] == g_day).OnlyEnforceIf(diff_day.Not())
-            before = model.NewBoolVar(f"{tid}_before_g{g_day}")
-            model.Add(task_end[tid] <= g_start_global).OnlyEnforceIf(before)
-            model.Add(task_end[tid] > g_start_global).OnlyEnforceIf(before.Not())
-            after = model.NewBoolVar(f"{tid}_after_g{g_day}")
-            model.Add(task_start[tid] >= g_end_global).OnlyEnforceIf(after)
-            model.Add(task_start[tid] < g_end_global).OnlyEnforceIf(after.Not())
+    # --- GenEd Constraints ---
+    for g_day, g_start, g_end in data.get("gened_blocks", []):
+        g_s_glob = g_day * 1440 + g_start
+        g_e_glob = g_day * 1440 + g_end
+        for tid, tv in task_vars.items():
+            diff_day = model.NewBoolVar(f"gen_diff_{tid}")
+            model.Add(tv["day"] != g_day).OnlyEnforceIf(diff_day)
+            model.Add(tv["day"] == g_day).OnlyEnforceIf(diff_day.Not())
+            before = model.NewBoolVar(f"gen_before_{tid}")
+            model.Add(tv["end"] <= g_s_glob).OnlyEnforceIf(before)
+            model.Add(tv["end"] > g_s_glob).OnlyEnforceIf(before.Not())
+            after = model.NewBoolVar(f"gen_after_{tid}")
+            model.Add(tv["start"] >= g_e_glob).OnlyEnforceIf(after)
+            model.Add(tv["start"] < g_e_glob).OnlyEnforceIf(after.Not())
             model.AddBoolOr([diff_day, before, after])
 
-    # -------------------- Load & Objectives --------------------
-    instructor_caps = data["instructor_caps"]
+    # -------------------- Load Calculation & Objectives --------------------
     objective_terms = []
     
     task_is_overtime = {} 
-    
-    for t in tasks:
-        tid = t["task_id"]
-        # Rule: Weekend OR (Weekday AND Start >= 17:00)
-        is_weekend = model.NewBoolVar(f"{tid}_is_weekend")
-        model.Add(task_day[tid] >= 5).OnlyEnforceIf(is_weekend)
-        model.Add(task_day[tid] < 5).OnlyEnforceIf(is_weekend.Not())
+    for tid, tv in task_vars.items():
+        is_weekend = model.NewBoolVar(f"{tid}_is_we")
+        model.Add(tv["day"] >= 5).OnlyEnforceIf(is_weekend)
+        model.Add(tv["day"] < 5).OnlyEnforceIf(is_weekend.Not())
         
-        start_min_of_day = model.NewIntVar(0, 1440, f"{tid}_start_mod_ot")
-        model.AddModuloEquality(start_min_of_day, task_start[tid], 1440)
+        start_mod = model.NewIntVar(0, 1440, f"{tid}_st_mod_ot")
+        model.AddModuloEquality(start_mod, tv["start"], 1440)
+        is_evening = model.NewBoolVar(f"{tid}_is_eve")
+        model.Add(start_mod >= 1020).OnlyEnforceIf(is_evening)
+        model.Add(start_mod < 1020).OnlyEnforceIf(is_evening.Not())
         
-        is_evening = model.NewBoolVar(f"{tid}_is_evening")
-        model.Add(start_min_of_day >= 1020).OnlyEnforceIf(is_evening)
-        model.Add(start_min_of_day < 1020).OnlyEnforceIf(is_evening.Not())
-        
-        is_ot_var = model.NewBoolVar(f"{tid}_is_ot")
-        model.AddBoolOr([is_weekend, is_evening]).OnlyEnforceIf(is_ot_var)
-        model.AddBoolAnd([is_weekend.Not(), is_evening.Not()]).OnlyEnforceIf(is_ot_var.Not())
-        task_is_overtime[tid] = is_ot_var
+        is_ot = model.NewBoolVar(f"{tid}_is_ot")
+        model.AddBoolOr([is_weekend, is_evening]).OnlyEnforceIf(is_ot)
+        model.AddBoolAnd([is_weekend.Not(), is_evening.Not()]).OnlyEnforceIf(is_ot.Not())
+        task_is_overtime[tid] = is_ot
 
     for i_idx, instr_id in enumerate(instructors):
         caps = instructor_caps.get(instr_id, {})
-        normal_limit = caps.get("normal_limit_min", 40 * 60)
-        overload_limit = caps.get("overload_limit_min", 0)
+        n_lim = caps.get("normal_limit_min", 40 * 60)
+        o_lim = caps.get("overload_limit_min", 0)
 
-        total_normal_min = model.NewIntVar(0, normal_limit, f"load_norm_{instr_id}")
-        total_overload_min = model.NewIntVar(0, overload_limit, f"load_ot_{instr_id}")
+        tot_norm = model.NewIntVar(0, n_lim, f"load_n_{i_idx}")
+        tot_over = model.NewIntVar(0, o_lim, f"load_o_{i_idx}")
         
-        normal_terms = []
-        overload_terms = []
+        norm_terms = []
+        over_terms = []
         
         for t in tasks:
             tid = t["task_id"]
-            dur = int(t["dur"])
+            if tid not in task_vars: continue # Skip if skipped
+            dur = t["dur"]
             assigned = assigned_instr[(tid, i_idx)]
             is_ot = task_is_overtime[tid]
             
-            assigned_ot = model.NewBoolVar(f"assign_ot_{tid}_{i_idx}")
-            model.AddBoolAnd([assigned, is_ot]).OnlyEnforceIf(assigned_ot)
-            model.AddBoolOr([assigned.Not(), is_ot.Not()]).OnlyEnforceIf(assigned_ot.Not())
+            as_ot = model.NewBoolVar(f"as_ot_{tid}_{i_idx}")
+            model.AddBoolAnd([assigned, is_ot]).OnlyEnforceIf(as_ot)
+            model.AddBoolOr([assigned.Not(), is_ot.Not()]).OnlyEnforceIf(as_ot.Not())
             
-            assigned_norm = model.NewBoolVar(f"assign_norm_{tid}_{i_idx}")
-            model.AddBoolAnd([assigned, is_ot.Not()]).OnlyEnforceIf(assigned_norm)
-            model.AddBoolOr([assigned.Not(), is_ot]).OnlyEnforceIf(assigned_norm.Not())
+            as_nm = model.NewBoolVar(f"as_nm_{tid}_{i_idx}")
+            model.AddBoolAnd([assigned, is_ot.Not()]).OnlyEnforceIf(as_nm)
+            model.AddBoolOr([assigned.Not(), is_ot]).OnlyEnforceIf(as_nm.Not())
             
-            overload_terms.append(assigned_ot * dur)
-            normal_terms.append(assigned_norm * dur)
-            
-        model.Add(total_normal_min == sum(normal_terms))
-        model.Add(total_overload_min == sum(overload_terms))
+            over_terms.append(as_ot * dur)
+            norm_terms.append(as_nm * dur)
+        
+        model.Add(tot_norm == sum(norm_terms))
+        model.Add(tot_over == sum(over_terms))
+        
+        objective_terms.append(tot_over * -GLOBAL_OVERLOAD_COST_PER_MIN)
 
-        # <--- CHANGED: Penalize Overload Bucket Usage 
-        # This ensures we prefer filling Normal bucket first.
-        objective_terms.append(total_overload_min * -GLOBAL_OVERLOAD_COST_PER_MIN)
-
-        # <--- CHANGED: Better Spreading (Sum of Squares)
-        # Instead of a soft limit, we minimize sum(daily_minutes^2).
-        # This mathematically forces spreading (e.g., 2,2,2,2 is better than 8,0,0,0)
-        for d_idx in range(7):
-            daily_dur_terms = []
+        # Spreading
+        for d in range(7):
+            d_terms = []
             for t in tasks:
                 tid = t["task_id"]
-                dur = int(t["dur"])
+                if tid not in task_vars: continue
+                dur = t["dur"]
                 assigned = assigned_instr[(tid, i_idx)]
-                on_this_day = model.NewBoolVar(f"{tid}_on_day_{d_idx}")
-                model.Add(task_day[tid] == d_idx).OnlyEnforceIf(on_this_day)
-                model.Add(task_day[tid] != d_idx).OnlyEnforceIf(on_this_day.Not())
+                day_match = model.NewBoolVar(f"{tid}_on_{d}")
+                model.Add(task_vars[tid]["day"] == d).OnlyEnforceIf(day_match)
+                model.Add(task_vars[tid]["day"] != d).OnlyEnforceIf(day_match.Not())
                 
-                active_on_day = model.NewBoolVar(f"{tid}_active_{d_idx}_{i_idx}")
-                model.AddBoolAnd([assigned, on_this_day]).OnlyEnforceIf(active_on_day)
-                model.AddBoolOr([assigned.Not(), on_this_day.Not()]).OnlyEnforceIf(active_on_day.Not())
-                daily_dur_terms.append(active_on_day * dur)
+                active = model.NewBoolVar(f"{tid}_act_{d}_{i_idx}")
+                model.AddBoolAnd([assigned, day_match]).OnlyEnforceIf(active)
+                model.AddBoolOr([assigned.Not(), day_match.Not()]).OnlyEnforceIf(active.Not())
+                d_terms.append(active * dur)
             
-            daily_total = model.NewIntVar(0, 1440, f"daily_load_{instr_id}_{d_idx}")
-            model.Add(daily_total == sum(daily_dur_terms))
+            daily_sum = model.NewIntVar(0, 1440, f"ds_{i_idx}_{d}")
+            model.Add(daily_sum == sum(d_terms))
             
-            # Quadratic Penalty: cost += (daily_total * daily_total)
-            # Scaling: Since 360^2 is big, we can scale down or just apply small weight.
-            sq = model.NewIntVar(0, 1440*1440, f"sq_load_{instr_id}_{d_idx}")
-            model.AddMultiplicationEquality(sq, [daily_total, daily_total])
-            # Weight 1 is usually enough for quadratic terms to dominate peaks
+            sq = model.NewIntVar(0, 1440*1440, f"sq_{i_idx}_{d}")
+            model.AddMultiplicationEquality(sq, [daily_sum, daily_sum])
             objective_terms.append(sq * -1)
 
-    # Objectives
+    # --- Other Objectives ---
     matches = data.get("matches", {})
-    instr_index_map = data.get("instructor_index", {})
-    for sec_id, match_list in matches.items():
+    i_map = data.get("instructor_index", {})
+    for sec_id, m_list in matches.items():
         sec_tasks = section_to_tasks.get(sec_id, [])
-        for (instr_id, score) in match_list:
-            if instr_id not in instr_index_map: continue
-            i_idx = instr_index_map[instr_id]
-            weight = int(round(score * MATCH_WEIGHT_SCALE))
+        for (i_id, score) in m_list:
+            if i_id not in i_map: continue
+            idx = i_map[i_id]
+            w = int(round(score * MATCH_WEIGHT_SCALE))
             for t in sec_tasks:
-                b = assigned_instr[(t["task_id"], i_idx)]
-                if weight != 0: objective_terms.append(b * weight)
+                if t["task_id"] not in task_vars: continue
+                b = assigned_instr[(t["task_id"], idx)]
+                if w != 0: objective_terms.append(b * w)
 
     for t in tasks:
         tid = t["task_id"]
-        # TBA penalty
-        is_tba = model.NewBoolVar(f"is_tba_{tid}")
-        model.Add(task_room_var[tid] == TBA_ROOM_IDX).OnlyEnforceIf(is_tba)
-        model.Add(task_room_var[tid] != TBA_ROOM_IDX).OnlyEnforceIf(is_tba.Not())
-        objective_terms.append(is_tba * (-TBA_PENALTY))
+        if tid not in task_vars: continue
+        is_priority = section_priority_map.get(t["section"], False)
+        room_var = task_vars[tid]["room"]
         
-        is_real = model.NewBoolVar(f"is_real_{tid}")
-        model.Add(task_room_var[tid] != TBA_ROOM_IDX).OnlyEnforceIf(is_real)
-        model.Add(task_room_var[tid] == TBA_ROOM_IDX).OnlyEnforceIf(is_real.Not())
-        objective_terms.append(is_real * REAL_ROOM_REWARD)
+        is_tba = model.NewBoolVar(f"{tid}_is_tba")
+        model.Add(room_var == TBA_ROOM_IDX).OnlyEnforceIf(is_tba)
+        model.Add(room_var != TBA_ROOM_IDX).OnlyEnforceIf(is_tba.Not())
         
-        # Weekend Penalty 
-        is_weekend = model.NewBoolVar(f"is_weekend_pen_{tid}")
-        model.Add(task_day[tid] >= 5).OnlyEnforceIf(is_weekend) 
-        model.Add(task_day[tid] < 5).OnlyEnforceIf(is_weekend.Not()) 
-        objective_terms.append(is_weekend * t["dur"] * -WEEKEND_TIME_PENALTY_PER_MINUTE)
+        if is_priority:
+            objective_terms.append(is_tba * -TBA_PENALTY_PRIORITY)
+        else:
+            objective_terms.append(is_tba * -TBA_PENALTY_NORMAL)
+        objective_terms.append(is_tba.Not() * REAL_ROOM_REWARD)
 
-        # Weekday Evening Penalty
-        is_weekday = model.NewBoolVar(f"is_weekday_pen_{tid}")
-        model.Add(task_day[tid] <= 4).OnlyEnforceIf(is_weekday) 
+    for t in tasks:
+        tid = t["task_id"]
+        if tid not in task_vars: continue
+        is_we = model.NewBoolVar(f"pen_we_{tid}")
+        model.Add(task_vars[tid]["day"] >= 5).OnlyEnforceIf(is_we)
+        model.Add(task_vars[tid]["day"] < 5).OnlyEnforceIf(is_we.Not())
+        objective_terms.append(is_we * t["dur"] * -WEEKEND_TIME_PENALTY_PER_MINUTE)
         
-        start_mod_pen = model.NewIntVar(0, 1439, f"start_mod_pen_{tid}")
-        model.AddModuloEquality(start_mod_pen, task_start[tid], 1440)
-        is_evening_start = model.NewBoolVar(f"is_evening_start_{tid}")
-        model.Add(start_mod_pen >= 1020).OnlyEnforceIf(is_evening_start)
+        start_mod = model.NewIntVar(0, 1440, f"pen_st_{tid}")
+        model.AddModuloEquality(start_mod, task_vars[tid]["start"], 1440)
+        is_eve = model.NewBoolVar(f"pen_eve_{tid}")
+        model.Add(start_mod >= 1020).OnlyEnforceIf(is_eve)
         
-        is_weekday_overload = model.NewBoolVar(f"is_weekday_overload_{tid}")
-        model.AddBoolAnd([is_weekday, is_evening_start]).OnlyEnforceIf(is_weekday_overload)
-        
-        objective_terms.append(is_weekday_overload * t["dur"] * -WEEKDAY_EVENING_PENALTY_PER_MINUTE)
+        is_wd = model.NewBoolVar(f"pen_wd_{tid}")
+        model.Add(task_vars[tid]["day"] <= 4).OnlyEnforceIf(is_wd)
+        is_wd_eve = model.NewBoolVar(f"pen_wd_eve_{tid}")
+        model.AddBoolAnd([is_wd, is_eve]).OnlyEnforceIf(is_wd_eve)
+        objective_terms.append(is_wd_eve * t["dur"] * -WEEKDAY_EVENING_PENALTY_PER_MINUTE)
 
-    objective = model.NewIntVar(-10000000000000, 10000000000000, "objective") 
-    model.Add(objective == sum(objective_terms))
-    model.Maximize(objective)
-
+    # --- Solve ---
+    model.Maximize(sum(objective_terms))
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = time_limit_seconds
     solver.parameters.num_search_workers = 8
@@ -457,24 +482,26 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
 
         for t in tasks:
             tid = t["task_id"]
+            if tid not in task_vars: continue
             sec_obj = section_objs[t["section"]]
-            instr_idx = solver.Value(task_instr_var[tid])
-            room_idx = solver.Value(task_room_var[tid])
-            start_min = solver.Value(task_start[tid])
+            i_idx = solver.Value(task_vars[tid]["instr"])
+            r_idx = solver.Value(task_vars[tid]["room"])
+            start_val = solver.Value(task_vars[tid]["start"])
             
-            day_idx = start_min // 1440
-            minute_of_day = start_min % 1440
-            hour = minute_of_day // 60
-            minute = minute_of_day % 60
-            start_time = datetime(2000, 1, 1, hour, minute).time()
-            end_dt = datetime(2000, 1, 1, hour, minute) + timedelta(minutes=t["dur"])
+            day_idx = start_val // 1440
+            min_day = start_val % 1440
+            h = min_day // 60
+            m = min_day % 60
+            
+            start_time = datetime(2000, 1, 1, h, m).time()
+            end_dt = datetime(2000, 1, 1, h, m) + timedelta(minutes=t["dur"])
             end_time = end_dt.time()
 
-            instructor = instructor_objs.get(instructors[instr_idx])
-            room = None if room_idx == TBA_ROOM_IDX else room_objs.get(rooms[room_idx])
+            instructor = instructor_objs.get(instructors[i_idx])
+            room = None if r_idx == TBA_ROOM_IDX else room_objs.get(rooms[r_idx])
             
             is_weekend_bool = (day_idx >= 5)
-            is_evening_bool = (minute_of_day >= 1020)
+            is_evening_bool = (min_day >= 1020)
             final_is_overtime = is_weekend_bool or is_evening_bool
 
             schedules_to_create.append(Schedule(
