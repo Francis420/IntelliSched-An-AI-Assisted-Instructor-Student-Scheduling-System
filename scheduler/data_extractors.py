@@ -7,10 +7,14 @@ from aimatching.models import InstructorSubjectMatch
 
 def get_solver_data(semester):
     # -------------------- Instructors --------------------
-    instructors_qs = [
-        i for i in Instructor.objects.all()
-        if (i.employmentType or "").lower() != "on-leave/retired"
-    ]
+    instructors_qs = list(
+        Instructor.objects.filter(
+            employmentType__in=['permanent', 'part-time', 'overload']
+        ).exclude(
+            employmentType='on-leave/retired'
+        ).select_related('rank', 'designation')
+    )
+    
     instructors = [i.instructorId for i in instructors_qs]
     instructor_index = {i.instructorId: idx for idx, i in enumerate(instructors_qs)}
 
@@ -34,33 +38,70 @@ def get_solver_data(semester):
         for s in sections_qs
     }
 
-    # -------------------- Instructor Load Caps --------------------
-    def resolve_caps(i):
-        emp = (i.employmentType or "permanent").lower()
-        has_designation = bool(i.designation)
+    # -------------------- Instructor Load Caps (DYNAMIC) --------------------
+    instructor_caps = {}
 
-        # Normal instruction hours
-        if i.designation and getattr(i.designation, "instructionHours", None):
-            normal_h = i.designation.instructionHours
-        elif i.rank and getattr(i.rank, "instructionHours", None):
-            normal_h = i.rank.instructionHours
-        else:
-            normal_h = 40
+    # Configuration for Permanent types
+    overload_has_designation = 9
+    overload_has_no_designation = 12
+    
+    # Configuration for Non-Permanent types
+    PART_TIME_NORMAL_HRS = 15
+    PART_TIME_OVERLOAD_HRS = 0
+    
+    # "Part-Time (Overload)" employees cannot teach Normal hours
+    PURE_OVERLOAD_NORMAL_HRS = 0 
+    PURE_OVERLOAD_LIMIT_HRS = 12
 
-        # Overload hours
-        if emp == "permanent":
-            overload_h = 9 if has_designation else 12
-        else:
-            overload_h = 27
+    for i in instructors_qs:
+        emp_type = (i.employmentType or "").lower().strip()
+        
+        norm_hrs = 0
+        over_hrs = 0
+        
+        if emp_type == 'permanent':
+            # --- PERMANENT FACULTY LOGIC ---
+            
+            # Step 1: Detect Designation
+            # It is "Designated" only if it is NOT None AND NOT "N/A"
+            is_designated = False
+            if i.designation:
+                designation_name = (i.designation.name or "").strip().upper()
+                if designation_name != "N/A" and designation_name != "":
+                    is_designated = True
+            
+            # Step 2: Determine Normal Load
+            if is_designated:
+                # Case A: Designated (e.g., Dean, Chair) -> Use Designation Hours
+                norm_hrs = i.designation.instructionHours
+            else:
+                # Case B: Regular (Blank or N/A) -> Use Rank Hours
+                if i.rank:
+                    norm_hrs = i.rank.instructionHours
+                else:
+                    norm_hrs = 18 # Fallback if no Rank and no Designation
+            
+            # Step 3: Determine Overload Limit
+            if is_designated:
+                over_hrs = overload_has_designation  # Designated gets less overload
+            else:
+                over_hrs = overload_has_no_designation # Regular gets standard overload
 
-        return {
-            "normal_limit_min": int(normal_h * 60),
-            "overload_limit_min": int(overload_h * 60),
-            "employment": emp,
-            "has_designation": has_designation,
+        elif emp_type == 'part-time':
+            # Part-Timers get fixed hours
+            norm_hrs = PART_TIME_NORMAL_HRS
+            over_hrs = PART_TIME_OVERLOAD_HRS
+            
+        elif emp_type == 'overload': 
+            # "Overload only" instructors
+            norm_hrs = PURE_OVERLOAD_NORMAL_HRS
+            over_hrs = PURE_OVERLOAD_LIMIT_HRS
+
+        # Save to map (Convert to minutes)
+        instructor_caps[i.instructorId] = {
+            "normal_limit_min": int(norm_hrs * 60),
+            "overload_limit_min": int(over_hrs * 60)
         }
-
-    instructor_caps = {i.instructorId: resolve_caps(i) for i in instructors_qs}
 
     # -------------------- Matches --------------------
     subject_ids = {s.subject_id for s in sections_qs}
