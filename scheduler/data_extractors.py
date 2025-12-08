@@ -20,7 +20,9 @@ def get_solver_data(semester):
         .select_related("subject")
     )
     sections = [s.sectionId for s in sections_qs]
-    section_index = {s.sectionId: idx for idx, s in enumerate(sections_qs)}
+
+    section_priority_map = {s.sectionId: s.isPriorityForRooms for s in sections_qs}
+    section_num_students = {s.sectionId: (s.numberOfStudents or 0) for s in sections_qs}
 
     # -------------------- Section Hours --------------------
     section_hours = {
@@ -96,18 +98,21 @@ def get_solver_data(semester):
                     lecture_lab_pairs.append((lec, lab))
 
     # -------------------- Rooms --------------------
-    rooms_qs = list(Room.objects.filter(isActive=True))
-    rooms = [r.roomId for r in rooms_qs]
-    room_index = {r.roomId: idx for idx, r in enumerate(rooms_qs)}
+    raw_rooms = list(Room.objects.filter(isActive=True))
+    
+    room_types = {} 
+    room_capacities = {}
+    
+    rooms_list = [r.roomId for r in raw_rooms]
+    for idx, r in enumerate(raw_rooms):
+        room_types[idx] = r.type.lower() if r.type else 'lecture'
+        room_capacities[idx] = r.capacity or 0
 
-    # Pre-store room types for solver use
-    room_types = {
-        r.roomId: getattr(r, "type", "").lower() for r in rooms_qs
-    }
-
-    # Add one synthetic "To Be Announced" room
-    TBA_ROOM_IDX = len(rooms)
-    rooms.append("TBA")
+    # Add TBA Room
+    rooms_list.append("TBA")
+    TBA_ROOM_IDX = len(rooms_list) - 1
+    room_types[TBA_ROOM_IDX] = 'universal' 
+    room_capacities[TBA_ROOM_IDX] = 999999
 
     # -------------------- GenEd blocks --------------------
     gened_qs = list(GenEdSchedule.objects.filter(
@@ -141,10 +146,12 @@ def get_solver_data(semester):
     return {
         "instructors": tuple(instructors),
         "sections": tuple(sections),
-        "rooms": tuple(rooms),
+        "rooms": tuple(rooms_list),
+        "room_types": room_types,
+        "room_capacities": room_capacities,
         "instructor_index": instructor_index,
-        "section_index": section_index,
-        "room_index": room_index,
+        "section_priority_map": section_priority_map,
+        "section_num_students": section_num_students,
         "instructor_caps": instructor_caps,
         "section_hours": section_hours,
         "matches": {k: tuple(v) for k, v in matches.items()},
@@ -153,9 +160,6 @@ def get_solver_data(semester):
         "permanent_instructors": tuple(permanent_ids),
         "non_permanent_instructors": tuple(non_permanent_ids),
 
-        "room_index": room_index,
-        "rooms": tuple(rooms),
-        "room_types": room_types,
         "TBA_ROOM_IDX": TBA_ROOM_IDX,
         "gened_blocks": tuple(gened_blocks),
     }

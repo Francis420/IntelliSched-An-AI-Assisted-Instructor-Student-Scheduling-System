@@ -18,11 +18,11 @@ WEEK_MINUTES = 7 * 24 * 60
 
 # Weights & Rewards
 MATCH_WEIGHT_SCALE = 100
-REAL_ROOM_REWARD = 10          # Small bonus for finding a physical room
+REAL_ROOM_REWARD = 10          
 
 # Penalties
-TBA_PENALTY_NORMAL = 50        # Low penalty: Use TBA if rooms are full
-TBA_PENALTY_PRIORITY = 100000  # Huge penalty: Priority sections MUST get a room
+TBA_PENALTY_NORMAL = 50        
+TBA_PENALTY_PRIORITY = 100000  
 WEEKEND_TIME_PENALTY_PER_MINUTE = 5000 
 WEEKDAY_EVENING_PENALTY_PER_MINUTE = 100
 GLOBAL_OVERLOAD_COST_PER_MIN = 500
@@ -32,32 +32,26 @@ def generate_timeslot_meta():
     slot_meta = []
     MORNING_RANGE = (8, 12)
     AFTERNOON_RANGE = (13, 17)
-    
-    # Strict 5 PM - 8 PM Overload Block
     OVERLOAD_RANGE_WEEKDAYS = (17, 20) 
     OVERLOAD_RANGE_WEEKENDS = [(8, 12), (13, 20)]
 
     for day_idx, day in enumerate(DAYS):
         if day_idx <= 4:  # Mon-Fri
-            # Normal Morning
             for hour in range(MORNING_RANGE[0], MORNING_RANGE[1]):
                 for minute in (0, 30):
                     minute_of_day = hour * 60 + minute
                     label = f"{day} {hour:02d}:{minute:02d}"
                     minute_of_week = day_idx * 1440 + minute_of_day
                     slot_meta.append((label, day_idx, minute_of_day, minute_of_week))
-            
-            # Normal Afternoon
             for hour in range(AFTERNOON_RANGE[0], AFTERNOON_RANGE[1]):
                 for minute in (0, 30):
                     minute_of_day = hour * 60 + minute
                     label = f"{day} {hour:02d}:{minute:02d}"
                     minute_of_week = day_idx * 1440 + minute_of_day
                     slot_meta.append((label, day_idx, minute_of_day, minute_of_week))
-
-            # Overload period: 17:00-20:00
-            start_h = int(OVERLOAD_RANGE_WEEKDAYS[0])
-            end_h = int(OVERLOAD_RANGE_WEEKDAYS[1])
+            
+            # Overload
+            start_h, end_h = OVERLOAD_RANGE_WEEKDAYS
             hour = start_h
             minute = 0
             while hour * 60 + minute + INTERVAL_MINUTES <= end_h * 60 + 1e-9:
@@ -69,7 +63,7 @@ def generate_timeslot_meta():
                 if minute == 60:
                     minute = 0
                     hour += 1
-        else:  # Sat-Sun (All Overload)
+        else:  # Sat-Sun
             for start_h, end_h in OVERLOAD_RANGE_WEEKENDS:
                 hour = int(start_h)
                 minute = 0
@@ -111,36 +105,28 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
     
     # --- Data Handling ---
     room_types = data.get("room_types", {i: 'lecture' for i in range(len(rooms))}) 
+    room_capacities = data.get("room_capacities", {i: 999 for i in range(len(rooms))}) # <--- NEW
     section_priority_map = data.get("section_priority_map", {}) 
+    section_num_students = data.get("section_num_students", {}) # <--- NEW
     
     num_rooms = len(rooms)
     num_instructors = len(instructors)
     
-    # Ensure we have a valid TBA index
     if "TBA_ROOM_IDX" in data:
         TBA_ROOM_IDX = data["TBA_ROOM_IDX"]
     else:
-        # Fallback if not provided
         TBA_ROOM_IDX = num_rooms - 1 
 
-    # --- Robust Room Domains ---
-    # We explicitly include TBA_ROOM_IDX in both sets to prevent Empty Domain errors
-    lecture_room_indices = {TBA_ROOM_IDX}
-    lab_room_indices = {TBA_ROOM_IDX}
+    # --- Robust Room Domains (Base Sets by Type) ---
+    lecture_base_indices = {TBA_ROOM_IDX}
+    lab_base_indices = {TBA_ROOM_IDX}
 
     for i in range(num_rooms):
         rtype = room_types.get(i, 'lecture')
         if rtype in ('lecture', 'universal'):
-            lecture_room_indices.add(i)
+            lecture_base_indices.add(i)
         if rtype in ('laboratory', 'universal'):
-            lab_room_indices.add(i)
-            
-    # Convert back to sorted lists for the solver
-    lecture_room_indices = sorted(list(lecture_room_indices))
-    lab_room_indices = sorted(list(lab_room_indices))
-
-    print(f"[Solver] Found {len(lecture_room_indices)} Lecture-capable rooms (including TBA)")
-    print(f"[Solver] Found {len(lab_room_indices)} Lab-capable rooms (including TBA)")
+            lab_base_indices.add(i)
 
     model = cp_model.CpModel()
 
@@ -151,7 +137,6 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
         lecture_d = int(sec_hours.get("lecture_min", 0) or 0)
         lab_d = int(sec_hours.get("lab_min", 0) or 0)
 
-        # Split long lectures
         if lecture_d > 120:
             half = lecture_d // 2
             other_half = lecture_d - half
@@ -202,10 +187,10 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
         dur = int(t["dur"])
         allowed_slots = get_allowed_slots(dur)
 
-        # CRITICAL SAFETY CHECK
+        # Safety Check
         if not allowed_slots:
-            print(f"[Solver] ERROR: Task {tid} with duration {dur}min fits NO allowed time slots! Skipping to avoid crash.")
-            continue # Skip this task or it will crash the solver
+            print(f"[Solver] ERROR: Task {tid} fits NO time slots! Skipping.")
+            continue 
 
         # 1. Time Variables
         slot_var = model.NewIntVarFromDomain(cp_model.Domain.FromValues(allowed_slots), f"slot_{tid}")
@@ -217,7 +202,6 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
         model.AddAllowedAssignments([slot_var, day_var], [(i, SLOT_TO_DAY[i]) for i in allowed_slots])
         model.Add(end_var == start_var + dur)
 
-        # Enforce finish by 20:00
         for d in range(7):
             cond = model.NewBoolVar(f"{tid}_day{d}")
             model.Add(day_var == d).OnlyEnforceIf(cond)
@@ -225,7 +209,7 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
             allowed_end = d*1440 + latest_end_by_day[d]
             model.Add(end_var <= allowed_end).OnlyEnforceIf(cond)
 
-        # "No Straddle" Logic
+        # No Straddle
         is_weekday = model.NewBoolVar(f"{tid}_is_weekday")
         model.Add(day_var <= 4).OnlyEnforceIf(is_weekday)
         model.Add(day_var >= 5).OnlyEnforceIf(is_weekday.Not())
@@ -245,9 +229,28 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
 
         model.AddBoolOr([ends_early, starts_late]).OnlyEnforceIf(is_weekday)
 
-        # 2. Room Variables (Robust)
-        valid_indices = lab_room_indices if t["kind"] == "lab" else lecture_room_indices
-        room_var = model.NewIntVarFromDomain(cp_model.Domain.FromValues(valid_indices), f"room_{tid}")
+        # 2. Room Variables (Type + Capacity)
+        base_indices = lab_base_indices if t["kind"] == "lab" else lecture_base_indices
+        required_students = section_num_students.get(t["section"], 0)
+        
+        # Filter rooms: Must be correct type AND have enough capacity
+        valid_indices = []
+        for r_idx in base_indices:
+            # TBA is always allowed (has infinite capacity in data extractor)
+            if r_idx == TBA_ROOM_IDX:
+                valid_indices.append(r_idx)
+                continue
+            
+            # Check capacity
+            cap = room_capacities.get(r_idx, 0)
+            if cap >= required_students:
+                valid_indices.append(r_idx)
+        
+        # Fallback if no room is big enough (Should rarely happen due to TBA)
+        if not valid_indices:
+            valid_indices = [TBA_ROOM_IDX]
+
+        room_var = model.NewIntVarFromDomain(cp_model.Domain.FromValues(sorted(valid_indices)), f"room_{tid}")
         
         # 3. Instructor Variable
         instr_var = model.NewIntVar(0, max(0, num_instructors - 1), f"instr_{tid}")
@@ -259,7 +262,6 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
         }
 
         # --- Intervals ---
-        # Instructor
         for i_idx in range(num_instructors):
             b = model.NewBoolVar(f"assign_{tid}_instr{i_idx}")
             assigned_instr[(tid, i_idx)] = b 
@@ -269,7 +271,6 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
             instr_intervals[i_idx].append(iv)
         model.Add(sum(assigned_instr[(tid, i)] for i in range(num_instructors)) == 1)
 
-        # Rooms
         for r_idx in range(num_rooms):
             b = model.NewBoolVar(f"assign_{tid}_room{r_idx}")
             assigned_room[(tid, r_idx)] = b
@@ -280,7 +281,7 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
                 room_intervals[r_idx].append(iv)
         model.Add(sum(assigned_room[(tid, r)] for r in range(num_rooms)) == 1)
 
-        # 4. Weekend Room Lockout
+        # Weekend Room Lockout
         is_weekend_check = model.NewBoolVar(f"{tid}_check_weekend")
         model.Add(day_var >= 5).OnlyEnforceIf(is_weekend_check)
         model.Add(day_var < 5).OnlyEnforceIf(is_weekend_check.Not())
@@ -296,7 +297,6 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
     # --- Linking & Gaps ---
     section_to_tasks = defaultdict(list)
     for t in tasks:
-        # Check if task was skipped due to error
         if t["task_id"] in task_vars:
             section_to_tasks[t["section"]].append(t)
 
@@ -369,7 +369,7 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
         
         for t in tasks:
             tid = t["task_id"]
-            if tid not in task_vars: continue # Skip if skipped
+            if tid not in task_vars: continue 
             dur = t["dur"]
             assigned = assigned_instr[(tid, i_idx)]
             is_ot = task_is_overtime[tid]
