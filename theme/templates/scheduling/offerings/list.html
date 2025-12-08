@@ -4,7 +4,6 @@
 
 {% block content %}
 <div class="max-w-6xl mx-auto mt-10 px-4 sm:px-6 lg:px-8">
-  <!-- Curriculum + Semester Dropdowns -->
   <form method="get" class="flex items-center gap-4 mb-6">
     <div>
       <label for="curriculum" class="mr-2 font-medium text-gray-700">Curriculum:</label>
@@ -35,7 +34,6 @@
     </div>
   </form>
 
-  <!-- Generate Sections Button -->
   {% if selected_curriculum and selected_semester %}
   <form method="post"
         action="{% url 'generateSections' selected_semester.semesterId selected_curriculum.curriculumId %}"
@@ -74,10 +72,14 @@
                 <td class="px-4 py-3 border-b">{{ offering.subject.units }}</td>
                 <td class="px-4 py-3 border-b">{{ offering.numberOfSections }}</td>
                 <td class="px-4 py-3 border-b">{{ offering.semester.name }}</td>
-                <td class="px-4 py-3 border-b text-center">
+                <td class="px-4 py-3 border-b text-center space-x-2">
                   <a href="{% url 'subjectOfferingUpdate' offering.id %}"
                      class="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded-md text-xs">
-                    Update
+                    Set Count
+                  </a>
+                  <a href="{% url 'sectionConfigList' offering.id %}"
+                     class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-md text-xs">
+                    Set Students
                   </a>
                 </td>
               </tr>

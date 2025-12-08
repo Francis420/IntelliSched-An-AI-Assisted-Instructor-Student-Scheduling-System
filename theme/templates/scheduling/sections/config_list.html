@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block header %}Set Number of Students per Section{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto mt-10 px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-800">
+            Configure the Number of Students for the Section:
+            <span class="text-indigo-600">{{ offering.subject.code }} - {{ offering.subject.name }} ({{ offering.semester.name }})</span>
+        </h2>
+        <a href="javascript:history.back()" 
+         class="flex-1 text-center bg-gray-300 text-black font-medium py-2 px-4 rounded-md hover:bg-gray-400 transition">
+        Back
+        </a>
+    </div>
+
+    {% if sections %}
+    <form method="post" class="bg-white p-6 rounded-lg shadow">
+        {% csrf_token %}
+        <p class="mb-4 text-sm text-gray-500">
+            Set the number of students for each individual section below. Click "Save Changes" when done.
+        </p>
+        
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Section Code
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Subject
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
+                            No. of Students
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for section in sections %}
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {{ section.sectionCode }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ section.subject.name }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <input type="number" 
+                                   name="students_{{ section.sectionId }}" 
+                                   value="{{ section.numberOfStudents }}"
+                                   min="1"
+                                   required
+                                   class="w-full border border-gray-300 rounded-md p-2 text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-6 flex justify-end">
+            <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-medium">
+                Save Changes
+            </button>
+        </div>
+    </form>
+    {% else %}
+    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md">
+        <p class="text-sm text-yellow-700">No sections found for this subject/semester. Click "Generate Sections" on the main list page first to pre set the number of sections.</p>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

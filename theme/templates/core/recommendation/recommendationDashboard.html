@@ -2,231 +2,222 @@
 {% block title %}Recommendation Dashboard{% endblock %}
 {% block extra_head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 {% endblock %}
+
 {% block header %}Recommendation Dashboard{% endblock %}
+
 {% block content %}
-<div class="bg-white rounded-2xl shadow-lg p-6 space-y-6">
-  <!-- Filters -->
-  <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-    <!-- Subjects -->
-    <div>
-      <label class="block text-sm font-semibold mb-1 text-gray-700">Subjects</label>
-      <select id="subjectFilter" class="w-full border-gray-300 rounded-lg" multiple>
-        <option value="all" selected>All Subjects</option>
-        {% for s in subjects %}
-          <option value="{{ s.name }}">{{ s.code }} - {{ s.name }}</option>
-        {% endfor %}
-      </select>
-    </div>
+<div class="space-y-6">
+  
+  <div class="bg-white rounded-2xl shadow-lg p-6">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      
+      <div class="md:col-span-2">
+        <label class="block text-sm font-semibold mb-1 text-gray-700">Filter by Subject Context</label>
+        <select id="subjectFilter" class="w-full border-gray-300 rounded-lg" multiple>
+          {% for s in subjects %}
+            <option value="{{ s.name }}">{{ s.code }} - {{ s.name }}</option>
+          {% endfor %}
+        </select>
+        <p class="text-xs text-gray-500 mt-1">Select subjects to see relevant experience and credentials.</p>
+      </div>
 
-    <!-- Year Range (Numeric Years) -->
-    <div>
-      <label class="block text-sm font-semibold mb-1 text-gray-700">From Year</label>
-      <select id="yearFromFilter" class="w-full border-gray-300 rounded-lg">
-        <option value="all" selected>All</option>
-        {% for y in years %}
-          <option value="{{ y }}">{{ y }}</option>
-        {% endfor %}
-      </select>
-    </div>
-
-    <div>
-      <label class="block text-sm font-semibold mb-1 text-gray-700">To Year</label>
-      <select id="yearToFilter" class="w-full border-gray-300 rounded-lg">
-        <option value="all" selected>All</option>
-        {% for y in years %}
-          <option value="{{ y }}">{{ y }}</option>
-        {% endfor %}
-      </select>
-    </div>
-
-    <!-- Instructors -->
-    <div>
-      <label class="block text-sm font-semibold mb-1 text-gray-700">Instructors</label>
-      <select id="instructorFilter" class="w-full border-gray-300 rounded-lg" multiple>
-        <option value="all" selected>All Instructors</option>
-        {% for i in instructors %}
-          <option value="{{ i.instructorId }}">{{ i.full_name }}</option>
-        {% endfor %}
-      </select>
-    </div>
-
-    <!-- Metric checkboxes -->
-    <div class="flex flex-col justify-end space-y-2">
-      <label class="inline-flex items-center">
-        <input type="checkbox" id="showExperience" class="w-5 h-5 text-blue-600 rounded" checked>
-        <span class="ml-2 text-sm font-semibold text-gray-700">Years of Experience</span>
-      </label>
-      <label class="inline-flex items-center">
-        <input type="checkbox" id="showTaught" class="w-5 h-5 text-green-600 rounded">
-        <span class="ml-2 text-sm font-semibold text-gray-700">Times Taught</span>
-      </label>
+      <div>
+        <label class="block text-sm font-semibold mb-1 text-gray-700">From Year</label>
+        <select id="yearFromFilter" class="w-full border-gray-300 rounded-lg p-2">
+          <option value="">All History</option>
+          {% for y in years %}
+            <option value="{{ y }}">{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold mb-1 text-gray-700">To Year</label>
+        <select id="yearToFilter" class="w-full border-gray-300 rounded-lg p-2">
+          <option value="">Present</option>
+          {% for y in years %}
+            <option value="{{ y }}">{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
     </div>
   </div>
 
-  <!-- Chart -->
-  <div class="relative mt-8">
-    <div id="loadingOverlay" class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70 hidden">
-      <div class="animate-spin h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    
+    <div class="lg:col-span-1 bg-white rounded-2xl shadow-lg p-6 flex flex-col">
+      <h3 class="text-lg font-bold text-gray-800 mb-4">Top 10 Leaders</h3>
+      
+      <div class="flex space-x-2 mb-4 bg-gray-100 p-1 rounded-lg">
+        <button class="metric-btn flex-1 py-1 text-sm rounded-md font-medium bg-white shadow text-blue-600" data-metric="years_taught">
+          Years Taught
+        </button>
+        <button class="metric-btn flex-1 py-1 text-sm rounded-md font-medium text-gray-500 hover:bg-white" data-metric="experience_years">
+          Years Exp.
+        </button>
+      </div>
+
+      <div class="relative flex-grow min-h-[300px]">
+        <canvas id="mainChart"></canvas>
+      </div>
     </div>
-    <div id="noDataOverlay" class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80 hidden">
-      <p class="text-gray-500 text-lg font-medium">No data available for the selected filters.</p>
+
+    <div class="lg:col-span-2 bg-white rounded-2xl shadow-lg p-6 overflow-hidden">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-bold text-gray-800">Candidate Analysis</h3>
+        <span class="text-xs text-gray-500 italic">Sorted by chart selection</span>
+      </div>
+      
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="text-gray-500 border-b border-gray-100 text-sm">
+              <th class="pb-3 font-semibold">Instructor</th>
+              <th class="pb-3 font-semibold">Rank</th>
+              <th class="pb-3 font-semibold text-right">Years Taught</th> 
+              <th class="pb-3 font-semibold text-right">Years Exp.</th>
+              <th class="pb-3 font-semibold text-right">Credentials</th>
+            </tr>
+          </thead>
+          <tbody id="analysisTableBody" class="text-sm text-gray-700">
+            </tbody>
+        </table>
+      </div>
+      <div id="loadingIndicator" class="hidden py-10 text-center text-blue-500">
+        <div class="animate-spin inline-block w-6 h-6 border-2 border-current border-t-transparent rounded-full"></div>
+        <span class="ml-2">Analyzing data...</span>
+      </div>
     </div>
-    <canvas id="experienceChart" class="w-full h-96"></canvas>
+
   </div>
 </div>
 
 <script>
+// ... (Your JavaScript remains here) ...
 $(document).ready(function() {
-  // Initialize Select2 for better dropdowns
-  $('#subjectFilter, #instructorFilter').select2({
-    width: '100%',
-    placeholder: "Select...",
-    allowClear: true
-  });
+  // --- 1. Initialization ---
+  $('#subjectFilter').select2({ placeholder: "All Subjects", width: '100%', allowClear: true });
+  
+  // UPDATED DEFAULT METRIC
+  let currentMetric = 'years_taught'; 
+  let chartInstance = null;
+  let cachedData = []; 
 
-  // Chart.js setup
-  const ctx = document.getElementById('experienceChart').getContext('2d');
-  let chart = new Chart(ctx, {
-    type: 'bar',
-    data: { labels: [], datasets: [] },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { position: 'top' },
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              return `${context.dataset.label}: ${Math.round(context.parsed.y)}`;
-            }
-          }
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          title: { display: true, text: 'Value' }
-        }
-      }
-    }
-  });
-
-  // Loading + No Data indicators
-  function showLoading() { $('#loadingOverlay').removeClass('hidden'); }
-  function hideLoading() { $('#loadingOverlay').addClass('hidden'); }
-  function showNoData() { $('#noDataOverlay').removeClass('hidden'); }
-  function hideNoData() { $('#noDataOverlay').addClass('hidden'); }
-
-  // Update "To" year dropdown dynamically based on selected "From" year
-  $('#yearFromFilter').on('change', function() {
-    const fromVal = parseInt($(this).val());
-    const toSelect = $('#yearToFilter');
-    const allOptions = toSelect.find('option');
-
-    if (!fromVal || isNaN(fromVal)) {
-      allOptions.prop('disabled', false).show();
-      return;
-    }
-
-    // Disable To-years less than From
-    allOptions.each(function() {
-      const year = parseInt($(this).val());
-      if (!isNaN(year) && year < fromVal) {
-        $(this).prop('disabled', true).hide();
-      } else {
-        $(this).prop('disabled', false).show();
+  // --- 2. Chart Setup ---
+  const ctx = document.getElementById('mainChart').getContext('2d');
+  
+  function initChart() {
+    chartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: { labels: [], datasets: [] },
+      options: {
+        indexAxis: 'y', 
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { x: { beginAtZero: true } }
       }
     });
+  }
+  initChart();
 
-    // Auto-reset invalid To-year
-    const currentTo = parseInt($('#yearToFilter').val());
-    if (currentTo && currentTo < fromVal) {
-      $('#yearToFilter').val('all');
-    }
+  // --- 3. Data Fetching ---
+  function fetchData() {
+    $('#loadingIndicator').removeClass('hidden');
+    $('#analysisTableBody').empty();
 
-    updateChart();
-  });
+    const params = {
+      'subjects[]': $('#subjectFilter').val(),
+      'year_from': $('#yearFromFilter').val(),
+      'year_to': $('#yearToFilter').val(),
+    };
 
-  // Core chart update logic
-  function updateChart() {
-    showLoading();
-    hideNoData();
+    $.ajax({
+      url: "{% url 'recommendation_data' %}",
+      data: params,
+      success: function(response) {
+        cachedData = response.data;
+        renderDashboard();
+      },
+      error: function(err) { console.error("Error", err); },
+      complete: function() { $('#loadingIndicator').addClass('hidden'); }
+    });
+  }
 
-    const subjects = $('#subjectFilter').val() || ['all'];
-    const yearFrom = $('#yearFromFilter').val();
-    const yearTo = $('#yearToFilter').val();
-    const instructors = $('#instructorFilter').val() || ['all'];
-    const showExperience = $('#showExperience').is(':checked');
-    const showTaught = $('#showTaught').is(':checked');
+  // --- 4. Render Logic ---
+  function renderDashboard() {
+    if(!cachedData) return;
 
-    const selectedMetrics = [];
-    if (showExperience) selectedMetrics.push('experience');
-    if (showTaught) selectedMetrics.push('taught');
+    // A. Update Chart (Top 10)
+    const sortedData = [...cachedData].sort((a, b) => b[currentMetric] - a[currentMetric]);
+    const top10 = sortedData.slice(0, 10);
+    
+    chartInstance.data.labels = top10.map(d => d.name);
+    
+    // UPDATED CHART LABEL LOGIC
+    const chartLabel = currentMetric === 'years_taught' ? 'Years Taught' : 'Years Experience';
+    const chartColor = currentMetric === 'years_taught' ? '#3B82F6' : '#10B981';
 
-    // No metric selected → show message
-    if (selectedMetrics.length === 0) {
-      hideLoading();
-      showNoData();
-      chart.data.labels = [];
-      chart.data.datasets = [];
-      chart.update();
+    chartInstance.data.datasets = [{
+      label: chartLabel,
+      data: top10.map(d => d[currentMetric]),
+      backgroundColor: chartColor,
+      borderRadius: 4
+    }];
+    chartInstance.update();
+
+    // B. Update Table
+    const tableBody = $('#analysisTableBody');
+    tableBody.empty();
+
+    if (sortedData.length === 0) {
+      tableBody.append('<tr><td colspan="5" class="text-center py-4 text-gray-500">No data found matching filters.</td></tr>');
       return;
     }
 
-    // Fetch both metrics in parallel
-    const fetches = selectedMetrics.map(metric =>
-      $.ajax({
-        url: "{% url 'recommendation_data' %}",
-        data: {
-          'subjects[]': subjects,
-          'year_from': yearFrom,
-          'year_to': yearTo,
-          'instructors[]': instructors,
-          'metric': metric
-        },
-        error: function(xhr) {
-          console.error("AJAX error:", xhr.status, xhr.responseText);
-        }
-      })
-    );
+    sortedData.forEach(d => {
+      let credContent = '-';
+      let credClass = "text-gray-400";
+      
+      if(d.credential_count > 0) {
+          credContent = `${d.credential_count} <span title="Has relevant credentials">🎖️</span>`;
+          credClass = "text-blue-600 font-bold";
+      }
 
-    Promise.all(fetches)
-      .then(results => {
-        chart.data.datasets = [];
-        if (results.length > 0 && results[0].labels)
-          chart.data.labels = results[0].labels;
-        else
-          chart.data.labels = [];
-
-        results.forEach((data, idx) => {
-          if (!data || !data.values || data.values.every(v => v === 0)) return;
-          const metric = selectedMetrics[idx];
-          const label = metric === 'experience' ? 'Years of Experience' : 'Times Taught';
-          const color = metric === 'experience' ? '#3B82F6' : '#10B981';
-
-          chart.data.datasets.push({
-            label: label,
-            data: data.values,
-            backgroundColor: color,
-            borderRadius: 8
-          });
-        });
-
-        const hasData = chart.data.datasets.some(ds => ds.data.some(v => v > 0));
-        if (!hasData) showNoData();
-        chart.update();
-      })
-      .catch(err => {
-        console.error("Promise error:", err);
-        showNoData();
-      })
-      .finally(() => hideLoading());
+      const row = `
+        <tr class="border-b border-gray-50 hover:bg-gray-50 transition">
+          <td class="py-3 font-medium text-gray-800">${d.name}</td>
+          <td class="py-3 text-gray-600 text-xs">${d.rank}</td>
+          <td class="py-3 text-right font-mono">${d.years_taught}</td> 
+          <td class="py-3 text-right font-mono">${d.experience_years}</td>
+          <td class="py-3 text-right ${credClass}">${credContent}</td>
+        </tr>
+      `;
+      tableBody.append(row);
+    });
   }
 
-  $('#subjectFilter, #yearFromFilter, #yearToFilter, #instructorFilter, #showExperience, #showTaught')
-    .on('change', updateChart);
+  // --- 5. Event Listeners ---
+  $('.metric-btn').on('click', function() {
+    // UI Toggle
+    $('.metric-btn').removeClass('bg-white shadow text-blue-600').addClass('text-gray-500 hover:bg-white');
+    $(this).removeClass('text-gray-500 hover:bg-white').addClass('bg-white shadow text-blue-600');
+    
+    // Logic Toggle
+    currentMetric = $(this).data('metric');
+    renderDashboard(); 
+  });
 
-  updateChart();
+  $('#subjectFilter, #yearFromFilter, #yearToFilter').on('change', fetchData);
+
+  // Initial Fetch (Ensures the correct button is active on load)
+  // Set the correct active button based on the default metric 'years_taught'
+  $(`.metric-btn[data-metric="years_taught"]`).click(); 
+  
+  // We call fetchData instead of clicking the button to avoid double-fetch if clicking the button triggers a render call that itself expects data to be present.
+  fetchData();
 });
 </script>
 {% endblock %}

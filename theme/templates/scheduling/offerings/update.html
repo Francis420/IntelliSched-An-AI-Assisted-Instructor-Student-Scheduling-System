@@ -29,6 +29,16 @@
                    min="1"
                    class="w-full p-2 border rounded-lg">
         </div>
+        
+        <div class="mb-4">
+            <label for="studentsPerSection" class="block font-semibold mb-2">
+                Number of Students per Section (Default)
+            </label>
+            <input type="number" id="studentsPerSection" name="studentsPerSection"
+                   value="{{ offering.defaultStudentsPerSection|default:40 }}"
+                   min="1"
+                   class="w-full p-2 border rounded-lg">
+        </div>
 
         <div class="flex justify-end">
             <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg shadow">

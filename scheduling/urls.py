@@ -36,4 +36,5 @@ urlpatterns = [
     path('subject-offerings/live/', views.subjectOfferingListLive, name='subjectOfferingListLive'),
     path('subject-offerings/update/<int:offeringId>/', views.subjectOfferingUpdate, name='subjectOfferingUpdate'),
     path("subject-offerings/generate-sections/<int:semesterId>/<int:curriculumId>/", views.generateSections, name="generateSections",),
+    path('offerings/<int:offeringId>/sections/config/', views.sectionConfigList, name='sectionConfigList'),
 ]

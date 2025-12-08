@@ -90,7 +90,7 @@ def roomCreate(request):
         roomCode = request.POST.get('roomCode')
         building = request.POST.get('building')
         capacity = request.POST.get('capacity')
-        type = request.POST.get('type')
+        type = request.POST.get('type') 
         isActive = request.POST.get('isActive') == 'on'
         notes = request.POST.get('notes')
 
@@ -119,7 +119,7 @@ def roomUpdate(request, roomId):
         room.roomCode = request.POST.get('roomCode')
         room.building = request.POST.get('building')
         room.capacity = request.POST.get('capacity')
-        room.type = request.POST.get('type')
+        room.type = request.POST.get('type') 
         room.isActive = request.POST.get('isActive') == 'on'
         room.notes = request.POST.get('notes')
         room.save()
@@ -708,7 +708,8 @@ def subjectOfferingList(request):
             SubjectOffering.objects.get_or_create(
                 subject=subj,
                 semester=selected_semester,
-                defaults={"numberOfSections": 6}
+                # UPDATED: Set a default for numberOfSections and the new student count
+                defaults={"numberOfSections": 6, "defaultStudentsPerSection": 40} 
             )
         offerings = SubjectOffering.objects.filter(
             semester=selected_semester,
@@ -790,6 +791,7 @@ def subjectOfferingUpdate(request, offeringId):
 
 @login_required
 @has_role('deptHead')
+@transaction.atomic
 def generateSections(request, semesterId, curriculumId):
     semester = get_object_or_404(Semester, pk=semesterId)
     curriculum = get_object_or_404(Curriculum, pk=curriculumId)
@@ -798,17 +800,21 @@ def generateSections(request, semesterId, curriculumId):
         semester=semester,
         subject__curriculum=curriculum,
         status="active"
-    )
+    ).select_related('subject')
+    
+    # Default capacity for newly created sections
+    DEFAULT_STUDENT_COUNT = 40
 
-    added, removed = 0, 0
+    added, removed, updated_units = 0, 0, 0 # Renamed 'updated_students' to 'updated_units' as we only force save()
     letters = list(string.ascii_uppercase)
 
     for offering in offerings:
+        required_sections = offering.numberOfSections
         existing_sections = list(
             Section.objects.filter(subject=offering.subject, semester=semester).order_by("sectionId")
         )
-        required_sections = offering.numberOfSections
 
+        # 1. Create missing sections
         if len(existing_sections) < required_sections:
             for i in range(len(existing_sections), required_sections):
                 section_code = f"{offering.subject.code}-{letters[i]}"
@@ -816,25 +822,89 @@ def generateSections(request, semesterId, curriculumId):
                     subject=offering.subject,
                     semester=semester,
                     sectionCode=section_code,
+                    numberOfStudents=DEFAULT_STUDENT_COUNT, # <-- NEW: Set default student count
                     status="active",
                 )
                 added += 1
 
+        # 2. Remove excess sections
         elif len(existing_sections) > required_sections:
             to_remove = existing_sections[required_sections:]
             for section in to_remove:
                 section.delete()
                 removed += 1
+        
+        # 3. Update existing sections (to ensure units/minutes are synced from Subject model)
+        for section in existing_sections[:required_sections]:
+            # If a section was created with default=0 (before this change), update it to a standard default
+            if section.numberOfStudents == 0:
+                 section.numberOfStudents = DEFAULT_STUDENT_COUNT
+                 section.save()
+                 updated_units += 1 # Use this counter for general updates
+            else:
+                 # Call save() to ensure units/minutes/lab status are updated from the Subject's save() hook
+                 section.save()
+                 updated_units += 1
 
-    if added or removed:
+
+    if added or removed or updated_units:
         messages.success(
             request,
-            f"Sections updated: {added} added, {removed} removed for {semester.name} ({curriculum.name})."
+            f"Sections successfully updated for {semester.name} ({curriculum.name}): {added} added, {removed} removed."
         )
     else:
         messages.info(
             request,
-            f"All sections already match the set numbers for {semester.name} ({curriculum.name})."
+            f"All sections already match the required count for {semester.name} ({curriculum.name})."
         )
 
     return redirect("subjectOfferingList")
+
+# Add this new function to your views.py
+from django.db import transaction
+
+@login_required
+@has_role('deptHead')
+def sectionConfigList(request, offeringId):
+    offering = get_object_or_404(SubjectOffering, pk=offeringId)
+    
+    sections = Section.objects.filter(
+        subject=offering.subject, 
+        semester=offering.semester,
+        status='active'
+    ).order_by('sectionCode')
+
+    if request.method == 'POST':
+        with transaction.atomic():
+            # Iterate through POST data and update sections
+            for section in sections:
+                # The input field names in the template will be 'students_SECTION_ID'
+                field_name = f'students_{section.sectionId}'
+                
+                try:
+                    new_capacity = request.POST.get(field_name)
+                    if new_capacity is not None:
+                        new_capacity = int(new_capacity)
+                        if new_capacity < 1:
+                            raise ValueError("Capacity must be a positive number.")
+
+                        if section.numberOfStudents != new_capacity:
+                            section.numberOfStudents = new_capacity
+                            section.save()
+                            
+                except ValueError as e:
+                    messages.error(request, f"Invalid capacity entered for section {section.sectionCode}.")
+                    # Render the page again to show the error
+                    return render(request, "scheduling/sections/config_list.html", {
+                        "offering": offering,
+                        "sections": sections,
+                    })
+        
+            messages.success(request, f"Section capacities for {offering.subject.code} updated successfully.")
+            return redirect('subjectOfferingList')
+
+    # GET request
+    return render(request, "scheduling/sections/config_list.html", {
+        "offering": offering,
+        "sections": sections,
+    })

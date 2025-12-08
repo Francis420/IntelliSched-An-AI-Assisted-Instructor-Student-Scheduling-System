@@ -91,6 +91,7 @@ class Section(models.Model):
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
     semester = models.ForeignKey(Semester, on_delete=models.CASCADE)
     sectionCode = models.CharField(max_length=50)
+    numberOfStudents = models.IntegerField(default=0)
 
     units = models.IntegerField()
     lectureMinutes = models.IntegerField()
@@ -109,10 +110,6 @@ class Section(models.Model):
         return f"{self.subject.code} - Section {self.sectionCode}"
 
     def save(self, *args, **kwargs):
-        """
-        Automatically copies relevant data from the Subject model
-        so that schedulers don't need to perform extra joins.
-        """
         if self.subject:
             self.units = self.subject.units
             self.lectureMinutes = self.subject.durationMinutes
@@ -141,7 +138,6 @@ class Room(models.Model):
     roomCode = models.CharField(max_length=20)
     building = models.CharField(max_length=100)
     capacity = models.IntegerField()
-    # type = models.CharField(max_length=50)
     type = models.CharField(max_length=20,
         choices=[
             ('lecture', 'Lecture'),
@@ -240,6 +236,7 @@ class GenEdSchedule(models.Model):
 class SubjectOffering(models.Model):
     subject = models.ForeignKey("Subject", on_delete=models.CASCADE, related_name="offerings")
     semester = models.ForeignKey("Semester", on_delete=models.CASCADE, related_name="offerings")
+    defaultStudentsPerSection = models.IntegerField(default=40)
     numberOfSections = models.PositiveIntegerField(default=6)
     status = models.CharField(
         max_length=20,

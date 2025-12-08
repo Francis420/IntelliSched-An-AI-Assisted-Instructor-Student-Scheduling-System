@@ -15,7 +15,11 @@ from core.models import (
     Student, 
     UserLogin,
 )
-from instructors.models import TeachingHistory, InstructorExperience
+from instructors.models import (
+    TeachingHistory, 
+    InstructorExperience, 
+    InstructorCredentials
+)
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import make_password
@@ -602,22 +606,19 @@ def studentAccountUpdate(request, userId):
 # ------------ Recommendation System ----------
 def normalize_year(value):
     """Extract numeric start year from '2020-2021'."""
-    if not value:
-        return None
+    if not value: return None
     try:
-        return int(value.split("-")[0].strip())
+        # We must convert to string before splitting, as the value might be an object/None initially
+        return int(str(value).split("-")[0].strip())
     except (ValueError, AttributeError):
         return None
-
 
 def recommendation_dashboard(request):
     subjects = Subject.objects.filter(isActive=True).values("subjectId", "code", "name")
     semesters = Semester.objects.values_list("academicYear", flat=True).distinct()
-
-    # Extract only numeric years from academicYear (e.g. "2020-2021" → 2020)
     years = sorted({normalize_year(y) for y in semesters if normalize_year(y)})
-
-    instructors = Instructor.objects.all()
+    
+    instructors = Instructor.objects.all().order_by('userlogin__user__lastName')
 
     context = {
         "subjects": sorted(subjects, key=lambda s: s["code"]),
@@ -626,85 +627,84 @@ def recommendation_dashboard(request):
     }
     return render(request, "core/recommendation/recommendationDashboard.html", context)
 
-
 def recommendation_data(request):
-    subjects = request.GET.getlist("subjects[]")
+    # 1. Parse Filters
+    subject_names = request.GET.getlist("subjects[]")
     year_from = normalize_year(request.GET.get("year_from"))
     year_to = normalize_year(request.GET.get("year_to"))
-    instructors = request.GET.getlist("instructors[]")
-    metric = request.GET.get("metric", "experience")
+    
+    # 2. Base Queryset
+    # FIX: Instructor.objects.all() is used
+    instructors_qs = Instructor.objects.all().select_related('rank').prefetch_related(
+        'teachingHistory__semester',
+        'experiences',
+        'credentials__relatedSubjects'
+    )
 
-    metric_colors = {
-        "experience": "#3B82F6",  # Blue
-        "taught": "#10B981",      # Green
-    }
-
-    data = []
-    instructors_qs = Instructor.objects.all()
-
-    if instructors and "all" not in instructors:
-        instructors_qs = instructors_qs.filter(instructorId__in=instructors)
+    results = []
 
     for inst in instructors_qs:
-        label = inst.full_name
+        
+        # --- Metric 1: Years Taught (Count unique academic years taught) ---
+        history_qs = inst.teachingHistory.all()
+        
+        # Subject Filter
+        if subject_names and "all" not in subject_names:
+            # Note: Assuming 'subject' is a ForeignKey on TeachingHistory
+            history_qs = history_qs.filter(subject__name__in=subject_names)
+        
+        # Year Filter and collection of unique years
+        years_taught_set = set()
+        for h in history_qs:
+            y = normalize_year(h.semester.academicYear)
+            if y:
+                if (not year_from or y >= year_from) and (not year_to or y <= year_to):
+                    years_taught_set.add(y)
+        
+        years_taught_count = len(years_taught_set)
 
-        if metric == "taught":
-            histories = TeachingHistory.objects.filter(instructor=inst)
-            if subjects and "all" not in subjects:
-                histories = histories.filter(subject__name__in=subjects)
+        # --- Metric 2: External/Teaching Experience (Years) ---
+        exp_years = 0.0
+        relevant_exps = inst.experiences.filter(experienceType="Teaching Experience")
+        
+        if subject_names and "all" not in subject_names:
+             # Filtering by relatedSubjects M2M field
+             relevant_exps = relevant_exps.filter(relatedSubjects__name__in=subject_names).distinct()
+        
+        for exp in relevant_exps:
+            start = exp.startDate.year
+            end = exp.endDate.year if exp.endDate else date.today().year
+            
+            # Determine the intersection of the experience range and the filter range
+            search_start = year_from if year_from else 0
+            search_end = year_to if year_to else date.today().year # Default to current year for 'to' filter
+            
+            actual_start = max(start, search_start)
+            actual_end = min(end, search_end)
+            
+            # Add the duration of the overlapping period
+            if actual_start <= actual_end:
+                exp_years += (actual_end - actual_start) + 1 
 
-            filtered_histories = []
-            for h in histories:
-                year = normalize_year(h.semester.academicYear)
-                if not year:
-                    continue
-                if (not year_from or year >= year_from) and (not year_to or year <= year_to):
-                    filtered_histories.append(h)
-            total_times = sum(h.timesTaught for h in filtered_histories)
-            value = total_times
+        # --- Metric 3: Relevant Credentials ---
+        cred_qs = inst.credentials.all()
+        if subject_names and "all" not in subject_names:
+            # Filtering by relatedSubjects M2M field on InstructorCredentials
+            cred_qs = cred_qs.filter(relatedSubjects__name__in=subject_names)
+        
+        cred_count = cred_qs.distinct().count()
 
-        else:
-            total_years = 0.0
-
-            experiences = InstructorExperience.objects.filter(
-                instructor=inst,
-                experienceType="Teaching Experience"
-            )
-            if subjects and "all" not in subjects:
-                experiences = experiences.filter(relatedSubjects__name__in=subjects).distinct()
-
-            for exp in experiences:
-                start = exp.startDate.year
-                end = exp.endDate.year if exp.endDate else date.today().year
-
-                if (not year_from or end >= year_from) and (not year_to or start <= year_to):
-                    start = max(start, year_from or start)
-                    end = min(end, year_to or end)
-                    total_years += max(0, end - start + 1)
-
-            internal_histories = TeachingHistory.objects.filter(instructor=inst)
-            if subjects and "all" not in subjects:
-                internal_histories = internal_histories.filter(subject__name__in=subjects)
-
-            years_taught = set()
-            for h in internal_histories:
-                year = normalize_year(h.semester.academicYear)
-                if not year:
-                    continue
-                if (not year_from or year >= year_from) and (not year_to or year <= year_to):
-                    years_taught.add(year)
-            total_years += len(years_taught)
-
-            value = total_years
-
-        data.append({
-            "label": label,
-            "value": round(value),
-            "color": metric_colors.get(metric, "#3B82F6"),
+        # --- Build Result Object ---
+        results.append({
+            "id": inst.instructorId,
+            "name": inst.full_name,
+            "rank": inst.rank.name if hasattr(inst, 'rank') and inst.rank else "N/A", 
+            "years_taught": years_taught_count,
+            "experience_years": round(exp_years, 1),
+            "credential_count": cred_count
         })
 
-    return JsonResponse({
-        "labels": [d["label"] for d in data],
-        "values": [d["value"] for d in data],
-        "colors": [d["color"] for d in data],
-    })
+    # Default sort by Years Taught descending
+    results.sort(key=lambda x: x['years_taught'], reverse=True)
+
+    return JsonResponse({"data": results})

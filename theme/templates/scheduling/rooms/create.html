@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% block header %}| Add New Room{% endblock %}
 {% block content %}
 <div class="max-w-xl mx-auto mt-6 p-6 bg-white rounded-2xl shadow">
   <h2 class="text-2xl font-semibold mb-4">Add New Room</h2>
@@ -23,7 +24,10 @@
 
     <div>
       <label for="type" class="block text-sm font-medium text-gray-700">Type</label>
-      <input type="text" name="type" id="type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
+      <select name="type" id="type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
+        <option value="lecture">Lecture</option>
+        <option value="laboratory">Laboratory</option>
+      </select>
     </div>
 
     <div class="flex items-center">
