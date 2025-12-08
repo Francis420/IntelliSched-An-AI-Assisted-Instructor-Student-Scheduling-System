@@ -20,12 +20,30 @@ WEEK_MINUTES = 7 * 24 * 60
 MATCH_WEIGHT_SCALE = 100
 REAL_ROOM_REWARD = 10          
 
-# Penalties
+# Penalties & Tuning
 TBA_PENALTY_NORMAL = 50        
 TBA_PENALTY_PRIORITY = 100000  
+
 WEEKEND_TIME_PENALTY_PER_MINUTE = 5000 
 WEEKDAY_EVENING_PENALTY_PER_MINUTE = 100
-GLOBAL_OVERLOAD_COST_PER_MIN = 500
+
+# --- TUNING FOR BALANCE (The "Fix") ---
+
+# 1. SATURATION REWARD (Maximize Normal Load)
+# High reward: Solver will fight to reach exactly 18.0 hours normal load.
+NORMAL_LOAD_REWARD_PER_MIN = 500            
+
+# 2. FAIRNESS PENALTY (Balance the Overload)
+# Quadratic (Squaring): Punishes the "11.5 vs 3.5" gap severely.
+OVERLOAD_FAIRNESS_PENALTY = 50000 
+
+# 3. DAILY SPREAD PENALTY (Linear)
+# We reverted this to Linear (Simple) to fix the "UNKNOWN" timeout error.
+DAILY_SPREAD_PENALTY = 50
+MAX_DESIRED_DAILY_MIN = 360 # 6 hours
+
+# 4. Base Overload Cost
+GLOBAL_OVERLOAD_COST_PER_MIN = 10         
 
 # -------------------- Timeslot metadata --------------------
 def generate_timeslot_meta():
@@ -103,11 +121,10 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
     instructors = list(data["instructors"])
     instructor_caps = data["instructor_caps"]
     
-    # --- Data Handling ---
     room_types = data.get("room_types", {i: 'lecture' for i in range(len(rooms))}) 
-    room_capacities = data.get("room_capacities", {i: 999 for i in range(len(rooms))}) # <--- NEW
+    room_capacities = data.get("room_capacities", {i: 999 for i in range(len(rooms))}) 
     section_priority_map = data.get("section_priority_map", {}) 
-    section_num_students = data.get("section_num_students", {}) # <--- NEW
+    section_num_students = data.get("section_num_students", {})
     
     num_rooms = len(rooms)
     num_instructors = len(instructors)
@@ -117,7 +134,7 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
     else:
         TBA_ROOM_IDX = num_rooms - 1 
 
-    # --- Robust Room Domains (Base Sets by Type) ---
+    # --- Robust Room Domains ---
     lecture_base_indices = {TBA_ROOM_IDX}
     lab_base_indices = {TBA_ROOM_IDX}
 
@@ -155,14 +172,13 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
                 "task_id": f"{s}_LAB", "section": s, "kind": "lab", "dur": lab_d
             })
 
-    # --- Variables & Domain Definitions ---
+    # --- Variables ---
     task_vars = {} 
     assigned_instr = defaultdict(list)
     assigned_room = defaultdict(list)
     instr_intervals = defaultdict(list)
     room_intervals = defaultdict(list) 
 
-    # Helper: Allowed Slots
     allowed_slots_for_duration = {}
     def get_allowed_slots(dur):
         if dur not in allowed_slots_for_duration:
@@ -187,12 +203,11 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
         dur = int(t["dur"])
         allowed_slots = get_allowed_slots(dur)
 
-        # Safety Check
         if not allowed_slots:
             print(f"[Solver] ERROR: Task {tid} fits NO time slots! Skipping.")
             continue 
 
-        # 1. Time Variables
+        # Time
         slot_var = model.NewIntVarFromDomain(cp_model.Domain.FromValues(allowed_slots), f"slot_{tid}")
         start_var = model.NewIntVar(0, WEEK_MINUTES - 1, f"start_{tid}")
         end_var = model.NewIntVar(0, WEEK_MINUTES, f"end_{tid}")
@@ -222,37 +237,28 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
         ends_early = model.NewBoolVar(f"{tid}_ends_early")
         model.Add(end_mod <= 1020).OnlyEnforceIf(ends_early) 
         model.Add(end_mod > 1020).OnlyEnforceIf(ends_early.Not())
-
         starts_late = model.NewBoolVar(f"{tid}_starts_late")
         model.Add(start_mod >= 1020).OnlyEnforceIf(starts_late)
         model.Add(start_mod < 1020).OnlyEnforceIf(starts_late.Not())
 
         model.AddBoolOr([ends_early, starts_late]).OnlyEnforceIf(is_weekday)
 
-        # 2. Room Variables (Type + Capacity)
+        # Room (Capacity + Type)
         base_indices = lab_base_indices if t["kind"] == "lab" else lecture_base_indices
         required_students = section_num_students.get(t["section"], 0)
-        
-        # Filter rooms: Must be correct type AND have enough capacity
         valid_indices = []
         for r_idx in base_indices:
-            # TBA is always allowed (has infinite capacity in data extractor)
             if r_idx == TBA_ROOM_IDX:
                 valid_indices.append(r_idx)
                 continue
-            
-            # Check capacity
             cap = room_capacities.get(r_idx, 0)
             if cap >= required_students:
                 valid_indices.append(r_idx)
-        
-        # Fallback if no room is big enough (Should rarely happen due to TBA)
-        if not valid_indices:
-            valid_indices = [TBA_ROOM_IDX]
+        if not valid_indices: valid_indices = [TBA_ROOM_IDX]
 
         room_var = model.NewIntVarFromDomain(cp_model.Domain.FromValues(sorted(valid_indices)), f"room_{tid}")
         
-        # 3. Instructor Variable
+        # Instructor
         instr_var = model.NewIntVar(0, max(0, num_instructors - 1), f"instr_{tid}")
 
         task_vars[tid] = {
@@ -261,7 +267,7 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
             "kind": t["kind"], "section": t["section"]
         }
 
-        # --- Intervals ---
+        # Intervals
         for i_idx in range(num_instructors):
             b = model.NewBoolVar(f"assign_{tid}_instr{i_idx}")
             assigned_instr[(tid, i_idx)] = b 
@@ -281,20 +287,19 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
                 room_intervals[r_idx].append(iv)
         model.Add(sum(assigned_room[(tid, r)] for r in range(num_rooms)) == 1)
 
-        # Weekend Room Lockout
+        # Weekend Lockout
         is_weekend_check = model.NewBoolVar(f"{tid}_check_weekend")
         model.Add(day_var >= 5).OnlyEnforceIf(is_weekend_check)
         model.Add(day_var < 5).OnlyEnforceIf(is_weekend_check.Not())
         model.Add(room_var == TBA_ROOM_IDX).OnlyEnforceIf(is_weekend_check)
 
-    # --- Overlap Constraints ---
+    # Overlaps
     for i_idx, ivs in instr_intervals.items():
         if ivs: model.AddNoOverlap(ivs)
-    
     for r_idx, ivs in room_intervals.items():
         if ivs: model.AddNoOverlap(ivs)
 
-    # --- Linking & Gaps ---
+    # Links
     section_to_tasks = defaultdict(list)
     for t in tasks:
         if t["task_id"] in task_vars:
@@ -303,7 +308,6 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
     for sec, tlist in section_to_tasks.items():
         lects = [t for t in tlist if t["kind"] == "lecture"]
         labs = [t for t in tlist if t["kind"] == "lab"]
-        
         for l_task in labs:
             for lect_task in lects:
                 model.Add(task_vars[l_task["task_id"]]["instr"] == task_vars[lect_task["task_id"]]["instr"])
@@ -320,7 +324,7 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
             model.AddAbsEquality(diff, vA["start"] - vB["start"])
             model.Add(diff >= min_gap)
 
-    # --- GenEd Constraints ---
+    # GenEd
     for g_day, g_start, g_end in data.get("gened_blocks", []):
         g_s_glob = g_day * 1440 + g_start
         g_e_glob = g_day * 1440 + g_end
@@ -339,6 +343,7 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
     # -------------------- Load Calculation & Objectives --------------------
     objective_terms = []
     
+    # Precompute Status
     task_is_overtime = {} 
     for tid, tv in task_vars.items():
         is_weekend = model.NewBoolVar(f"{tid}_is_we")
@@ -356,6 +361,7 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
         model.AddBoolAnd([is_weekend.Not(), is_evening.Not()]).OnlyEnforceIf(is_ot.Not())
         task_is_overtime[tid] = is_ot
 
+    # Instructor Totals
     for i_idx, instr_id in enumerate(instructors):
         caps = instructor_caps.get(instr_id, {})
         n_lim = caps.get("normal_limit_min", 40 * 60)
@@ -388,9 +394,22 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
         model.Add(tot_norm == sum(norm_terms))
         model.Add(tot_over == sum(over_terms))
         
+        # --- BALANCED OBJECTIVES ---
+        
+        # 1. Base Cost (Keep Low)
         objective_terms.append(tot_over * -GLOBAL_OVERLOAD_COST_PER_MIN)
 
-        # Spreading
+        # 2. Saturation Reward (High) - Fill to 18.0 hrs
+        objective_terms.append(tot_norm * NORMAL_LOAD_REWARD_PER_MIN)
+
+        # 3. Overload Fairness (Quadratic) - Balance the overtime
+        # We KEEP this one quadratic because it's the most critical for your specific request
+        sq_over = model.NewIntVar(0, o_lim * o_lim, f"sq_over_{i_idx}")
+        model.AddMultiplicationEquality(sq_over, [tot_over, tot_over])
+        objective_terms.append(sq_over * -OVERLOAD_FAIRNESS_PENALTY)
+        
+        # 4. Daily Spreading (Simplified to Linear)
+        # Replaces the complex daily squares that caused UNKNOWN
         for d in range(7):
             d_terms = []
             for t in tasks:
@@ -401,7 +420,6 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
                 day_match = model.NewBoolVar(f"{tid}_on_{d}")
                 model.Add(task_vars[tid]["day"] == d).OnlyEnforceIf(day_match)
                 model.Add(task_vars[tid]["day"] != d).OnlyEnforceIf(day_match.Not())
-                
                 active = model.NewBoolVar(f"{tid}_act_{d}_{i_idx}")
                 model.AddBoolAnd([assigned, day_match]).OnlyEnforceIf(active)
                 model.AddBoolOr([assigned.Not(), day_match.Not()]).OnlyEnforceIf(active.Not())
@@ -410,9 +428,11 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
             daily_sum = model.NewIntVar(0, 1440, f"ds_{i_idx}_{d}")
             model.Add(daily_sum == sum(d_terms))
             
-            sq = model.NewIntVar(0, 1440*1440, f"sq_{i_idx}_{d}")
-            model.AddMultiplicationEquality(sq, [daily_sum, daily_sum])
-            objective_terms.append(sq * -1)
+            # Linear Soft Limit (Fast)
+            excess = model.NewIntVar(0, 1440, f"exc_{i_idx}_{d}")
+            # excess >= daily_sum - 360
+            model.Add(excess >= daily_sum - MAX_DESIRED_DAILY_MIN)
+            objective_terms.append(excess * -DAILY_SPREAD_PENALTY)
 
     # --- Other Objectives ---
     matches = data.get("matches", {})
