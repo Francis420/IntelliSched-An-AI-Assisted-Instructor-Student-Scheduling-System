@@ -7,6 +7,9 @@ from instructors.models import (
     InstructorCredentials, 
     InstructorSubjectPreference,
     TeachingHistory,
+    InstructorRank,
+    InstructorDesignation,
+    InstructorAcademicAttainment,
 )
 from core.models import UserLogin
 from scheduling.models import Semester
@@ -789,3 +792,257 @@ def teachingHistoryDelete(request, teachingId):
     return redirect('instructorDashboard')
 
 
+
+# ---------- Instructor Rank Configuration ----------
+@login_required
+@has_role('deptHead') 
+def instructorRankList(request):
+    ranks = InstructorRank.objects.all()
+    
+    return render(request, "instructors/ranks/list.html", {"ranks": ranks})
+
+@login_required
+@has_role('deptHead')
+def instructorRankCreate(request):
+    if request.method == "POST":
+        try:
+            name = request.POST.get('name').strip()
+            
+            data = {
+                'instructionHours': int(request.POST.get('instructionHours', 0)),
+                'researchHours': int(request.POST.get('researchHours', 0)),
+                'extensionHours': int(request.POST.get('extensionHours', 0)),
+                'productionHours': int(request.POST.get('productionHours', 0)),
+                'consultationHours': int(request.POST.get('consultationHours', 0)),
+                'classAdviserHours': int(request.POST.get('classAdviserHours', 0)),
+            }
+            
+            if not name:
+                messages.error(request, "Rank name cannot be empty.")
+                return redirect('instructorRankCreate')
+
+            for key, value in data.items():
+                if value < 0:
+                    messages.error(request, f"Hours for {key} must be non-negative.")
+                    return redirect('instructorRankCreate')
+            
+            InstructorRank.objects.create(
+                name=name,
+                **data
+            )
+            
+            messages.success(request, f"Instructor Rank '{name}' created successfully.")
+            return redirect('instructorRankList')
+            
+        except ValueError:
+            messages.error(request, "Invalid number entered for one of the hour fields.")
+        except Exception as e:
+            messages.error(request, f"An error occurred: {e}")
+
+    return render(request, "instructors/ranks/create.html")
+
+@login_required
+@has_role('deptHead')
+def instructorRankUpdate(request, rankId):
+    rank = get_object_or_404(InstructorRank, pk=rankId)
+
+    if request.method == "POST":
+        try:
+            rank.name = request.POST.get('name').strip()
+            
+            rank.instructionHours = int(request.POST.get('instructionHours', rank.instructionHours))
+            rank.researchHours = int(request.POST.get('researchHours', rank.researchHours))
+            rank.extensionHours = int(request.POST.get('extensionHours', rank.extensionHours))
+            rank.productionHours = int(request.POST.get('productionHours', rank.productionHours))
+            rank.consultationHours = int(request.POST.get('consultationHours', rank.consultationHours))
+            rank.classAdviserHours = int(request.POST.get('classAdviserHours', rank.classAdviserHours))
+
+            if not rank.name:
+                messages.error(request, "Rank name cannot be empty.")
+                # Fall through to render
+            elif any(h < 0 for h in [rank.instructionHours, rank.researchHours, rank.extensionHours, rank.productionHours, rank.consultationHours, rank.classAdviserHours]):
+                messages.error(request, "All hour fields must be non-negative.")
+                # Fall through to render
+            else:
+                rank.save()
+                messages.success(request, f"Instructor Rank '{rank.name}' updated successfully.")
+                return redirect('instructorRankList')
+
+        except ValueError:
+            messages.error(request, "Invalid number entered for one of the hour fields.")
+        except Exception as e:
+            messages.error(request, f"An error occurred: {e}")
+
+    return render(request, "instructors/ranks/update.html", {"rank": rank})
+
+
+
+# ---------- Instructor Designation Configuration ----------
+@login_required
+@has_role('deptHead') 
+def instructorDesignationList(request):
+    designations = InstructorDesignation.objects.all()
+    
+    return render(request, "instructors/designations/list.html", {
+        "designations": designations,
+    })
+
+@login_required
+@has_role('deptHead')
+def instructorDesignationCreate(request):
+    if request.method == "POST":
+        try:
+            name = request.POST.get('name').strip()
+            
+            # Retrieve all hour fields
+            data = {
+                'adminSupervisionHours': int(request.POST.get('adminSupervisionHours', 0)),
+                'instructionHours': int(request.POST.get('instructionHours', 0)),
+                'researchHours': int(request.POST.get('researchHours', 0)),
+                'extensionHours': int(request.POST.get('extensionHours', 0)),
+                'productionHours': int(request.POST.get('productionHours', 0)),
+                'consultationHours': int(request.POST.get('consultationHours', 0)),
+            }
+            
+            # Input validation
+            if not name:
+                messages.error(request, "Designation name cannot be empty.")
+                return redirect('instructorDesignationCreate')
+
+            for key, value in data.items():
+                if value < 0:
+                    messages.error(request, f"Hours for {key} must be non-negative.")
+                    return redirect('instructorDesignationCreate')
+            
+            # Create the object
+            InstructorDesignation.objects.create(
+                name=name,
+                **data
+            )
+            
+            messages.success(request, f"Instructor Designation '{name}' created successfully.")
+            return redirect('instructorDesignationList')
+            
+        except ValueError:
+            messages.error(request, "Invalid number entered for one of the hour fields.")
+        except Exception as e:
+            messages.error(request, f"An error occurred: {e}")
+
+    return render(request, "instructors/designations/create.html")
+
+
+@login_required
+@has_role('deptHead')
+def instructorDesignationUpdate(request, designationId):
+    designation = get_object_or_404(InstructorDesignation, pk=designationId)
+
+    if request.method == "POST":
+        try:
+            designation.name = request.POST.get('name').strip()
+            
+            # Retrieve and update all hour fields
+            designation.adminSupervisionHours = int(request.POST.get('adminSupervisionHours', designation.adminSupervisionHours))
+            designation.instructionHours = int(request.POST.get('instructionHours', designation.instructionHours))
+            designation.researchHours = int(request.POST.get('researchHours', designation.researchHours))
+            designation.extensionHours = int(request.POST.get('extensionHours', designation.extensionHours))
+            designation.productionHours = int(request.POST.get('productionHours', designation.productionHours))
+            designation.consultationHours = int(request.POST.get('consultationHours', designation.consultationHours))
+
+            # Basic Validation
+            if not designation.name:
+                messages.error(request, "Designation name cannot be empty.")
+            elif any(h < 0 for h in [designation.adminSupervisionHours, designation.instructionHours, designation.researchHours, designation.extensionHours, designation.productionHours, designation.consultationHours]):
+                messages.error(request, "All hour fields must be non-negative.")
+            else:
+                designation.save()
+                messages.success(request, f"Instructor Designation '{designation.name}' updated successfully.")
+                return redirect('instructorDesignationList')
+
+        except ValueError:
+            messages.error(request, "Invalid number entered for one of the hour fields.")
+        except Exception as e:
+            messages.error(request, f"An error occurred: {e}")
+
+    return render(request, "instructors/designations/update.html", {
+        "designation": designation,
+    })
+
+
+# ---------- Instructor Academic Attainment Configuration ----------
+@login_required
+@has_role('deptHead') 
+def instructorAttainmentList(request):
+    attainments = InstructorAcademicAttainment.objects.all()
+    
+    return render(request, "instructors/attainments/list.html", {
+        "attainments": attainments,
+    })
+
+@login_required
+@has_role('deptHead')
+def instructorAttainmentCreate(request):
+    if request.method == "POST":
+        try:
+            name = request.POST.get('name').strip()
+            suffix = request.POST.get('suffix').strip()
+            
+            data = {
+                'overloadUnitsHasDesignation': int(request.POST.get('overloadUnitsHasDesignation', 0)),
+                'overloadUnitsNoDesignation': int(request.POST.get('overloadUnitsNoDesignation', 0)),
+            }
+            
+            if not name:
+                messages.error(request, "Attainment name cannot be empty.")
+                return redirect('instructorAttainmentCreate')
+
+            for key, value in data.items():
+                if value < 0:
+                    messages.error(request, f"Units must be non-negative.")
+                    return redirect('instructorAttainmentCreate')
+            
+            InstructorAcademicAttainment.objects.create(
+                name=name,
+                suffix=suffix,
+                **data
+            )
+            
+            messages.success(request, f"Academic Attainment '{name}' created successfully.")
+            return redirect('instructorAttainmentList')
+            
+        except ValueError:
+            messages.error(request, "Invalid number entered for one of the unit fields.")
+        except Exception as e:
+            messages.error(request, f"An error occurred: {e}")
+
+    return render(request, "instructors/attainments/create.html")
+
+@login_required
+@has_role('deptHead')
+def instructorAttainmentUpdate(request, attainmentId):
+    attainment = get_object_or_404(InstructorAcademicAttainment, pk=attainmentId)
+
+    if request.method == "POST":
+        try:
+            attainment.name = request.POST.get('name').strip()
+            attainment.suffix = request.POST.get('suffix').strip()
+            
+            attainment.overloadUnitsHasDesignation = int(request.POST.get('overloadUnitsHasDesignation', attainment.overloadUnitsHasDesignation))
+            attainment.overloadUnitsNoDesignation = int(request.POST.get('overloadUnitsNoDesignation', attainment.overloadUnitsNoDesignation))
+
+            if not attainment.name:
+                messages.error(request, "Attainment name cannot be empty.")
+            elif attainment.overloadUnitsHasDesignation < 0 or attainment.overloadUnitsNoDesignation < 0:
+                messages.error(request, "All unit fields must be non-negative.")
+            else:
+                attainment.save()
+                messages.success(request, f"Academic Attainment '{attainment.name}' updated successfully.")
+                return redirect('instructorAttainmentList')
+
+        except ValueError:
+            messages.error(request, "Invalid number entered for one of the unit fields.")
+        except Exception as e:
+            messages.error(request, f"An error occurred: {e}")
+
+    return render(request, "instructors/attainments/update.html", {
+        "attainment": attainment,
+    })

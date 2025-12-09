@@ -39,4 +39,19 @@ urlpatterns = [
     path('teachingHistory/create/', views.teachingHistoryCreate, name='teachingHistoryCreate'),
     path('teachingHistory/<int:teachingId>/update/', views.teachingHistoryUpdate, name='teachingHistoryUpdate'),
     path('teachingHistory/<int:teachingId>/delete/', views.teachingHistoryDelete, name='teachingHistoryDelete'),
+
+    # Instructor Ranks
+    path('ranks/', views.instructorRankList, name='instructorRankList'),
+    path('ranks/create/', views.instructorRankCreate, name='instructorRankCreate'),
+    path('ranks/<int:rankId>/update/', views.instructorRankUpdate, name='instructorRankUpdate'),
+
+    # Instructor Designations
+    path('designations/', views.instructorDesignationList, name='instructorDesignationList'),
+    path('designations/create/', views.instructorDesignationCreate, name='instructorDesignationCreate'),
+    path('designations/<int:designationId>/update/', views.instructorDesignationUpdate, name='instructorDesignationUpdate'),
+
+    # Instructor Academic Attainments
+    path('attainments/', views.instructorAttainmentList, name='instructorAttainmentList'),
+    path('attainments/create/', views.instructorAttainmentCreate, name='instructorAttainmentCreate'),
+    path('attainments/<int:attainmentId>/update/', views.instructorAttainmentUpdate, name='instructorAttainmentUpdate'),
 ]

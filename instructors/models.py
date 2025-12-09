@@ -168,11 +168,12 @@ class InstructorDesignation(models.Model):
     productionHours = models.IntegerField(default=0)
     consultationHours = models.IntegerField(default=0)
 
+    createdAt = models.DateTimeField(auto_now_add=True)
+
     class Meta:
+        verbose_name = "Instructor Designation"
+        verbose_name_plural = "Instructor Designations"
         ordering = ['designationId']
-        indexes = [
-            models.Index(fields=['name']),
-        ]
 
     def __str__(self):
         return self.name
@@ -192,11 +193,12 @@ class InstructorRank(models.Model):
     consultationHours = models.IntegerField(default=0)
     classAdviserHours = models.IntegerField(default=0)
 
+    createdAt = models.DateTimeField(auto_now_add=True)
+
     class Meta:
+        verbose_name = "Instructor Rank"
+        verbose_name_plural = "Instructor Ranks"
         ordering = ['rankId']
-        indexes = [
-            models.Index(fields=['name']),
-        ]
 
     def __str__(self):
         return self.name
@@ -206,21 +208,22 @@ class InstructorRank(models.Model):
 # ---------- Instructor Academic Attainment ----------
 # This model defines the academic attainments of instructors and the corresponding allowed overloads.
 class InstructorAcademicAttainment(models.Model):
-    attainmentId = models.AutoField(primary_key=True)
-    name = models.CharField(max_length=50)
-    suffix = models.CharField(max_length=10, blank=True, null=True)
+    attainmentId = models.AutoField(primary_key=True) 
+    name = models.CharField(max_length=100, unique=True)
+    suffix = models.CharField(max_length=20, blank=True, default='')
+    
+    overloadUnitsHasDesignation = models.IntegerField(default=0)
+    overloadUnitsNoDesignation = models.IntegerField(default=0) 
 
-    overloadUnitsHasDesignation = models.PositiveIntegerField()
-    overloadUnitsNoDesignation = models.PositiveIntegerField() 
-
-    class Meta:
-        ordering = ['attainmentId']
-        indexes = [
-            models.Index(fields=['name']),
-        ]
+    createdAt = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.name
+    
+    class Meta:
+        verbose_name = "Academic Attainment"
+        verbose_name_plural = "Academic Attainments"
+        ordering = ['attainmentId']
 
 
 

@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}Instructor Designations{% endblock %}
+{% block header %}Instructor Designations{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto mt-10 px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-extrabold text-gray-900">Instructor Designations</h1>
+        <a href="{% url 'instructorDesignationCreate' %}"
+           class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
+            + Create New Designation
+        </a>
+    </div>
+
+    {% if designations %}
+    <div class="overflow-x-auto shadow-xl sm:rounded-lg">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Admin/Supervision</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Instruction</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Research</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Extension</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Production</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Consultation</th>
+                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for designation in designations %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ designation.designationId }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-indigo-600">{{ designation.name }}</td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{{ designation.adminSupervisionHours }} hrs</td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{{ designation.instructionHours }} hrs</td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{{ designation.researchHours }} hrs</td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{{ designation.extensionHours }} hrs</td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{{ designation.productionHours }} hrs</td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{{ designation.consultationHours }} hrs</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                        <a href="{% url 'instructorDesignationUpdate' designation.designationId %}" class="text-indigo-600 hover:text-indigo-900">
+                            Update
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md">
+        <p class="text-sm text-yellow-700">No instructor designations have been defined yet.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

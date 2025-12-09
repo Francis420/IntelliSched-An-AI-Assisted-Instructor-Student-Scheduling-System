@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}Create Instructor Rank{% endblock %}
+{% block header %}Create Instructor Rank{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto mt-10 p-6 bg-white rounded-xl shadow-xl">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6">Create New Instructor Rank</h2>
+
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+        
+        <div>
+            <label for="name" class="block text-sm font-medium text-gray-700">Rank Name</label>
+            <input type="text" name="name" id="name" required
+                   class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-blue-500 focus:border-blue-500">
+        </div>
+
+        <div class="grid grid-cols-2 gap-6">
+            <h3 class="col-span-2 text-lg font-semibold border-b pb-2 text-gray-700">Workload Allocation (Hours)</h3>
+            
+            <div>
+                <label for="instructionHours" class="block text-sm font-medium text-gray-700">Instruction Hours</label>
+                <input type="number" name="instructionHours" id="instructionHours" value="0" min="0" required
+                       class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            
+            <div>
+                <label for="researchHours" class="block text-sm font-medium text-gray-700">Research Hours</label>
+                <input type="number" name="researchHours" id="researchHours" value="0" min="0" required
+                       class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-blue-500 focus:border-blue-500">
+            </div>
+
+            <div>
+                <label for="extensionHours" class="block text-sm font-medium text-gray-700">Extension Hours</label>
+                <input type="number" name="extensionHours" id="extensionHours" value="0" min="0" required
+                       class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            
+            <div>
+                <label for="productionHours" class="block text-sm font-medium text-gray-700">Production Hours</label>
+                <input type="number" name="productionHours" id="productionHours" value="0" min="0" required
+                       class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-blue-500 focus:border-blue-500">
+            </div>
+
+            <div>
+                <label for="consultationHours" class="block text-sm font-medium text-gray-700">Consultation Hours</label>
+                <input type="number" name="consultationHours" id="consultationHours" value="0" min="0" required
+                       class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            
+            <div>
+                <label for="classAdviserHours" class="block text-sm font-medium text-gray-700">Class Adviser Hours</label>
+                <input type="number" name="classAdviserHours" id="classAdviserHours" value="0" min="0" required
+                       class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-blue-500 focus:border-blue-500">
+            </div>
+
+        </div>
+
+        <div class="flex justify-end pt-4">
+            <button type="submit"
+                    class="inline-flex justify-center py-3 px-6 border border-transparent shadow-sm text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                Create Rank
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
