@@ -3,7 +3,9 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('output/', views.scheduleOutput, name='scheduleOutput'),
+    path('scheduleOutput/', views.scheduleOutput, name='scheduleOutput'),
+    path('finalize/<int:semester_id>/', views.finalizeSchedule, name='finalizeSchedule'),
+    path('revertSchedule/', views.revertSchedule, name='revertSchedule'),
     path("mySchedule/", views.instructorScheduleView, name="instructorScheduleView"),
     path("dashboard/", views.scheduler_dashboard, name="schedulerDashboard"),
     path("start/", views.start_scheduler, name="startScheduler"),

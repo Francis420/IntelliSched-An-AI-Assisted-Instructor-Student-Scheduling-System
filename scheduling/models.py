@@ -3,7 +3,7 @@ from django.db import models
 from core.models import Student, User
 from django.utils import timezone
 from django.apps import apps
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 # ---------- Curriculum Table ----------
@@ -173,7 +173,7 @@ class Schedule(models.Model):
     isOvertime = models.BooleanField(default=False)
     status = models.CharField(
         max_length=20,
-        choices=[('active', 'Active'), ('archived', 'Archived')],
+        choices=[('active', 'Active'), ('archived', 'Archived'), ('finalized', 'Finalized')],
         default='active'
     )
     createdAt = models.DateTimeField(auto_now_add=True)
@@ -191,10 +191,16 @@ class Schedule(models.Model):
         return f"{self.subject.code} - {self.dayOfWeek} ({self.startTime}-{self.endTime})"
     
     @property
-    def teaching_hours(self):
+    def duration_minutes(self):
         start = datetime.combine(datetime.today(), self.startTime)
         end = datetime.combine(datetime.today(), self.endTime)
-        return round((end - start).seconds / 3600, 2)
+        if end < start:
+            end += timedelta(days=1)
+        return int((end - start).total_seconds() / 60)
+    
+    @property
+    def teaching_hours(self):
+        return round(self.duration_minutes / 60, 2)
 
 
 # ---------- Schedule Control ----------
