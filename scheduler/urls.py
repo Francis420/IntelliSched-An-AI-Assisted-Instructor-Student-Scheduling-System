@@ -13,5 +13,5 @@ urlpatterns = [
     path("stop/", views.stop_scheduler, name="stopScheduler"),
     path("status/", views.scheduler_status, name="schedulerStatus"),
     path("roomUtilization/", views.roomUtilization, name="roomUtilization"),
-
+    path("export/workload/", views.exportWorkloadPDF, name="exportWorkloadPDF"),
 ]

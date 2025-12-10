@@ -1,8 +1,8 @@
 # scheduler/views.py
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.db import transaction
-from scheduling.models import Schedule, Semester, Section, Room
+from scheduling.models import Schedule, Semester, Section, Room, Curriculum
 from core.models import Instructor, UserLogin, User
 from django.contrib.auth.decorators import login_required
 from collections import defaultdict
@@ -17,6 +17,10 @@ from datetime import datetime, time, timedelta
 from django.utils import timezone
 from authapi.views import has_role  
 import re
+from django.http import HttpResponse
+from django.template.loader import get_template
+from xhtml2pdf import pisa
+from django.db.models import Sum
 
 
 @login_required
@@ -742,3 +746,125 @@ def roomUtilization(request):
     }
 
     return render(request, "scheduler/roomUtilization.html", context)
+
+
+@login_required
+def exportWorkloadPDF(request):
+    """
+    Generates the Instructor Workload Form (EVSU-ACA-F-002) as a PDF.
+    FIX: Calculates filler rows in the view to replace the invalid 'make_range' filter.
+    """
+    user = request.user
+    
+    # 1. Identify Instructor and Semester
+    login_entry = UserLogin.objects.filter(user=user).select_related("instructor").first()
+    if not login_entry or not login_entry.instructor:
+        return HttpResponse("No instructor profile found.", status=404)
+
+    instructor = login_entry.instructor
+    
+    semester_id = request.GET.get("semester")
+    if semester_id:
+        current_semester = get_object_or_404(Semester, pk=semester_id)
+    else:
+        current_semester = Semester.objects.order_by("-createdAt").first()
+        if not current_semester:
+             return HttpResponse("No semesters found.", status=404)
+
+    # 2. Fetch Schedules & 3. Prepare Load Data (Logic remains the same as before)
+    schedules = Schedule.objects.filter(
+        instructor=instructor,
+        semester=current_semester,
+        status='finalized'
+    ).select_related('subject', 'section', 'room')
+
+    regular_load = []
+    overload_load = []
+    reg_units = reg_hours_lec = reg_hours_lab = 0
+    over_units = over_hours_lec = over_hours_lab = 0
+
+    for s in schedules:
+        duration_hours = s.duration_minutes / 60
+        lec_hours = duration_hours if s.scheduleType == 'lecture' else 0
+        lab_hours = duration_hours if s.scheduleType == 'lab' else 0
+        
+        # Section/Subject logic for display formatting...
+        subject_code = s.subject.code
+        year_level = re.search(r'\d', subject_code).group() if re.search(r'\d', subject_code) else ""
+        raw_section = s.section.sectionCode
+        section_letter = raw_section.split('-')[-1].strip() if '-' in raw_section else raw_section.strip()
+        section_display = f"{s.subject.code}, {year_level}{section_letter}"
+
+        item = {
+            'code': s.subject.code,
+            'title': s.subject.name,
+            'units': s.subject.units if hasattr(s.subject, 'units') else 3, 
+            'time': f"{s.startTime.strftime('%I:%M %p')} - {s.endTime.strftime('%I:%M %p')}",
+            'days': s.dayOfWeek[:3],
+            'lec': lec_hours,
+            'lab': lab_hours,
+            'students': s.section.defaultStudentsPerSection if hasattr(s.section, 'defaultStudentsPerSection') else 40,
+            'room': s.room.roomCode if s.room else "TBA",
+            'section': section_display
+        }
+
+        # Assuming 'isOvertime' field exists on the Schedule model
+        if hasattr(s, 'isOvertime') and s.isOvertime: 
+            overload_load.append(item)
+            over_units += item['units']
+            over_hours_lec += lec_hours
+            over_hours_lab += lab_hours
+        else:
+            regular_load.append(item)
+            reg_units += item['units']
+            reg_hours_lec += lec_hours
+            reg_hours_lab += lab_hours
+
+    # 4. Calculate Filler Rows for Template (THE FIX)
+    MAX_REGULAR_ROWS = 10
+    MAX_OVERLOAD_ROWS = 3
+    
+    # Calculate how many empty rows are needed
+    reg_filler_count = max(0, MAX_REGULAR_ROWS - len(regular_load))
+    overload_filler_count = max(0, MAX_OVERLOAD_ROWS - len(overload_load))
+    
+    # Create iterable lists for the template loop
+    regular_filler = list(range(reg_filler_count)) 
+    overload_filler = list(range(overload_filler_count))
+    
+    # 5. Fetch Signatories
+    active_curriculum = Curriculum.objects.filter(isActive=True).first() # Requires Curriculum model
+
+    context = {
+        "instructor": instructor,
+        "semester": current_semester,
+        # ... (other context variables)
+        "regular_load": regular_load,
+        "overload_load": overload_load,
+        "reg_total": {'units': reg_units, 'lec': reg_hours_lec, 'lab': reg_hours_lab},
+        "over_total": {'units': over_units, 'lec': over_hours_lec, 'lab': over_hours_lab},
+        
+        # --- NEW CONTEXT VARIABLES FOR FIX ---
+        "regular_filler": regular_filler,
+        "overload_filler": overload_filler,
+        # -------------------------------------
+        
+        "dean": active_curriculum.dean if active_curriculum else "DEAN NAME",
+        "vp_academic": active_curriculum.vicePresidentForAcademicAffairs if active_curriculum else "VP NAME",
+        "president": active_curriculum.universityPresident if active_curriculum else "PRESIDENT NAME",
+        "date_now": timezone.now()
+    }
+
+    # 6. Render to PDF
+    template_path = 'scheduler/workload_pdf.html' 
+    template = get_template(template_path)
+    html = template.render(context)
+    
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="Workload_{instructor.full_name}.pdf"'
+    
+    pisa_status = pisa.CreatePDF(html, dest=response)
+    
+    if pisa_status.err:
+        return HttpResponse('We had some errors generating the PDF.', status=500)
+    return response

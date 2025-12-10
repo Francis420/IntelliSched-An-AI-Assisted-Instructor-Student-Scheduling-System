@@ -109,6 +109,10 @@
                     </table>
                 </div>
             </div>
+            <a href="{% url 'exportWorkloadPDF' %}?semester={{ current_semester.pk }}" 
+            class="bg-red-600 text-white px-4 py-2 rounded shadow hover:bg-red-700">
+            Export to PDF
+            </a>
         {% else %}
             <div class="text-center p-12 bg-white shadow-lg rounded-xl border border-gray-200">
                 <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

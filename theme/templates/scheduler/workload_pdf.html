@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        /* PDF specific layout settings */
+        @page {
+            size: letter landscape; /* Use wide format */
+            margin: 1cm;
+        }
+        body {
+            font-family: sans-serif;
+            font-size: 9px; /* Slightly smaller font for better fit */
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .header h3 { margin: 0; font-size: 14px; }
+        .header p { margin: 0; font-size: 10px; }
+        
+        /* Info Grid - Simplified to match the exact layout */
+        .info-table {
+            width: 100%;
+            margin-bottom: 10px;
+            border-collapse: collapse;
+        }
+        .info-table td {
+            padding: 2px 5px;
+            font-weight: normal;
+            vertical-align: top;
+        }
+        .underline {
+            border-bottom: 1px solid black;
+            padding: 0 5px;
+            font-weight: bold;
+            display: inline-block;
+            min-width: 150px;
+        }
+
+        /* Control Number Box */
+        .control-box {
+            float: right;
+            border: 1px solid black;
+            padding: 5px;
+            margin-top: -30px;
+            font-size: 8px;
+            line-height: 1.5;
+        }
+
+        /* Main Data Table */
+        .workload-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+        .workload-table th, .workload-table td {
+            border: 1px solid black;
+            padding: 3px;
+            text-align: center;
+            font-size: 9px;
+            height: 15px; /* Ensures consistent row height */
+        }
+        .workload-table th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+        .section-header {
+            background-color: #e0e0e0;
+            text-align: left;
+            font-weight: bold;
+            padding: 5px;
+        }
+        .align-left { text-align: left; padding-left: 10px; }
+        .total-row td { font-weight: bold; background-color: #f9f9f9; }
+
+        /* Signatories */
+        .sig-container {
+            width: 100%;
+            margin-top: 20px;
+        }
+        .sig-container table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .sig-container td {
+            width: 25%;
+            vertical-align: bottom;
+            padding: 10px 5px;
+            text-align: center;
+        }
+        .sig-name {
+            font-weight: bold;
+            border-bottom: 1px solid black;
+            padding-bottom: 3px;
+            margin-bottom: 5px;
+            height: 15px; /* To reserve space for the name */
+        }
+        .sig-label {
+            font-size: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="control-box">
+        Control No. EVSU-ACA-F-002<br>
+        Revision No. 02<br>
+        Date: February 20, 2023
+    </div>
+
+    <div class="header">
+        <h3 style="margin-top: 10px;">EASTERN VISAYAS STATE UNIVERSITY</h3>
+        <p>Tacloban City</p>
+        <br>
+        <h3 style="font-size: 16px;">TEACHER WORKLOAD FORM</h3>
+    </div>
+
+    <table class="info-table">
+        <tr>
+            <td width="50%">Faculty Member: <span class="underline">{{ instructor.full_name|upper }}</span></td>
+            <td width="50%">Semester: <span class="underline">{{ semester.get_semesterType_display|upper }}</span></td>
+        </tr>
+        <tr>
+            <td>Academic Rank: <span class="underline">{{ instructor_rank|upper }}</span></td> 
+            <td>School Year: <span class="underline">{{ semester.academicYear }}</span></td>
+        </tr>
+        <tr>
+            <td>College/Campus: <span class="underline">COLLEGE OF ENGINEERING</span></td>
+            <td>Date: <span class="underline">{{ date_now|date:"F j, Y" }}</span></td>
+        </tr>
+    </table>
+
+    <table class="workload-table">
+        <thead>
+            <tr>
+                <th colspan="10" class="section-header">REGULAR</th>
+            </tr>
+            <tr>
+                <th rowspan="2" width="10%">Course No.</th>
+                <th rowspan="2" width="20%">Descriptive Title</th>
+                <th rowspan="2" width="5%">Units</th>
+                <th rowspan="2" width="15%">TIME</th>
+                <th rowspan="2" width="7%">DAYS</th>
+                <th colspan="2" width="10%">No. Hours/Week</th>
+                <th rowspan="2" width="10%">No. of Students</th>
+                <th rowspan="2" width="8%">Room No.</th>
+                <th rowspan="2" width="15%">Course, Yr-Sec.</th>
+            </tr>
+            <tr>
+                <th width="5%">Lec</th>
+                <th width="5%">Lab</th>
+            </tr>
+        </thead>
+        <tbody>
+            {# Iterate regular load items #}
+            {% for row in regular_load %}
+            <tr>
+                <td>{{ row.code }}</td>
+                <td class="align-left">{{ row.title }}</td>
+                <td>{{ row.units }}</td>
+                <td>{{ row.time }}</td>
+                <td>{{ row.days }}</td>
+                <td>{{ row.lec|floatformat:1 }}</td>
+                <td>{{ row.lab|floatformat:1 }}</td>
+                <td>{{ row.students }}</td>
+                <td>{{ row.room }}</td>
+                <td>{{ row.section }}</td>
+            </tr>
+            {% endfor %}
+            
+            {% for i in regular_filler %}
+            <tr><td colspan="10" style="height: 15px;"></td></tr>
+            {% endfor %}
+
+            <tr class="total-row">
+                <td colspan="2" style="text-align: right; padding-right: 10px;">Total</td>
+                <td>{{ reg_total.units }}</td>
+                <td></td>
+                <td></td>
+                <td>{{ reg_total.lec|floatformat:1 }}</td>
+                <td>{{ reg_total.lab|floatformat:1 }}</td>
+                <td colspan="3"></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <table class="workload-table">
+        <thead>
+            <tr>
+                <th colspan="10" class="section-header">OVERLOAD / PART-TIME</th>
+            </tr>
+            <tr>
+                <th rowspan="2" width="10%">Course No.</th>
+                <th rowspan="2" width="20%">Descriptive Title</th>
+                <th rowspan="2" width="5%">Units</th>
+                <th rowspan="2" width="15%">TIME</th>
+                <th rowspan="2" width="7%">DAYS</th>
+                <th colspan="2" width="10%">No. Hours/Week</th>
+                <th rowspan="2" width="10%">No. of Students</th>
+                <th rowspan="2" width="8%">Room No.</th>
+                <th rowspan="2" width="15%">Course, Yr-Sec.</th>
+            </tr>
+            <tr>
+                <th width="5%">Lec</th>
+                <th width="5%">Lab</th>
+            </tr>
+        </thead>
+        <tbody>
+            {# Iterate overload load items #}
+            {% for row in overload_load %}
+            <tr>
+                <td>{{ row.code }}</td>
+                <td class="align-left">{{ row.title }}</td>
+                <td>{{ row.units }}</td>
+                <td>{{ row.time }}</td>
+                <td>{{ row.days }}</td>
+                <td>{{ row.lec|floatformat:1 }}</td>
+                <td>{{ row.lab|floatformat:1 }}</td>
+                <td>{{ row.students }}</td>
+                <td>{{ row.room }}</td>
+                <td>{{ row.section }}</td>
+            </tr>
+            {% endfor %}
+            
+            {# ADD EMPTY FILLER ROWS (FIXED) #}
+            {% for i in overload_filler %}
+            <tr><td colspan="10" style="height: 15px;"></td></tr>
+            {% endfor %}
+
+
+            <tr class="total-row">
+                <td colspan="2" style="text-align: right; padding-right: 10px;">Total</td>
+                <td>{{ over_total.units }}</td>
+                <td></td>
+                <td></td>
+                <td>{{ over_total.lec|floatformat:1 }}</td>
+                <td>{{ over_total.lab|floatformat:1 }}</td>
+                <td colspan="3"></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="sig-container">
+        <table>
+            <tr>
+                <td>
+                    <div class="sig-name">{{ instructor.full_name|upper }}</div>
+                    <div class="sig-label">Faculty Member</div>
+                </td>
+                <td>
+                    <div class="sig-name">{{ dean|upper }}</div>
+                    <div class="sig-label">Dean, College of Engineering</div>
+                </td>
+                <td>
+                    <div class="sig-name">{{ vp_academic|upper }}</div>
+                    <div class="sig-label">VP for Academic Affairs</div>
+                </td>
+                <td>
+                    <div class="sig-name">{{ president|upper }}</div>
+                    <div class="sig-label">University President</div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+</body>
+</html>
