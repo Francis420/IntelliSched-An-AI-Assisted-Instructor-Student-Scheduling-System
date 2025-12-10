@@ -22,8 +22,6 @@ from authapi.views import has_role
 @has_role('deptHead')
 def finalizeSchedule(request, semester_id): 
     if request.method == 'POST':
-        # semester_id is now retrieved from the URL path as a positional argument
-        
         # Check if the currently active schedule is the one being finalized
         active_schedules = Schedule.objects.filter(semester__semesterId=semester_id, status='active')
         
@@ -42,69 +40,92 @@ def finalizeSchedule(request, semester_id):
         else:
             messages.warning(request, "No active schedule found to finalize.")
             
-        return redirect(reverse('schedule_output') + f'?semester={semester_id}&batch_key=finalized')
-    return redirect('schedule_output')
+        return redirect(reverse('scheduleOutput') + f'?semester={semester_id}&batch_key=finalized')
+    return redirect('scheduleOutput')
 
-# --- NEW REVERT VIEW ---
+@login_required
+@has_role('deptHead')
+def revertFinalizedSchedule(request, semester_id):
+    if request.method == 'POST':
+        try:
+            semester = Semester.objects.get(semesterId=semester_id)
+        except Semester.DoesNotExist:
+            messages.error(request, "Semester not found.")
+            return redirect(reverse('scheduleOutput'))
+
+        try:
+            with transaction.atomic():
+                # Step 1: Find the schedules currently marked as 'finalized'
+                finalized_schedules = Schedule.objects.filter(
+                    semester=semester, 
+                    status='finalized'
+                )
+
+                if finalized_schedules.exists():
+                    # Step 2: Change status to 'active'
+                    finalized_schedules.update(status='active')
+                    messages.success(request, f"Schedule for {semester.name} has been **UNLOCKED**.")
+                else:
+                    messages.warning(request, "No finalized schedule found to unlock.")
+
+        except Exception as e:
+            messages.error(request, f"An error occurred while unlocking the schedule: {e}")
+
+        return redirect(reverse('scheduleOutput') + f'?semester={semester_id}&batch_key=active')
+    
+    return redirect(reverse('scheduleOutput'))
+
 @login_required
 @has_role('deptHead')
 def revertSchedule(request):
-    if request.method != 'POST':
-        messages.error(request, "Invalid request method.")
-        return redirect('schedule_output')
+    if request.method == 'POST':
+        semester_id = request.POST.get('semester_id')
+        batch_key = request.POST.get('batch_key') 
 
-    semester_id = request.POST.get('semester_id')
-    batch_key = request.POST.get('batch_key')
-
-    # Guard clause: Ensure a valid archived batch key is provided
-    if not semester_id or not batch_key or batch_key in ['active', 'finalized', 'none']:
-        messages.error(request, "Invalid selection for reversion. Please select an archived run.")
-        return redirect('schedule_output')
-
-    try:
-        # 1. Parse and validate the selected batch time (using Python truncation logic)
-        selected_timestamp = datetime.fromisoformat(batch_key)
+        if not semester_id or not batch_key or batch_key in ['active', 'finalized']:
+            messages.error(request, "Invalid request for schedule reversion.")
+            return redirect(reverse('scheduleOutput'))
         
-        # Ensure timezone awareness and normalize
-        if selected_timestamp.tzinfo is None:
-            selected_timestamp = timezone.make_aware(selected_timestamp)
-        else:
-            selected_timestamp = selected_timestamp.astimezone(timezone.get_current_timezone())
+        # 1. Check if a finalized run currently exists for this semester
+        finalized_run_exists = Schedule.objects.filter(
+            semester__semesterId=semester_id, 
+            status='finalized'
+        ).exists()
         
-        # Truncate microseconds to match the batching logic in scheduleOutput
-        selected_timestamp = selected_timestamp.replace(microsecond=0)
-
-        # 2. Perform the Atomic Swap
-        with transaction.atomic():
+        if finalized_run_exists:
+            messages.error(request, "A schedule is currently **FINALIZED**. Please unlock it first.")
+            return redirect(reverse('scheduleOutput') + f'?semester={semester_id}&batch_key=finalized')
+        
+        try:
+            dt_obj = datetime.fromisoformat(batch_key)
             
-            # A. Archive the CURRENT active schedules (preserving them)
-            Schedule.objects.filter(
-                semester__semesterId=semester_id, 
-                status='active'
-            ).update(status='archived') 
-            
-            # B. Revert the SELECTED ARCHIVED schedules back to 'active'
-            # Filter using the 1-second range around the truncated timestamp
-            num_reverted = Schedule.objects.filter(
-                semester__semesterId=semester_id, 
+            schedules_to_promote = Schedule.objects.filter(
+                semester__semesterId=semester_id,
                 status='archived',
-                createdAt__gte=selected_timestamp,
-                createdAt__lt=selected_timestamp + timedelta(seconds=1),
-            ).update(status='active')
+                createdAt=dt_obj 
+            ).select_related('semester')
+            
+            if not schedules_to_promote.exists():
+                messages.error(request, "The specified archived schedule batch was not found.")
+                return redirect(reverse('scheduleOutput') + f'?semester={semester_id}&batch_key=active')
+            
+            semester = schedules_to_promote.first().semester
 
-        if num_reverted > 0:
-            messages.success(request, f"Successfully reverted {num_reverted} schedules to the active draft from the run: {selected_timestamp.strftime('%b %d, %I:%M %p')}.")
-        else:
-            messages.warning(request, "No schedules were found for the selected archived run. Nothing was reverted.")
+            with transaction.atomic():
+                Schedule.objects.filter(semester=semester, status='active').update(status='archived')
+                schedules_to_promote.update(status='active')
+                messages.success(request, f"Successfully reverted to schedule batch created at {batch_key}.")
 
-    except (ValueError, Exception) as e:
-        messages.error(request, f"An error occurred during schedule reversion: {e}")
+        except ValueError:
+            messages.error(request, "Invalid batch key format.")
+        except Exception as e:
+            messages.error(request, f"Error during reversion: {e}")
         
-    # Redirect to view the newly active schedule
-    return redirect(reverse('schedule_output') + f'?semester={semester_id}&batch_key=active')
+        return redirect(reverse('scheduleOutput') + f'?semester={semester_id}&batch_key=active')
+    
+    return redirect(reverse('scheduleOutput'))
 
 
-# --- UPDATED scheduleOutput View (FIXED Instructor Aggregation) ---
 @login_required
 @has_role('deptHead')
 def scheduleOutput(request):
@@ -115,58 +136,89 @@ def scheduleOutput(request):
         if latest_semester:
             semester_id = str(latest_semester.semesterId)
         else:
+            # Handle case where no semesters exist at all
             return render(request, "scheduler/scheduleOutput.html", {"error": "No semesters found."})
 
-    # --- BATCH SELECTION LOGIC ---
     
-    batch_key = request.GET.get("batch_key", 'active') 
+    batch_key = request.GET.get("batch_key", 'active') # batch_key defaults to 'active'
     
-    # 1. Get all unique creation timestamps and group them in Python
+    # 1. Get all unique creation timestamps for archived schedules
+    # We must first truncate/group by the second for reliable batch identification.
     raw_archived_datetimes = Schedule.objects.filter(
         semester__semesterId=semester_id, 
         status='archived'
     ).order_by('-createdAt').values_list('createdAt', flat=True).distinct()
-
-    # Use a dictionary to collect only one datetime per unique 'second' timestamp
+    
+    # Python grouping to ensure only one timestamp per second exists for a batch
     unique_batch_times = {}
     for dt in raw_archived_datetimes:
-        # Truncate the datetime to the second in Python to simulate TruncSecond
         truncated_dt_key = dt.replace(microsecond=0)
         if truncated_dt_key not in unique_batch_times:
             unique_batch_times[truncated_dt_key] = truncated_dt_key
-
-    # Get the sorted list of unique batch datetimes
+            
+    # Sorted list of unique batch datetimes
     archived_batch_times = sorted(unique_batch_times.keys(), reverse=True)
-    
-    # Build a list of choices for the template dropdown
-    batch_choices = [
-        {'key': 'active', 'name': 'Current Active Draft'},
-        {'key': 'finalized', 'name': 'FINALIZED Schedule (Locked)'},
-    ] + [
-        {'key': batch_time.isoformat(), 'name': f"Archived Run: {batch_time.strftime('%b %d, %Y %I:%M %p')}"} 
+
+    archived_batches = [
+        {'key': batch_time.isoformat(), 'label': f"Archived Run: {batch_time.strftime('%b %d, %Y %I:%M %p')}"} 
         for batch_time in archived_batch_times
     ]
+
+    # --- BATCH SELECTION LOGIC ---
     
-    # 2. Determine which schedules to display
+    # Determine if a finalized run exists for the current semester
+    finalized_exists = Schedule.objects.filter(
+        semester__semesterId=semester_id, 
+        status='finalized'
+    ).exists()
+
+    schedules = Schedule.objects.none() # Initialize to an empty QuerySet
+    current_status = 'N/A'
     
-    if batch_key == 'finalized':
+    if batch_key == 'finalized' and finalized_exists:
         schedules = Schedule.objects.filter(semester__semesterId=semester_id, status='finalized')
-        current_display_status = 'Finalized Schedule'
+        current_status = 'Finalized Schedule (Locked)'
     
-    elif batch_key == 'active':
+    elif batch_key == 'active' or (batch_key == 'finalized' and not finalized_exists):
+        # Default to active if requested or if finalized was requested but doesn't exist
         schedules = Schedule.objects.filter(semester__semesterId=semester_id, status='active')
-        current_display_status = 'Active Draft'
-        
-    else:
-        # User selected an archived batch
+        current_status = 'Active Draft'
+
+        # If no active schedules, try to load the latest archived batch
+        if not schedules.exists() and archived_batches:
+             try:
+                 latest_batch_time_iso = archived_batches[0]['key']
+                 # Ensure datetime is timezone-aware for filtering
+                 latest_batch_time = datetime.fromisoformat(latest_batch_time_iso)
+                 if latest_batch_time.tzinfo is None:
+                     latest_batch_time = timezone.make_aware(latest_batch_time)
+
+                 # Filter the database records using the 1-second range
+                 schedules = Schedule.objects.filter(
+                     semester__semesterId=semester_id, 
+                     createdAt__gte=latest_batch_time,
+                     createdAt__lt=latest_batch_time + timedelta(seconds=1),
+                     status='archived'
+                 )
+                 current_status = archived_batches[0]['label']
+                 batch_key = latest_batch_time_iso
+                 messages.info(request, "Active draft not found. Displaying the latest archived run instead.")
+             except Exception:
+                 schedules = Schedule.objects.none()
+                 current_status = 'No Schedules Found'
+                 batch_key = 'none'
+
+
+    elif batch_key:
+        # Load a specific archived batch using the batch_key (timestamp)
         try:
             selected_timestamp = datetime.fromisoformat(batch_key)
             
+            # Handle timezone if necessary
             if selected_timestamp.tzinfo is None:
                 selected_timestamp = timezone.make_aware(selected_timestamp)
-            else:
-                selected_timestamp = selected_timestamp.astimezone(timezone.get_current_timezone())
             
+            # Truncate to the second to match grouping logic
             selected_timestamp = selected_timestamp.replace(microsecond=0)
             
             # Filter the database records using the 1-second range
@@ -176,34 +228,15 @@ def scheduleOutput(request):
                 createdAt__lt=selected_timestamp + timedelta(seconds=1),
                 status='archived'
             )
-            current_display_status = f"Archived Run ({selected_timestamp.strftime('%b %d, %I:%M %p')})"
-            
+            # Find the correct label for display
+            label = next((b['label'] for b in archived_batches if b['key'] == batch_key), f"Archived Run ({selected_timestamp.strftime('%b %d, %I:%M %p')})")
+            current_status = label
+
         except ValueError:
-            # Fallback if the timestamp key is invalid
-            schedules = Schedule.objects.filter(semester__semesterId=semester_id, status='active')
-            current_display_status = 'Active Draft'
-            batch_key = 'active'
-            
-    # --- Fallback Check: If the requested batch is empty, fall back to the newest archived run ---
-    if not schedules.exists() and batch_key in ['active', 'finalized']:
-        if archived_batch_times: 
-            latest_batch_time = archived_batch_times[0]
-            
-            schedules = Schedule.objects.filter(
-                semester__semesterId=semester_id, 
-                createdAt__gte=latest_batch_time,
-                createdAt__lt=latest_batch_time + timedelta(seconds=1),
-                status='archived'
-            )
-            current_display_status = f"Archived Run ({latest_batch_time.strftime('%b %d, %I:%M %p')})"
-            batch_key = latest_batch_time.isoformat()
-        else:
-            schedules = Schedule.objects.none()
-            current_display_status = 'No Schedules Found'
-            batch_key = 'none'
-
-
-    # 3. Fetch Data with necessary lookups
+            messages.error(request, "Invalid schedule batch key provided. Falling back to active draft.")
+            return redirect(reverse('scheduleOutput') + f'?semester={semester_id}&batch_key=active')
+    
+    # 2. Fetch Data with necessary lookups
     schedules = schedules.select_related(
         'instructor', 
         'room'
@@ -212,34 +245,47 @@ def scheduleOutput(request):
         'instructor__userlogin_set__user'
     ).order_by('dayOfWeek', 'startTime')
     
-    # --- Aggregation Dictionaries Initialization and Logic (FIXED: Uses unique ID) ---
-    room_usage = defaultdict(lambda: {"total_minutes": 0, "usage_hours": 0.0})
+    # --- Aggregation Dictionaries Initialization and Logic ---
+    DAYS_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    
+    room_usage = defaultdict(lambda: {
+        "room_code": None, 
+        "total_minutes": 0, 
+        "usage_hours": 0.0,
+        "daily_spread": defaultdict(int) # Tracks daily usage in minutes
+    })
+    
     instructor_load = defaultdict(lambda: {
         "id": None, "name": None, "normal_min": 0, "overload_min": 0, "total_hours": 0.0,
         "daily_spread": defaultdict(int)
     })
     
+    # Populate the aggregation dictionaries
     for schedule in schedules:
-        # Use Schedule model's property for duration
-        duration_minutes = schedule.duration_minutes
+        # Assuming schedule.duration_minutes is a property on the Schedule model
+        duration_minutes = schedule.duration_minutes 
         
-        # Room Usage (This works)
+        # Room Usage
         room_name = schedule.room.roomCode if schedule.room else "TBA"
+        room_usage[room_name]["room_code"] = room_name
         room_usage[room_name]["total_minutes"] += duration_minutes
-
+        
+        # Track daily usage for rooms
+        day = schedule.dayOfWeek
+        room_usage[room_name]["daily_spread"][day] += duration_minutes
+        
         # Instructor Load and Daily Spread 
         if schedule.instructor:
-            instr_id = schedule.instructor.instructorId # <--- FIX: Use unique ID as dictionary key
-            instr_name = schedule.instructor.full_name
+            instr_id = schedule.instructor.instructorId # Use unique ID as dictionary key
+            instr_name = schedule.instructor.full_name # Assumes full_name is a property on Instructor
         else:
             instr_id = 'TBA_UNASSIGNED' 
-            instr_name = 'Unknown Instructor'
+            instr_name = 'Unassigned Sections'
 
         # Use the unique ID as the key for aggregation
         instructor_load[instr_id]["id"] = instr_id
-        instructor_load[instr_id]["name"] = instr_name # Set the full_name for display
+        instructor_load[instr_id]["name"] = instr_name
         
-        # Check the isOvertime flag set by the scheduler
         if schedule.isOvertime: 
             instructor_load[instr_id]["overload_min"] += duration_minutes
         else:
@@ -248,49 +294,74 @@ def scheduleOutput(request):
         day = schedule.dayOfWeek
         instructor_load[instr_id]["daily_spread"][day] += duration_minutes
 
-    # Final calculations for Room Usage
-    for data in room_usage.values():
+    # --- Final calculations and formatting for Room Usage ---
+    formatted_room_data = [] 
+    
+    for room_code, data in room_usage.items():
         data["usage_hours"] = round(data["total_minutes"] / 60.0, 2)
-    ordered_room_usage = dict(sorted(room_usage.items(), key=lambda item: item[1]["usage_hours"], reverse=True))
+        
+        # Prepare daily spread list (in hours) for template
+        daily_list = []
+        for day in DAYS_ORDER:
+            daily_list.append({"day": day, "hours": round(data["daily_spread"].get(day, 0) / 60.0, 2)})
+        data["daily_spread_list"] = daily_list
+        formatted_room_data.append(data)
 
-    DAYS_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    # Sort room usage descending by total hours
+    ordered_room_usage = sorted(formatted_room_data, key=lambda item: item["usage_hours"], reverse=True)
+
+
+    # --- Final calculations and formatting for Instructor Load ---
     formatted_instructor_data = []
     
     # Final calculations for Instructor Load
     for instr_id, data in instructor_load.items(): 
-        if instr_id == 'TBA_UNASSIGNED': # Exclude unassigned schedules from instructor load table
-             continue 
-             
+        if instr_id == 'TBA_UNASSIGNED': # Exclude the unassigned aggregation from the load table
+            continue 
+            
         data["total_hours"] = round((data["normal_min"] + data["overload_min"]) / 60.0, 2)
         data["normal_hours"] = round(data["normal_min"] / 60.0, 2)
         data["overload_hours"] = round(data["overload_min"] / 60.0, 2)
         
+        # Prepare daily spread list for template/chart
         daily_list = []
         for day in DAYS_ORDER:
             daily_list.append({"day": day, "hours": round(data["daily_spread"].get(day, 0) / 60.0, 2)})
         data["daily_spread_list"] = daily_list
         formatted_instructor_data.append(data)
 
+    # Sort instructor load descending by total hours
     ordered_instructor_load = sorted(formatted_instructor_data, key=lambda item: item["total_hours"], reverse=True)
 
+    # Get all semesters for the dropdown
     semesters = Semester.objects.all().order_by("-createdAt")
     
+    # Get the current semester object for its term display
+    try:
+        current_semester = Semester.objects.get(semesterId=semester_id)
+    except Semester.DoesNotExist:
+        current_semester = None
+
+
     context = {
         "current_semester_id": semester_id,
-        "selected_semester": semester_id,
+        "current_status": current_status,
+        "batch_key": batch_key,
+        "finalized_exists": finalized_exists,
+        "schedules": schedules, # Keeping this here just in case, even though the table is removed
+        "semesters": semesters,
+        "archived_batches": archived_batches,
+        "current_semester": current_semester,
         
-        "batch_choices": batch_choices,               
-        "selected_batch_key": batch_key,              
-        "current_schedule_status": current_display_status, 
-        
-        "can_finalize": batch_key == 'active', 
-        "is_finalized": batch_key == 'finalized',
-        "can_revert": batch_key not in ['active', 'finalized', 'none'], 
-        
-        "room_usage_data": ordered_room_usage,
+        # Data for the metrics tables/charts
+        "room_usage_data": ordered_room_usage, # NOTE: This is now a list of dicts, not dict of dicts
         "instructor_load_data": ordered_instructor_load,
         "days_order": DAYS_ORDER, 
-        "semesters": semesters,
+        
+        # Flags for action buttons (Can be used in scheduleOutput.html)
+        "can_finalize": batch_key == 'active' and schedules.exists(), 
+        "is_finalized": current_status.startswith('Finalized'),
+        "can_revert": (batch_key not in ['active', 'finalized', 'none', 'N/A']) and schedules.exists(), 
     }
     return render(request, "scheduler/scheduleOutput.html", context)
 
@@ -302,7 +373,7 @@ def instructorScheduleView(request):
     login_entry = UserLogin.objects.filter(user=user).select_related("instructor").first()
 
     if not login_entry or not login_entry.instructor:
-        return render(request, "scheduling/instructor_schedule.html", {
+        return render(request, "scheduler/instructorSchedule.html", {
             "error": "No instructor profile found for this account."
         })
 

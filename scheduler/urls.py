@@ -5,6 +5,7 @@ from . import views
 urlpatterns = [
     path('scheduleOutput/', views.scheduleOutput, name='scheduleOutput'),
     path('finalize/<int:semester_id>/', views.finalizeSchedule, name='finalizeSchedule'),
+    path('finalize/<str:semester_id>/revert/', views.revertFinalizedSchedule, name='revertFinalizedSchedule'),
     path('revertSchedule/', views.revertSchedule, name='revertSchedule'),
     path("mySchedule/", views.instructorScheduleView, name="instructorScheduleView"),
     path("dashboard/", views.scheduler_dashboard, name="schedulerDashboard"),
