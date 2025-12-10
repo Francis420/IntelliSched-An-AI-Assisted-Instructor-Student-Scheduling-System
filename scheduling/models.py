@@ -7,11 +7,13 @@ from datetime import datetime, timedelta
 
 
 # ---------- Curriculum Table ----------
-# This model represents the curriculum to avoids conflicts/mixing of new and old curriculums, including its name, effective school year,
 class Curriculum(models.Model):
     curriculumId = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100, unique=True)  # e.g., "2021 Curriculum"
     effectiveSy = models.CharField(max_length=20)  # e.g., "S.Y. 2021-2022"
+    dean = models.CharField(max_length=100, null=True, blank=True)
+    vicePresidentForAcademicAffairs = models.CharField(max_length=100, null=True, blank=True)
+    universityPresident = models.CharField(max_length=100, null=True, blank=True)
     description = models.TextField(null=True, blank=True)
     isActive = models.BooleanField(default=True) 
     createdAt = models.DateTimeField(auto_now_add=True)
@@ -21,8 +23,7 @@ class Curriculum(models.Model):
 
 
 
-# ---------- Subjects Table ---------- 60 still need dynamic checks for subject code and name
-# This model represents subjects offered by the IT department, including their code, name, units, and other attributes.
+# ---------- Subjects Table ---------- still need dynamic checks for subject code and name
 class Subject(models.Model):
     subjectId = models.AutoField(primary_key=True)
     curriculum = models.ForeignKey("Curriculum", on_delete=models.CASCADE, related_name="subjects")
@@ -69,7 +70,6 @@ class Subject(models.Model):
 
 
 # ---------- Semester Table ----------
-# This model represents semesters in the academic calendar, including their name, academic year, and term
 class Semester(models.Model):
     semesterId = models.AutoField(primary_key=True)
     name = models.CharField(max_length=50)
@@ -84,8 +84,7 @@ class Semester(models.Model):
         return f"{self.name}"
 
 
-# ---------- Section Table ---------- 50 check notes
-# This model represents sections of subjects in a specific semester, linking to the subject and semester models.
+# ---------- Section Table ----------
 class Section(models.Model):
     sectionId = models.AutoField(primary_key=True)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
@@ -131,8 +130,7 @@ class Section(models.Model):
         return self.lectureHours + (self.labHours if self.hasLab else 0)
 
 
-# ---------- Room Table ---------- 50 check notes for info
-# This model represents rooms available for scheduling classes, including their code, building, capacity, and type.
+# ---------- Room Table ----------
 class Room(models.Model):
     roomId = models.AutoField(primary_key=True)
     roomCode = models.CharField(max_length=20)
@@ -154,7 +152,6 @@ class Room(models.Model):
 
 
 # ---------- Schedule Table ----------
-# This model represents the schedule of classes, linking subject offerings, instructors, sections, rooms, and semesters.
 class Schedule(models.Model):
     scheduleId = models.AutoField(primary_key=True)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
@@ -204,7 +201,6 @@ class Schedule(models.Model):
 
 
 # ---------- Schedule Control ----------
-# This model tracks the control and status of schedules, including who updated it and its current status.
 class ScheduleControl(models.Model):
     schedule = models.ForeignKey(Schedule, on_delete=models.CASCADE)
     updatedBy = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -216,7 +212,6 @@ class ScheduleControl(models.Model):
 
 
 # ---------- GenEdSchedules ---------- 50 check notes
-# This model represents the General Education schedules, linking them to semesters and including details like code, subject name, section code, instructor name, and time.
 class GenEdSchedule(models.Model):
     genedScheduleId = models.AutoField(primary_key=True)
     semester = models.ForeignKey(Semester, on_delete=models.CASCADE, null=True, blank=True)
@@ -239,6 +234,7 @@ class GenEdSchedule(models.Model):
         return f"GenEd {self.code} - {self.sectionCode}"
     
 
+# ---------- Subject Offering ----------
 class SubjectOffering(models.Model):
     subject = models.ForeignKey("Subject", on_delete=models.CASCADE, related_name="offerings")
     semester = models.ForeignKey("Semester", on_delete=models.CASCADE, related_name="offerings")
@@ -259,15 +255,12 @@ class SubjectOffering(models.Model):
     
     @property
     def academicYear(self):
-        """Shortcut to semester academic year"""
         return self.semester.academicYear
     
     @property
     def term(self):
-        """Shortcut to semester term"""
         return self.semester.term
 
     @property
     def curriculum(self):
-        """Shortcut to subject curriculum"""
         return self.subject.curriculum

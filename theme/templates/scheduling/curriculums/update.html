@@ -23,7 +23,26 @@
       <textarea name="description" rows="4"
                 class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">{{ curriculum.description }}</textarea>
     </div>
+    
+    <h3 class="text-lg font-semibold border-t pt-4 mt-6 text-gray-700">Official Signatures (For Exports)</h3>
 
+    <div>
+      <label for="dean" class="block font-medium text-gray-700">Dean:</label>
+      <input type="text" name="dean" id="dean" value="{{ curriculum.dean|default:'' }}"
+             class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <div>
+      <label for="vicePresidentForAcademicAffairs" class="block font-medium text-gray-700">VP for Academic Affairs:</label>
+      <input type="text" name="vicePresidentForAcademicAffairs" id="vicePresidentForAcademicAffairs" value="{{ curriculum.vicePresidentForAcademicAffairs|default:'' }}"
+             class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <div>
+      <label for="universityPresident" class="block font-medium text-gray-700">University President:</label>
+      <input type="text" name="universityPresident" id="universityPresident" value="{{ curriculum.universityPresident|default:'' }}"
+             class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
     <div class="flex justify-between items-center pt-4">
       <a href="javascript:history.back()" class="bg-gray-300 hover:bg-gray-400 text-black font-semibold px-4 py-2 rounded">Back</a>
       <button type="submit"

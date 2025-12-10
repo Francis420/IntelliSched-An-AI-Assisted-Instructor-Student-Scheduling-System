@@ -481,6 +481,12 @@ def curriculumCreate(request):
         name = request.POST.get('name')
         effectiveSy = request.POST.get('effectiveSy')
         description = request.POST.get('description')
+        
+        # --- NEW SIGNATURE FIELDS ---
+        dean = request.POST.get('dean')
+        vicePresidentForAcademicAffairs = request.POST.get('vicePresidentForAcademicAffairs')
+        universityPresident = request.POST.get('universityPresident')
+        # ----------------------------
 
         if Curriculum.objects.filter(name=name).exists():
             messages.error(request, 'A curriculum with this name already exists.')
@@ -488,7 +494,10 @@ def curriculumCreate(request):
             Curriculum.objects.create(
                 name=name,
                 effectiveSy=effectiveSy,
-                description=description
+                description=description,
+                dean=dean,
+                vicePresidentForAcademicAffairs=vicePresidentForAcademicAffairs,
+                universityPresident=universityPresident
             )
             messages.success(request, 'Curriculum created successfully.')
             return redirect('curriculumList')
@@ -505,6 +514,9 @@ def curriculumUpdate(request, curriculumId):
         name = request.POST.get('name')
         effectiveSy = request.POST.get('effectiveSy')
         description = request.POST.get('description')
+        dean = request.POST.get('dean')
+        vicePresidentForAcademicAffairs = request.POST.get('vicePresidentForAcademicAffairs')
+        universityPresident = request.POST.get('universityPresident')
 
         if Curriculum.objects.exclude(curriculumId=curriculum.curriculumId).filter(name=name).exists():
             messages.error(request, 'Another curriculum with this name already exists.')
@@ -512,6 +524,10 @@ def curriculumUpdate(request, curriculumId):
             curriculum.name = name
             curriculum.effectiveSy = effectiveSy
             curriculum.description = description
+            curriculum.dean = dean
+            curriculum.vicePresidentForAcademicAffairs = vicePresidentForAcademicAffairs
+            curriculum.universityPresident = universityPresident
+            
             curriculum.save()
             messages.success(request, 'Curriculum updated successfully.')
             return redirect('curriculumList')

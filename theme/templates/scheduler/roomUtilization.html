@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+<div class="p-6 md:p-10 bg-gray-50 min-h-screen">
+    <div class="max-w-7xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">Room Utilization</h1>
+        <hr class="border-gray-300 mb-8">
+
+        {# --- Filter Section --- #}
+        <div class="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0 mb-8 p-4 bg-white shadow-lg rounded-xl">
+            
+            <form id="schedule-select-form" method="GET" action="{% url 'roomUtilization' %}" class="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-4 w-full md:w-2/3">
+                
+                {# Semester Selector #}
+                <div class="flex items-center space-x-2 w-full md:w-1/2">
+                    <label for="semester_select" class="text-sm font-medium text-gray-700 whitespace-nowrap">Semester:</label>
+                    <select name="semester" id="semester_select" 
+                            onchange="this.form.submit()"
+                            class="form-select border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm py-2 w-full">
+                        {% for sem in semesters %}
+                            <option value="{{ sem.semesterId }}" {% if current_semester_id|stringformat:"s" == sem.semesterId|stringformat:"s" %}selected{% endif %}>
+                                {{ sem.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                {# Room Selector (Replaced Batch Selector) #}
+                <div class="flex items-center space-x-2 w-full md:w-1/2">
+                    <label for="room_select" class="text-sm font-medium text-gray-700 whitespace-nowrap">Room:</label>
+                    <select name="room_code" id="room_select" 
+                            onchange="this.form.submit()"
+                            class="form-select border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm py-2 w-full">
+                        
+                        <option value="All" {% if selected_room_code == 'All' %}selected{% endif %}>All Rooms</option>
+                        
+                        {% for room in all_rooms %}
+                            <option value="{{ room.roomCode }}" {% if selected_room_code == room.roomCode %}selected{% endif %}>
+                                {{ room.roomCode }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+            
+            <div class="flex items-center space-x-2">
+                <span class="px-3 py-1 text-sm rounded-full bg-green-100 text-green-800 font-semibold border border-green-200">
+                    Status: Finalized
+                </span>
+            </div>
+        </div>
+
+        {# --- Main Room Timetable --- #}
+
+        {% if room_data %}
+            {% for room in room_data %}
+            <div class="bg-white shadow-xl rounded-lg overflow-hidden mb-10 border border-gray-200">
+                <div class="p-4 bg-gray-800 text-white flex justify-between items-center">
+                    <div>
+                        <h3 class="text-xl font-bold">{{ room.code }}</h3>
+                        <span class="text-sm text-gray-300">{{ room.type }}</span>
+                    </div>
+                    <span class="text-sm font-medium bg-gray-700 px-3 py-1 rounded">Capacity: {{ room.capacity }}</span>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 border-collapse table-fixed">
+                        <thead class="bg-gray-50 sticky top-0 z-30">
+                            <tr>
+                                <th class="w-24 px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider border-r border-gray-200 bg-gray-100">Time</th>
+                                {% for day in days_of_week %}
+                                <th class="w-40 px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider border-r border-gray-200 last:border-r-0">
+                                    {{ day }}
+                                </th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            
+                            {# Iterate over the pre-built matrix rows #}
+                            {% for row in room.matrix %}
+                            <tr class="h-10">
+                                {# Time Column #}
+                                <td class="px-2 py-1 text-xs text-gray-600 font-semibold border-r border-gray-200 sticky left-0 bg-gray-50 z-20 text-center">
+                                    {{ row.time }}
+                                </td>
+                                
+                                {# Iterate over the days in this row #}
+                                {% for schedules_in_slot in row.days %}
+                                    <td class="px-1 py-0 border-r border-b border-gray-100 text-center relative v-top h-10 w-40">
+                                        
+                                        {% for s in schedules_in_slot %}
+                                            {% if s.is_start_slot %}
+                                                <div class="absolute top-0 left-0 w-full p-1 z-10"
+                                                     style="height: calc({{ s.height_px }}px); padding-right: 2px;">
+                                                    
+                                                    <div class="w-full h-full bg-indigo-600 text-white rounded shadow-sm 
+                                                                text-xs font-semibold overflow-hidden flex flex-col justify-center p-1
+                                                                hover:bg-indigo-700 transition-colors cursor-default"
+                                                         title="{{ s.subject_code }} ({{ s.section_label }}) | {{ s.start_time }} - {{ s.end_time }}">
+                                                        
+                                                        <span class="block truncate text-xs">{{ s.subject_code }} - {{ s.section_label }}</span>
+                                                        <span class="block text-[9px] opacity-75 mt-0.5">{{ s.start_time }} - {{ s.end_time }}</span>
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                        {% endfor %}
+                                        
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="text-center p-12 bg-white shadow-lg rounded-xl border border-gray-200">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-gray-900">No Finalized Schedules</h3>
+                <p class="mt-1 text-sm text-gray-500">There are no finalized schedules for this semester yet, or the selected room is empty.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock content %}

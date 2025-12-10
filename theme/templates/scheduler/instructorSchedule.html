@@ -1,52 +1,127 @@
-{% extends 'base.html' %}
-{% block header %}| {{ instructor.full_name }}’s Weekly Schedule{% endblock %}
+{% extends "base.html" %}
+{% load static %}
+
 {% block content %}
-<div class="max-w-7xl mx-auto p-6 space-y-8">
-  {% if error %}
-    <p class="text-red-500 mt-4">{{ error }}</p>
 
-  {% elif grouped_schedules %}
-    {% for day, schedules in grouped_schedules %}
-    <section class="bg-white rounded-2xl shadow border border-gray-100 overflow-hidden">
-      <div class="bg-indigo-600 text-white px-6 py-3">
-        <h2 class="text-lg font-semibold tracking-wide">{{ day }}</h2>
-      </div>
-
-      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
-        {% for sched in schedules %}
-        <div class="border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition bg-gray-50">
-          <div class="flex justify-between items-start">
+<div class="p-6 md:p-10 bg-gray-50 min-h-screen">
+    <div class="max-w-7xl mx-auto">
+        
+        {# --- Header Section --- #}
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
             <div>
-              <h3 class="text-lg font-semibold text-gray-800">
-                {{ sched.subject.code }}
-              </h3>
-              <p class="text-sm text-gray-500">{{ sched.subject.name }}</p>
+                <h1 class="text-3xl font-bold text-gray-800">My Schedule 📅</h1>
+                <p class="text-lg text-gray-600">
+                    Instructor: <span class="font-semibold text-blue-700">{{ instructor.full_name }}</span>
+                </p>
             </div>
-            <span class="px-2 py-1 text-xs font-semibold rounded-full
-              {% if sched.scheduleType == 'lecture' %}
-                bg-blue-100 text-blue-700
-              {% else %}
-                bg-orange-100 text-orange-700
-              {% endif %}
-            ">
-              {{ sched.scheduleType|capfirst }}
-            </span>
-          </div>
 
-          <div class="mt-3 space-y-1 text-sm text-gray-700">
-            <p><span class="font-medium">Section:</span> {{ sched.section.sectionCode }}</p>
-            <p><span class="font-medium">Room:</span> {{ sched.room.roomCode|default:"—" }}</p>
-            <p><span class="font-medium">Time:</span>
-              {{ sched.startTime|time:"h:i A" }} – {{ sched.endTime|time:"h:i A" }}
-            </p>
-          </div>
+            {# --- Semester Selector --- #}
+            <form id="semester-form" method="GET" action="{% url 'instructorScheduleView' %}" class="mt-4 md:mt-0">
+                <div class="flex items-center space-x-2">
+                    <label for="semester_select" class="text-sm font-medium text-gray-700">Semester:</label>
+                    <select name="semester" id="semester_select" 
+                            onchange="this.form.submit()"
+                            class="form-select border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm py-2 px-3">
+                        {% for sem in semesters %}
+                            <option value="{{ sem.pk }}" {% if current_semester.pk == sem.pk %}selected{% endif %}>
+                                {{ sem.name }} 
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
         </div>
-        {% endfor %}
-      </div>
-    </section>
-    {% endfor %}
-  {% else %}
-    <p class="text-gray-500 text-center mt-10">No active schedules assigned.</p>
-  {% endif %}
+        <hr class="border-gray-300 mb-8">
+
+        {# --- Timetable Matrix --- #}
+        {% if error %}
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                <strong class="font-bold">Notice:</strong>
+                <span class="block sm:inline">{{ error }}</span>
+            </div>
+        {% elif has_schedules %}
+            <div class="bg-white shadow-xl rounded-lg overflow-hidden border border-gray-200">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 border-collapse table-fixed">
+                        
+                        {# Header Row #}
+                        <thead class="bg-gray-50 sticky top-0 z-30">
+                            <tr>
+                                <th class="w-24 px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider border-r border-gray-200 bg-gray-100">
+                                    Time
+                                </th>
+                                {% for day in days_of_week %}
+                                <th class="w-40 px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider border-r border-gray-200 last:border-r-0">
+                                    {{ day }}
+                                </th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+
+                        {# Matrix Body #}
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for row in matrix %}
+                            <tr class="h-10">
+                                {# Time Column #}
+                                <td class="px-2 py-1 text-xs text-gray-600 font-semibold border-r border-gray-200 sticky left-0 bg-gray-50 z-20 text-center">
+                                    {{ row.time }}
+                                </td>
+                                
+                                {# Days Columns #}
+                                {% for schedules_in_slot in row.days %}
+                                    <td class="px-1 py-0 border-r border-b border-gray-100 text-center relative v-top h-10 w-40">
+                                        
+                                        {% for s in schedules_in_slot %}
+                                            {% if s.is_start_slot %}
+                                                <div class="absolute top-0 left-0 w-full p-1 z-10"
+                                                     style="height: calc({{ s.height_px }}px); padding-right: 2px;">
+                                                    
+                                                    <div class="w-full h-full bg-blue-600 text-white rounded shadow-sm 
+                                                                text-xs font-semibold overflow-hidden flex flex-col justify-center p-1
+                                                                hover:bg-blue-700 transition-colors cursor-default"
+                                                         title="{{ s.subject }} - {{ s.section }} @ {{ s.room }}">
+                                                        
+                                                        {# SUBJECT #}
+                                                        <span class="block truncate font-bold text-xs">
+                                                            {{ s.subject }} - {{ s.section }}
+                                                        </span>
+                                                        
+
+                                                        {# ROOM #}
+                                                        <span class="block truncate text-[10px] bg-blue-800 bg-opacity-40 rounded px-1 mt-0.5 mx-auto inline-block">
+                                                            {{ s.room }}
+                                                        </span>
+
+                                                        {# TIME #}
+                                                        <span class="block text-[9px] opacity-75 mt-0.5">
+                                                            {{ s.start_time }} - {{ s.end_time }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                        {% endfor %}
+                                        
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        {% else %}
+            <div class="text-center p-12 bg-white shadow-lg rounded-xl border border-gray-200">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-gray-900">No Schedule Found</h3>
+                <p class="mt-1 text-sm text-gray-500">
+                    There is no <strong>Finalized</strong> schedule yet for {{ current_semester.name }}.
+                </p>
+            </div>
+        {% endif %}
+
+    </div>
 </div>
-{% endblock %}
+
+{% endblock content %}
