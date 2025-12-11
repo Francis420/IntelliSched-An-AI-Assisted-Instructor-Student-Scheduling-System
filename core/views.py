@@ -28,9 +28,10 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 from django.core.paginator import Paginator
 from django.template.loader import render_to_string
-from django.db.models import Q
 from auditlog.models import LogEntry
 from datetime import date
+from django.db.models import Q, Count, F, Value, Case, When, IntegerField
+from django.utils import timezone
 
 
 
@@ -604,107 +605,121 @@ def studentAccountUpdate(request, userId):
 
 
 # ------------ Recommendation System ----------
-def normalize_year(value):
-    """Extract numeric start year from '2020-2021'."""
-    if not value: return None
-    try:
-        # We must convert to string before splitting, as the value might be an object/None initially
-        return int(str(value).split("-")[0].strip())
-    except (ValueError, AttributeError):
-        return None
-
-def recommendation_dashboard(request):
-    subjects = Subject.objects.filter(isActive=True).values("subjectId", "code", "name")
-    semesters = Semester.objects.values_list("academicYear", flat=True).distinct()
-    years = sorted({normalize_year(y) for y in semesters if normalize_year(y)})
+@login_required
+@has_role('deptHead')
+def recommendInstructors(request):
+    """
+    Advanced recommendation system for assigning instructors to subjects.
+    Scores candidates based on:
+    1. Relevance of Credentials (high weight)
+    2. Teaching History with this specific subject (high weight)
+    3. Weighted Professional Experience (Teaching > Research > Admin)
+    4. Recency of Experience (bonus for current/recent roles)
+    """
+    subject_id = request.GET.get("subject_id")
     
-    instructors = Instructor.objects.all().order_by('userlogin__user__lastName')
+    instructors = Instructor.objects.filter(
+        userlogin__user__isActive=True
+    ).select_related('rank').distinct()
 
-    context = {
-        "subjects": sorted(subjects, key=lambda s: s["code"]),
-        "years": years,
-        "instructors": instructors,
-    }
-    return render(request, "core/recommendation/recommendationDashboard.html", context)
-
-def recommendation_data(request):
-    # 1. Parse Filters
-    subject_names = request.GET.getlist("subjects[]")
-    year_from = normalize_year(request.GET.get("year_from"))
-    year_to = normalize_year(request.GET.get("year_to"))
-    
-    # 2. Base Queryset
-    # FIX: Instructor.objects.all() is used
-    instructors_qs = Instructor.objects.all().select_related('rank').prefetch_related(
-        'teachingHistory__semester',
-        'experiences',
-        'credentials__relatedSubjects'
-    )
-
-    results = []
-
-    for inst in instructors_qs:
-        
-        # --- Metric 1: Years Taught (Count unique academic years taught) ---
-        history_qs = inst.teachingHistory.all()
-        
-        # Subject Filter
-        if subject_names and "all" not in subject_names:
-            # Note: Assuming 'subject' is a ForeignKey on TeachingHistory
-            history_qs = history_qs.filter(subject__name__in=subject_names)
-        
-        # Year Filter and collection of unique years
-        years_taught_set = set()
-        for h in history_qs:
-            y = normalize_year(h.semester.academicYear)
-            if y:
-                if (not year_from or y >= year_from) and (not year_to or y <= year_to):
-                    years_taught_set.add(y)
-        
-        years_taught_count = len(years_taught_set)
-
-        # --- Metric 2: External/Teaching Experience (Years) ---
-        exp_years = 0.0
-        relevant_exps = inst.experiences.filter(experienceType="Teaching Experience")
-        
-        if subject_names and "all" not in subject_names:
-             # Filtering by relatedSubjects M2M field
-             relevant_exps = relevant_exps.filter(relatedSubjects__name__in=subject_names).distinct()
-        
-        for exp in relevant_exps:
-            start = exp.startDate.year
-            end = exp.endDate.year if exp.endDate else date.today().year
-            
-            # Determine the intersection of the experience range and the filter range
-            search_start = year_from if year_from else 0
-            search_end = year_to if year_to else date.today().year # Default to current year for 'to' filter
-            
-            actual_start = max(start, search_start)
-            actual_end = min(end, search_end)
-            
-            # Add the duration of the overlapping period
-            if actual_start <= actual_end:
-                exp_years += (actual_end - actual_start) + 1 
-
-        # --- Metric 3: Relevant Credentials ---
-        cred_qs = inst.credentials.all()
-        if subject_names and "all" not in subject_names:
-            # Filtering by relatedSubjects M2M field on InstructorCredentials
-            cred_qs = cred_qs.filter(relatedSubjects__name__in=subject_names)
-        
-        cred_count = cred_qs.distinct().count()
-
-        # --- Build Result Object ---
-        results.append({
-            "id": inst.instructorId,
-            "name": inst.full_name,
-            "rank": inst.rank.name if hasattr(inst, 'rank') and inst.rank else "N/A", 
-            "years_taught": years_taught_count,
-            "experience_years": round(exp_years, 1),
-            "credential_count": cred_count
+    if not subject_id:
+        return render(request, "core/recommendations.html", {
+            "instructors": [], 
+            "subjects": Subject.objects.all()
         })
 
-    # Default sort by Years Taught descending
-    results.sort(key=lambda x: x['years_taught'], reverse=True)
+    target_subject = get_object_or_404(Subject, subjectId=subject_id)
+    recommendations = []
 
-    return JsonResponse({"data": results})
+    # --- WEIGHTS CONFIGURATION ---
+    WEIGHT_CREDENTIAL_MATCH = 20  
+    WEIGHT_PAST_TEACHING = 15     
+    WEIGHT_EXP_TEACHING = 3.0     
+    WEIGHT_EXP_INDUSTRY = 2.0     
+    WEIGHT_EXP_GENERIC = 0.5      
+    BONUS_RECENCY = 5             
+    BONUS_RANK = {                
+        'Professor': 10,
+        'Associate Professor': 8,
+        'Assistant Professor': 6,
+        'Instructor': 2,
+    }
+
+    current_year = date.today().year
+
+    for inst in instructors:
+        score = 0
+        breakdown = [] 
+
+        # 1. Credentials Score (Direct Subject Match)
+        relevant_creds = inst.credentials.filter(relatedSubjects=target_subject).count()
+        if relevant_creds > 0:
+            points = relevant_creds * WEIGHT_CREDENTIAL_MATCH
+            score += points
+            breakdown.append(f"+{points} pts: {relevant_creds} relevant credential(s)")
+
+        # 2. Teaching History 
+        past_sections = TeachingHistory.objects.filter(
+            instructor=inst, 
+            subject=target_subject
+        ).count()
+        
+        if past_sections > 0:
+            points = past_sections * WEIGHT_PAST_TEACHING
+            score += points
+            breakdown.append(f"+{points} pts: Taught subject {past_sections} times")
+
+        # 3. Weighted Professional Experience
+        experiences = inst.experiences.all()
+        
+        for exp in experiences:
+            # Calculate duration
+            start = exp.startDate.year
+            end = exp.endDate.year if exp.endDate else current_year
+            duration = max(0, (end - start) + 1)
+
+            # Determine relevance
+            weight = WEIGHT_EXP_GENERIC
+            is_relevant = False
+
+            # Check if subject name appears in title/description or related subjects
+            if (target_subject.name.lower() in exp.title.lower() or 
+                target_subject.name.lower() in exp.description.lower() or
+                target_subject in exp.relatedSubjects.all()):
+                is_relevant = True
+            
+            # Apply Weights
+            if exp.experienceType == 'Teaching Experience':
+                weight = WEIGHT_EXP_TEACHING
+            elif exp.experienceType in ['Work Experience', 'Research Role'] and is_relevant:
+                weight = WEIGHT_EXP_INDUSTRY
+            
+            score += duration * weight
+            
+            # Recency Bonus
+            if end >= (current_year - 3) and is_relevant:
+                score += BONUS_RECENCY
+
+        # 4. Rank Bonus
+        rank_name = inst.rank.name if inst.rank else "N/A"
+        rank_points = BONUS_RANK.get(rank_name, 0)
+        if rank_points > 0:
+            score += rank_points
+
+        # Final Object
+        recommendations.append({
+            "instructor": inst,
+            "score": round(score, 1),
+            "rank": rank_name,
+            "match_details": breakdown,
+            "past_teaching_count": past_sections
+        })
+
+    # Sort by Score Descending
+    recommendations.sort(key=lambda x: x['score'], reverse=True)
+
+    return render(request, "core/recommendations.html", {
+        "target_subject": target_subject,
+        "recommendations": recommendations,
+        "subjects": Subject.objects.all()
+    })

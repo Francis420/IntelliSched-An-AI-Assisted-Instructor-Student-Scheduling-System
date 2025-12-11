@@ -30,7 +30,6 @@ urlpatterns = [
     path('students/update/<int:userId>/', views.studentAccountUpdate, name='studentAccountUpdate'),
 
     # Recommendation Dashboard
-    path('recommendation/', views.recommendation_dashboard, name='recommendationDashboard'),
-    path('recommendation/data/', views.recommendation_data, name='recommendation_data'),
+    path('recommendations/', views.recommendInstructors, name='recommendations'),
 ]
 

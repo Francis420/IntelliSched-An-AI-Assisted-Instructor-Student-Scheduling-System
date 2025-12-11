@@ -6,8 +6,7 @@ from django.core.exceptions import ValidationError
 
 
 
-# ---------- Instructor Experience ---------- 60/update views/templates to handle experienceType
-# This model tracks the professional experiences of instructors, including work experience, academic positions, and research roles.
+# ---------- Instructor Experience ----------
 class InstructorExperience(models.Model):
     EXPERIENCE_TYPE_CHOICES = [
         ('Academic Position', 'Academic Position'), 
@@ -56,9 +55,7 @@ class InstructorExperience(models.Model):
             raise ValidationError("End date cannot be before start date.")
 
 
-# ---------- Teaching History ---------- 60
-# This model tracks the history of subjects taught by instructors, including the number of times taught.
-# It will help in analyzing teaching patterns and subject expertise.
+# ---------- Teaching History ---------- 
 class TeachingHistory(models.Model):
     teachingId = models.AutoField(primary_key=True)
     instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE, related_name='teachingHistory')
@@ -85,8 +82,7 @@ class TeachingHistory(models.Model):
 
 
 
-# ---------- Instructor Credential ---------- 60
-# This model stores various credentials that instructors have, such as certifications, workshops, and training.
+# ---------- Instructor Credential ----------
 class InstructorCredentials(models.Model):
     CREDENTIAL_TYPE_CHOICES = [
         ('License', 'License'),
