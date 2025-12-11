@@ -106,7 +106,7 @@ SLOT_TO_GLOBAL_MIN = {i: SLOT_META[i][3] for i in range(NUM_SLOTS)}
 # ----------------- Main solver -----------------
 def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
     if semester is None:
-        semester = Semester.objects.order_by('-createdAt').first()
+        semester = Semester.objects.filter(isActive=True).order_by('-createdAt').first()
         if not semester:
             return []
     elif isinstance(semester, int):

@@ -604,23 +604,30 @@ def studentAccountUpdate(request, userId):
     })
 
 
-# ------------ Recommendation System ----------
 @login_required
 @has_role('deptHead')
 def recommendInstructors(request):
     """
     Advanced recommendation system for assigning instructors to subjects.
     Scores candidates based on:
-    1. Relevance of Credentials (high weight)
-    2. Teaching History with this specific subject (high weight)
-    3. Weighted Professional Experience (Teaching > Research > Admin)
-    4. Recency of Experience (bonus for current/recent roles)
+    1. Credentials (related to subject)
+    2. Combined Teaching History (Legacy + System Automation)
+    3. Professional Experience (Weighted by Type & Employment Status)
+    4. Recency & Rank
     """
     subject_id = request.GET.get("subject_id")
     
+    # OPTIMIZATION: Prefetch all related data to avoid hitting the DB inside the loop
     instructors = Instructor.objects.filter(
         userlogin__user__isActive=True
-    ).select_related('rank').distinct()
+    ).select_related('rank').prefetch_related(
+        'credentials',
+        'credentials__relatedSubjects',
+        'experiences',
+        'experiences__relatedSubjects',
+        'legacy_experiences',    # For manual history
+        'system_assignments'     # For automated history
+    ).distinct()
 
     if not subject_id:
         return render(request, "core/recommendations.html", {
@@ -634,10 +641,18 @@ def recommendInstructors(request):
     # --- WEIGHTS CONFIGURATION ---
     WEIGHT_CREDENTIAL_MATCH = 20  
     WEIGHT_PAST_TEACHING = 15     
-    WEIGHT_EXP_TEACHING = 3.0     
-    WEIGHT_EXP_INDUSTRY = 2.0     
+    WEIGHT_EXP_TEACHING = 3.0     # Per year for Academic roles
+    WEIGHT_EXP_INDUSTRY = 2.0     # Per year for Industry/Research
     WEIGHT_EXP_GENERIC = 0.5      
     BONUS_RECENCY = 5             
+    
+    # Employment Status Multipliers (FTE)
+    FTE_MULTIPLIER = {
+        'FT': 1.0,  # Full Time
+        'PT': 0.5,  # Part Time
+        'CT': 0.75, # Contractual
+    }
+
     BONUS_RANK = {                
         'Professor': 10,
         'Associate Professor': 8,
@@ -651,56 +666,89 @@ def recommendInstructors(request):
         score = 0
         breakdown = [] 
 
+        # ---------------------------------------------------------
         # 1. Credentials Score (Direct Subject Match)
-        relevant_creds = inst.credentials.filter(relatedSubjects=target_subject).count()
-        if relevant_creds > 0:
-            points = relevant_creds * WEIGHT_CREDENTIAL_MATCH
-            score += points
-            breakdown.append(f"+{points} pts: {relevant_creds} relevant credential(s)")
-
-        # 2. Teaching History 
-        past_sections = InstructorLegacyExperience.objects.filter(
-            instructor=inst, 
-            subject=target_subject
-        ).count()
+        # ---------------------------------------------------------
+        # Check if credential tags this subject in 'relatedSubjects'
+        relevant_creds = [c for c in inst.credentials.all() if target_subject in c.relatedSubjects.all()]
+        count_creds = len(relevant_creds)
         
-        if past_sections > 0:
-            points = past_sections * WEIGHT_PAST_TEACHING
+        if count_creds > 0:
+            points = count_creds * WEIGHT_CREDENTIAL_MATCH
             score += points
-            breakdown.append(f"+{points} pts: Taught subject {past_sections} times")
+            breakdown.append(f"+{points} pts: {count_creds} relevant credential(s)")
 
+        # ---------------------------------------------------------
+        # 2. Combined Teaching History (Legacy + System)
+        # ---------------------------------------------------------
+        # A. Legacy Data (Manual Entry)
+        legacy_entry = next((l for l in inst.legacy_experiences.all() if l.subject_id == target_subject.subjectId), None)
+        legacy_count = legacy_entry.priorTimesTaught if legacy_entry else 0
+        
+        # B. System Data (Automated via TeachingAssignment)
+        # Count how many times this instructor appears in the system history for this subject
+        system_count = len([a for a in inst.system_assignments.all() if a.subject_id == target_subject.subjectId])
+        
+        total_taught = legacy_count + system_count
+        
+        if total_taught > 0:
+            points = total_taught * WEIGHT_PAST_TEACHING
+            score += points
+            breakdown.append(f"+{points} pts: Taught {total_taught} times (Legacy: {legacy_count}, System: {system_count})")
+
+        # ---------------------------------------------------------
         # 3. Weighted Professional Experience
-        experiences = inst.experiences.all()
-        
-        for exp in experiences:
-            # Calculate duration
+        # ---------------------------------------------------------
+        for exp in inst.experiences.all():
+            # A. Calculate Duration
             start = exp.startDate.year
-            end = exp.endDate.year if exp.endDate else current_year
-            duration = max(0, (end - start) + 1)
+            # Use 'isCurrent' flag for end date
+            if exp.isCurrent:
+                end = current_year
+            else:
+                end = exp.endDate.year if exp.endDate else current_year
+                
+            duration = max(0, (end - start) + 1) # Min 1 year if same year
 
-            # Determine relevance
-            weight = WEIGHT_EXP_GENERIC
+            # B. Determine Relevance
+            # Check if subject is linked M2M OR if title/desc contains subject name
             is_relevant = False
-
-            # Check if subject name appears in title/description or related subjects
-            if (target_subject.name.lower() in exp.title.lower() or 
-                target_subject.name.lower() in exp.description.lower() or
-                target_subject in exp.relatedSubjects.all()):
+            if target_subject in exp.relatedSubjects.all():
                 is_relevant = True
+            elif target_subject.name.lower() in exp.title.lower() or target_subject.name.lower() in exp.description.lower():
+                is_relevant = True
+
+            # C. Determine Weight based on New Categories
+            weight = WEIGHT_EXP_GENERIC
             
-            # Apply Weights
-            if exp.experienceType == 'Teaching Experience':
-                weight = WEIGHT_EXP_TEACHING
-            elif exp.experienceType in ['Work Experience', 'Research Role'] and is_relevant:
+            # 'Academic Position' is high value (Pedagogy)
+            if exp.experienceType == 'Academic Position':
+                # We give full points for relevant academic exp, slightly less for generic
+                weight = WEIGHT_EXP_TEACHING if is_relevant else (WEIGHT_EXP_TEACHING * 0.5)
+            
+            # 'Industry', 'Research', 'Consultancy' only counts if relevant
+            elif exp.experienceType in ['Industry', 'Research Role', 'Consultancy'] and is_relevant:
                 weight = WEIGHT_EXP_INDUSTRY
             
-            score += duration * weight
-            
-            # Recency Bonus
-            if end >= (current_year - 3) and is_relevant:
-                score += BONUS_RECENCY
+            # 'Administrative' gets generic score
+            elif exp.experienceType == 'Administrative Role':
+                weight = WEIGHT_EXP_GENERIC
 
+            # D. Apply FTE Multiplier (Full Time vs Part Time)
+            fte = FTE_MULTIPLIER.get(exp.employmentType, 1.0)
+
+            # Calculate
+            exp_points = duration * weight * fte
+            
+            if exp_points > 0:
+                score += exp_points
+                # Only add Recency Bonus if the experience is relevant/academic and recent (last 3 years)
+                if end >= (current_year - 3) and (is_relevant or exp.experienceType == 'Academic Position'):
+                    score += BONUS_RECENCY
+
+        # ---------------------------------------------------------
         # 4. Rank Bonus
+        # ---------------------------------------------------------
         rank_name = inst.rank.name if inst.rank else "N/A"
         rank_points = BONUS_RANK.get(rank_name, 0)
         if rank_points > 0:
@@ -712,7 +760,7 @@ def recommendInstructors(request):
             "score": round(score, 1),
             "rank": rank_name,
             "match_details": breakdown,
-            "past_teaching_count": past_sections
+            "past_teaching_count": total_taught
         })
 
     # Sort by Score Descending

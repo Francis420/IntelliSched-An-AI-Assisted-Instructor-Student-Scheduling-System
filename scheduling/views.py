@@ -561,19 +561,22 @@ def curriculumDetail(request, curriculumId):
 
 
 # ---------- Semesters ----------
+
 @login_required
 @has_role('deptHead')
 def semesterList(request):
     query = request.GET.get("q", "").strip()
     page = int(request.GET.get("page", 1))
 
-    semesters = Semester.objects.all().order_by("-createdAt")
+    # Optimize query with select_related since we will show curriculum name
+    semesters = Semester.objects.select_related('curriculum').all().order_by("-createdAt")
 
     if query:
         semesters = semesters.filter(
             Q(name__icontains=query) |
             Q(term__icontains=query) |
-            Q(academicYear__icontains=query)
+            Q(academicYear__icontains=query) |
+            Q(curriculum__name__icontains=query) # Added search by curriculum
         )
 
     paginator = Paginator(semesters, 10)
@@ -591,13 +594,14 @@ def semesterListLive(request):
     query = request.GET.get("q", "").strip()
     page = int(request.GET.get("page", 1))
 
-    semesters = Semester.objects.all().order_by("-createdAt")
+    semesters = Semester.objects.select_related('curriculum').all().order_by("-createdAt")
 
     if query:
         semesters = semesters.filter(
             Q(name__icontains=query) |
             Q(term__icontains=query) |
-            Q(academicYear__icontains=query)
+            Q(academicYear__icontains=query) |
+            Q(curriculum__name__icontains=query)
         )
 
     paginator = Paginator(semesters, 10)
@@ -615,20 +619,32 @@ def semesterListLive(request):
         "has_previous": page_obj.has_previous(),
     })
 
+
 @login_required
 @has_role('deptHead')
 def semesterCreate(request):
+    # Fetch active curriculums for the dropdown
+    curriculums = Curriculum.objects.filter(isActive=True).order_by('-createdAt')
+
     if request.method == 'POST':
+        curriculum_id = request.POST.get('curriculum')
         academicYear = request.POST.get('academicYear')
         term = request.POST.get('term')
-        isActive = bool(request.POST.get('isActive'))
+        isActive = request.POST.get('isActive') == 'on'
+        
+        # Get Curriculum Instance
+        curriculum = get_object_or_404(Curriculum, pk=curriculum_id)
+
+        # Name format: "1st Semester 2025-2026 (Curriculum Name)"
         name = f"{term} Semester {academicYear}"
 
-        if Semester.objects.filter(academicYear=academicYear, term=term).exists():
-            messages.error(request, 'Semester for this academic year and term already exists.')
+        # Validation: Check if this specific combo exists
+        if Semester.objects.filter(academicYear=academicYear, term=term, curriculum=curriculum).exists():
+            messages.error(request, 'A semester for this curriculum, academic year, and term already exists.')
         else:
             Semester.objects.create(
                 name=name,
+                curriculum=curriculum,
                 academicYear=academicYear,
                 term=term,
                 isActive=isActive
@@ -636,23 +652,34 @@ def semesterCreate(request):
             messages.success(request, 'Semester created successfully.')
             return redirect('semesterList')
 
-    return render(request, 'scheduling/semesters/create.html')
+    return render(request, 'scheduling/semesters/create.html', {
+        'curriculums': curriculums
+    })
+
 
 @login_required
 @has_role('deptHead')
 def semesterUpdate(request, semesterId):
     semester = get_object_or_404(Semester, semesterId=semesterId)
+    curriculums = Curriculum.objects.filter(isActive=True).order_by('-createdAt')
 
     if request.method == 'POST':
+        curriculum_id = request.POST.get('curriculum')
         academicYear = request.POST.get('academicYear')
         term = request.POST.get('term')
-        isActive = bool(request.POST.get('isActive'))
+        isActive = request.POST.get('isActive') == 'on'
+        
+        curriculum = get_object_or_404(Curriculum, pk=curriculum_id)
         name = f"{term} Semester {academicYear}"
 
-        if Semester.objects.exclude(semesterId=semester.semesterId).filter(academicYear=academicYear, term=term).exists():
-            messages.error(request, 'Another semester with this academic year and term already exists.')
+        # Validation: Exclude current self, check if combo exists
+        if Semester.objects.exclude(semesterId=semester.semesterId).filter(
+            academicYear=academicYear, term=term, curriculum=curriculum
+        ).exists():
+            messages.error(request, 'Another semester with this curriculum, academic year, and term already exists.')
         else:
             semester.name = name
+            semester.curriculum = curriculum
             semester.academicYear = academicYear
             semester.term = term
             semester.isActive = isActive
@@ -660,9 +687,11 @@ def semesterUpdate(request, semesterId):
             messages.success(request, 'Semester updated successfully.')
             return redirect('semesterList')
 
-    return render(request, 'scheduling/semesters/update.html', {'semester': semester})
+    return render(request, 'scheduling/semesters/update.html', {
+        'semester': semester,
+        'curriculums': curriculums
+    })
 
-from django.db.models import ProtectedError
 
 @login_required
 @has_role('deptHead')
@@ -677,7 +706,7 @@ def semesterDelete(request, semesterId):
         semester.delete()
         messages.success(request, 'Semester deleted successfully.')
     except ProtectedError:
-        messages.error(request, 'Cannot delete this semester because it is linked to other records (e.g., schedules, enrollments).')
+        messages.error(request, 'Cannot delete this semester because it is linked to other records (e.g., schedules).')
 
     return redirect('semesterList')
 

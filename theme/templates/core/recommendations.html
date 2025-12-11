@@ -10,16 +10,18 @@
             <h1 class="text-3xl font-bold text-gray-800 flex items-center gap-3">
                 <span>🎯 Instructor Recommendations</span>
             </h1>
-            <p class="text-gray-500 mt-2">AI-assisted scoring based on credentials, teaching history, and professional experience.</p>
+            <p class="text-gray-500 mt-2">
+                AI-assisted scoring based on credentials, teaching history (Legacy + System), and professional experience.
+            </p>
         </div>
 
         <div class="bg-white shadow-md rounded-xl p-6 mb-8 border border-gray-100">
             <form method="GET" action="{% url 'recommendations' %}" class="flex flex-col md:flex-row items-center gap-4">
                 <div class="w-full md:w-1/2">
-                    <label for="subject_id" class="block text-sm font-medium text-gray-700 mb-1">Select Target Subject</label>
+                    <label for="subject_id" class="block text-sm font-medium text-gray-700 mb-1">Target Subject</label>
                     <select name="subject_id" id="subject_id" onchange="this.form.submit()" 
-                            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors cursor-pointer py-2.5">
-                        <option value="">-- Choose a Subject to Analyze --</option>
+                            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2.5 px-3">
+                        <option value="">-- Select a Subject --</option>
                         {% for sub in subjects %}
                             <option value="{{ sub.subjectId }}" {% if target_subject and target_subject.subjectId == sub.subjectId %}selected{% endif %}>
                                 {{ sub.code }} - {{ sub.name }}
@@ -27,91 +29,81 @@
                         {% endfor %}
                     </select>
                 </div>
-                
-                {% if target_subject %}
-                <div class="w-full md:w-1/2 md:text-right mt-2 md:mt-0">
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                        Analyzing: {{ target_subject.code }}
-                    </span>
-                </div>
-                {% endif %}
             </form>
         </div>
 
         {% if target_subject %}
-            <div class="bg-white shadow-xl rounded-xl overflow-hidden border border-gray-200">
+            <div class="bg-white shadow-lg rounded-xl overflow-hidden border border-gray-200">
+                <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                    <h2 class="text-xl font-bold text-gray-800">
+                        Top Candidates for <span class="text-blue-600">{{ target_subject.code }}</span>
+                    </h2>
+                    <span class="text-sm text-gray-500">{{ recommendations|length }} candidates found</span>
+                </div>
+
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Rank</th>
-                                <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Instructor Candidate</th>
-                                <th scope="col" class="px-6 py-4 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Match Score</th>
-                                <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Scoring Breakdown</th>
-                                <th scope="col" class="px-6 py-4 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">History</th>
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50 text-gray-600 text-sm uppercase tracking-wider">
+                                <th class="p-4 font-semibold border-b">Rank</th>
+                                <th class="p-4 font-semibold border-b">Instructor</th>
+                                <th class="p-4 font-semibold border-b text-center">Total Score</th>
+                                <th class="p-4 font-semibold border-b">Match Breakdown</th>
                             </tr>
                         </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
+                        <tbody class="divide-y divide-gray-100">
                             {% for rec in recommendations %}
-                            <tr class="hover:bg-blue-50 transition-colors duration-150">
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="flex items-center">
-                                        {% if forloop.counter == 1 %}
-                                            <span class="flex items-center justify-center w-8 h-8 rounded-full bg-yellow-100 text-yellow-700 font-bold text-sm ring-2 ring-yellow-400">1</span>
-                                        {% elif forloop.counter == 2 %}
-                                            <span class="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 text-gray-700 font-bold text-sm ring-2 ring-gray-300">2</span>
-                                        {% elif forloop.counter == 3 %}
-                                            <span class="flex items-center justify-center w-8 h-8 rounded-full bg-orange-100 text-orange-700 font-bold text-sm ring-2 ring-orange-300">3</span>
+                            <tr class="hover:bg-blue-50 transition-colors duration-150 group">
+                                <td class="p-4 align-top">
+                                    <div class="flex flex-col items-start gap-1">
+                                        <span class="font-bold text-gray-400">#{{ forloop.counter }}</span>
+                                        {% if rec.rank == 'Professor' %}
+                                            <span class="px-2 py-1 text-xs font-bold text-purple-700 bg-purple-100 rounded-full">Professor</span>
+                                        {% elif rec.rank == 'Associate Professor' %}
+                                            <span class="px-2 py-1 text-xs font-bold text-indigo-700 bg-indigo-100 rounded-full">Assoc. Prof</span>
+                                        {% elif rec.rank == 'Assistant Professor' %}
+                                            <span class="px-2 py-1 text-xs font-bold text-blue-700 bg-blue-100 rounded-full">Asst. Prof</span>
                                         {% else %}
-                                            <span class="text-gray-400 font-medium ml-2">#{{ forloop.counter }}</span>
+                                            <span class="px-2 py-1 text-xs font-bold text-gray-700 bg-gray-100 rounded-full">{{ rec.rank }}</span>
                                         {% endif %}
                                     </div>
                                 </td>
 
-                                <td class="px-6 py-4">
-                                    <div class="flex items-center">
-                                        <div>
-                                            <div class="text-sm font-bold text-gray-900">{{ rec.instructor.full_name }}</div>
-                                            <div class="text-xs text-gray-500">{{ rec.rank }}</div>
-                                        </div>
+                                <td class="p-4 align-top">
+                                    <div class="font-bold text-gray-800 text-lg">{{ rec.instructor.full_name }}</div>
+                                    <div class="text-sm text-gray-500">{{ rec.instructor.department.name|default:"No Dept" }}</div>
+                                    
+                                    {% if rec.past_teaching_count > 0 %}
+                                    <div class="mt-2 text-xs text-green-600 font-medium flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                        Taught {{ rec.past_teaching_count }} times previously
+                                    </div>
+                                    {% endif %}
+                                </td>
+
+                                <td class="p-4 align-top text-center">
+                                    <div class="inline-block bg-blue-600 text-white font-bold text-2xl rounded-lg px-4 py-2 shadow-sm">
+                                        {{ rec.score }}
                                     </div>
                                 </td>
 
-                                <td class="px-6 py-4 whitespace-nowrap text-center">
-                                    <span class="inline-block px-4 py-2 rounded-lg text-lg font-bold
-                                        {% if rec.score >= 50 %} bg-green-100 text-green-800
-                                        {% elif rec.score >= 20 %} bg-blue-100 text-blue-800
-                                        {% else %} bg-gray-100 text-gray-600 {% endif %}">
-                                        {{ rec.score }}
-                                    </span>
-                                </td>
-
-                                <td class="px-6 py-4">
-                                    <ul class="space-y-1 text-xs text-gray-600">
+                                <td class="p-4 align-top">
+                                    <ul class="space-y-1 text-sm text-gray-600">
                                         {% for detail in rec.match_details %}
                                             <li class="flex items-start gap-2">
-                                                <svg class="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                                <span class="text-green-500 mt-1">✓</span>
                                                 <span>{{ detail }}</span>
                                             </li>
                                         {% empty %}
-                                            <li class="text-gray-400 italic">No specific subject match found.</li>
+                                            <li class="text-gray-400 italic">No specific match factors found.</li>
                                         {% endfor %}
                                     </ul>
-                                </td>
-                                
-                                <td class="px-6 py-4 text-center whitespace-nowrap">
-                                    {% if rec.past_teaching_count > 0 %}
-                                        <div class="text-sm text-gray-900 font-medium">{{ rec.past_teaching_count }} times</div>
-                                        <div class="text-xs text-gray-500">previously taught</div>
-                                    {% else %}
-                                        <span class="text-xs text-gray-400">Never taught</span>
-                                    {% endif %}
                                 </td>
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="5" class="px-6 py-10 text-center text-gray-500">
-                                    <div class="flex flex-col items-center justify-center">
+                                <td colspan="4" class="p-12 text-center text-gray-500">
+                                    <div class="flex flex-col items-center">
                                         <svg class="w-12 h-12 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                         <p class="text-lg font-medium">No instructors found.</p>
                                         <p class="text-sm">Try checking if credentials and experiences are properly logged.</p>
@@ -127,13 +119,13 @@
         {% else %}
             <div class="flex flex-col items-center justify-center p-12 bg-white border-2 border-dashed border-gray-300 rounded-xl text-center">
                 <svg class="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                 </svg>
-                <h3 class="mt-2 text-lg font-medium text-gray-900">Select a Subject to Begin</h3>
-                <p class="mt-1 text-sm text-gray-500 max-w-sm">Choose a subject from the dropdown above to see which instructors are best qualified to teach it.</p>
+                <h3 class="text-xl font-medium text-gray-900">Select a Subject to Begin</h3>
+                <p class="text-gray-500 mt-1">Choose a subject above to see AI-ranked instructor recommendations.</p>
             </div>
         {% endif %}
 
     </div>
 </div>
-{% endblock content %}
+{% endblock %}

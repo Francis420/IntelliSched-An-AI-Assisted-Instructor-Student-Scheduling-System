@@ -9,7 +9,7 @@ class InstructorsConfig(AppConfig):
         from .models import (
             InstructorExperience,
             InstructorCredentials,
-            TeachingAssignment,            # Changed from TeachingHistory
+            TeachingAssignment,          
             InstructorLegacyExperience,
             InstructorDesignation,
             InstructorRank,

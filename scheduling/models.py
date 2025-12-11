@@ -28,7 +28,7 @@ class Subject(models.Model):
     subjectId = models.AutoField(primary_key=True)
     curriculum = models.ForeignKey("Curriculum", on_delete=models.CASCADE, related_name="subjects")
 
-    code = models.CharField(max_length=20, unique=True)
+    code = models.CharField(max_length=20)
     name = models.CharField(max_length=150)
     units = models.IntegerField()
     durationMinutes = models.IntegerField()
@@ -72,6 +72,7 @@ class Subject(models.Model):
 # ---------- Semester Table ----------
 class Semester(models.Model):
     semesterId = models.AutoField(primary_key=True)
+    curriculum = models.ForeignKey('Curriculum', on_delete=models.CASCADE, null=True)
     name = models.CharField(max_length=50)
     academicYear = models.CharField(max_length=20) 
     term = models.CharField(max_length=10, choices=[('1st', '1st'), ('2nd', '2nd'), ('Midyear', 'Midyear')])

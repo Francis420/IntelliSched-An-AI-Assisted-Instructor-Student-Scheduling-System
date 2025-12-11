@@ -1,47 +1,54 @@
 {% extends 'base.html' %}
-{% load static %}
-
 {% block content %}
 <div class="max-w-xl mx-auto mt-6 p-6 bg-white rounded-2xl shadow">
   <h2 class="text-2xl font-semibold mb-4">Update Semester</h2>
 
-  <form method="post" class="space-y-4">
+  <form method="POST" class="space-y-4">
     {% csrf_token %}
+    
+    <div>
+        <label for="curriculum" class="block text-sm font-medium text-gray-700 mb-1">Curriculum</label>
+        <select name="curriculum" id="curriculum" required
+                class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            {% for curr in curriculums %}
+                <option value="{{ curr.curriculumId }}" 
+                        {% if semester.curriculum and semester.curriculum.curriculumId == curr.curriculumId %}selected{% endif %}>
+                    {{ curr.name }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
 
     <div>
-      <label for="term" class="block font-medium mb-1">Semester:</label>
-      <select name="term" id="term" required
-              class="w-full border border-gray-300 rounded px-3 py-2">
-        <option value="1st" {% if semester.term == '1st' %}selected{% endif %}>1st</option>
-        <option value="2nd" {% if semester.term == '2nd' %}selected{% endif %}>2nd</option>
-        <option value="Midyear" {% if semester.term == 'Midyear' %}selected{% endif %}>Midyear</option>
-      </select>
+        <label for="term" class="block text-sm font-medium text-gray-700 mb-1">Term</label>
+        <select name="term" id="term" required
+                class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <option value="1st" {% if semester.term == '1st' %}selected{% endif %}>1st Semester</option>
+            <option value="2nd" {% if semester.term == '2nd' %}selected{% endif %}>2nd Semester</option>
+            <option value="Summer" {% if semester.term == 'Summer' %}selected{% endif %}>Summer</option>
+        </select>
     </div>
 
     <div>
-      <label for="academicYear" class="block font-medium mb-1">Academic Year (e.g. 2025 - 2026):</label>
-      <input type="text" name="academicYear" id="academicYear"
-             value="{{ semester.academicYear }}" required
-             class="w-full border border-gray-300 rounded px-3 py-2" />
+      <label for="academicYear" class="block text-sm font-medium text-gray-700 mb-1">Academic Year</label>
+      <input type="text" name="academicYear" value="{{ semester.academicYear }}" required
+             placeholder="e.g., 2025-2026"
+             class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
     </div>
 
-    <!-- ✅ Active toggle -->
-    <div class="flex items-center space-x-2">
-      <input type="checkbox" id="isActive" name="isActive" {% if semester.isActive %}checked{% endif %}
-             class="h-4 w-4 text-blue-600 border-gray-300 rounded">
-      <label for="isActive" class="font-medium text-gray-700">Set as Active Semester</label>
+    <div class="flex items-center">
+      <input type="checkbox" name="isActive" id="isActive" 
+             {% if semester.isActive %}checked{% endif %}
+             class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+      <label for="isActive" class="ml-2 block text-sm text-gray-900">Set as Active Semester</label>
     </div>
 
-    <p class="text-sm text-gray-500">
-      ⚙️ Only one semester can be active at a time. Activating this one will deactivate others.
-    </p>
-
-    <div class="flex justify-between mt-4">
+    <div class="flex justify-between items-center pt-4">
+      <a href="{% url 'semesterList' %}" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold px-4 py-2 rounded-xl transition">Back</a>
       <button type="submit"
-              class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+              class="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-xl shadow transition">
         Update Semester
       </button>
-      <a href="javascript:history.back()" class="bg-gray-300 hover:bg-gray-400 text-black font-semibold px-4 py-2 rounded">Back</a>
     </div>
   </form>
 </div>

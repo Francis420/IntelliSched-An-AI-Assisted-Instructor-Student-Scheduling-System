@@ -321,7 +321,6 @@ def _matching_results_common(request, batchId, live=False):
             obj.latestHistory.teachingScorePct = obj.latestHistory.teachingScore * 100
             obj.latestHistory.credentialScorePct = obj.latestHistory.credentialScore * 100
             obj.latestHistory.experienceScorePct = obj.latestHistory.experienceScore * 100
-            # Removed Preference Pct
             obj.latestHistory.confidenceScorePct = obj.latestHistory.confidenceScore * 100
 
         results.append(obj)
