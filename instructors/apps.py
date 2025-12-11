@@ -8,9 +8,9 @@ class InstructorsConfig(AppConfig):
         from auditlog.registry import auditlog
         from .models import (
             InstructorExperience,
-            TeachingHistory,
             InstructorCredentials,
-            InstructorSubjectPreference,
+            TeachingAssignment,            # Changed from TeachingHistory
+            InstructorLegacyExperience,
             InstructorDesignation,
             InstructorRank,
             InstructorAcademicAttainment,
@@ -19,11 +19,13 @@ class InstructorsConfig(AppConfig):
         )
 
         auditlog.register(InstructorExperience)
-        auditlog.register(TeachingHistory)
         auditlog.register(InstructorCredentials)
-        auditlog.register(InstructorSubjectPreference)
+        auditlog.register(TeachingAssignment)         
+        auditlog.register(InstructorLegacyExperience)
         auditlog.register(InstructorDesignation)
         auditlog.register(InstructorRank)
         auditlog.register(InstructorAcademicAttainment)
         auditlog.register(InstructorAbsence)
         auditlog.register(InstructorAvailability)
+
+        import instructors.signals

@@ -8,7 +8,7 @@ from functools import wraps
 from core.models import User, UserLogin, Student, Role, Instructor
 from django.urls import reverse
 from django.contrib.auth import authenticate, login 
-from instructors.models import InstructorExperience, InstructorCredentials, InstructorAvailability, InstructorSubjectPreference, TeachingHistory
+from instructors.models import InstructorExperience, InstructorCredentials, InstructorAvailability
 from itertools import chain
 from operator import attrgetter
 from scheduling.models import Curriculum, Semester, Subject, Room
@@ -172,19 +172,16 @@ def instructorDashboard(request):
     experience_count = InstructorExperience.objects.filter(instructor=instructor).count()
     credential_count = InstructorCredentials.objects.filter(instructor=instructor).count()
     availability_count = InstructorAvailability.objects.filter(instructor=instructor).count()
-    preference_count = InstructorSubjectPreference.objects.filter(instructor=instructor).count()
-    teaching_history_count = TeachingHistory.objects.filter(instructor=instructor).count()
 
     # Get latest updates from each model
     experiences = InstructorExperience.objects.filter(instructor=instructor).order_by('-createdAt')[:3]
     credentials = InstructorCredentials.objects.filter(instructor=instructor).order_by('-createdAt')[:3]
     availabilities = InstructorAvailability.objects.filter(instructor=instructor).order_by('-createdAt')[:3]
-    preferences = InstructorSubjectPreference.objects.filter(instructor=instructor).order_by('-createdAt')[:3]
-    teaching_history = TeachingHistory.objects.filter(instructor=instructor).order_by('-createdAt')[:3]
+
 
     # Combine & sort all recent activities
     recent_activities = sorted(
-        chain(experiences, credentials, availabilities, preferences, teaching_history),
+        chain(experiences, credentials, availabilities),
         key=attrgetter("createdAt"),
         reverse=True
     )[:5]
@@ -201,12 +198,6 @@ def instructorDashboard(request):
         elif isinstance(item, InstructorAvailability):
             url = reverse('availabilityUpdate', args=[item.pk])
             label = "Availability"
-        elif isinstance(item, InstructorSubjectPreference):
-            url = reverse('preferenceUpdate', args=[item.pk])
-            label = "Preference"
-        elif isinstance(item, TeachingHistory):
-            url = reverse('teachingHistoryUpdate', args=[item.pk])
-            label = "Teaching History"
         else:
             url = None
             label = "Update"
@@ -223,8 +214,6 @@ def instructorDashboard(request):
         "experience_count": experience_count,
         "credential_count": credential_count,
         "availability_count": availability_count,
-        "preference_count": preference_count,
-        "teaching_history_count": teaching_history_count,
         "recent_activities": activity_feed,
     }
     return render(request, 'dashboards/instructorDashboard.html', context)

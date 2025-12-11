@@ -46,14 +46,16 @@ function updateTotal() {
   const teaching = parseFloat(document.getElementById("teachingWeight").value) || 0;
   const credentials = parseFloat(document.getElementById("credentialsWeight").value) || 0;
   const experience = parseFloat(document.getElementById("experienceWeight").value) || 0;
-  const preference = parseFloat(document.getElementById("preferenceWeight").value) || 0;
   
-  const total = teaching + credentials + experience + preference;
+  // Updated total calculation (Removed preference)
+  const total = teaching + credentials + experience;
+  
   document.getElementById("totalDisplay").innerText = total.toFixed(2);
 
   const warning = document.getElementById("totalWarning");
   const saveBtn = document.getElementById("saveBtn");
 
+  // Allow small floating point margin of error (0.01)
   if (Math.abs(total - 1.0) > 0.01) {
     warning.classList.remove("hidden");
     saveBtn.disabled = true;
@@ -67,6 +69,7 @@ function updateTotal() {
   }
 }
 
+// Run immediately to set initial state
 updateTotal();
 </script>
 {% endblock %}

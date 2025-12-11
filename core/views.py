@@ -15,10 +15,10 @@ from core.models import (
     Student, 
     UserLogin,
 )
-from instructors.models import (
-    TeachingHistory, 
+from instructors.models import ( 
     InstructorExperience, 
-    InstructorCredentials
+    InstructorCredentials,
+    InstructorLegacyExperience,
 )
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -659,7 +659,7 @@ def recommendInstructors(request):
             breakdown.append(f"+{points} pts: {relevant_creds} relevant credential(s)")
 
         # 2. Teaching History 
-        past_sections = TeachingHistory.objects.filter(
+        past_sections = InstructorLegacyExperience.objects.filter(
             instructor=inst, 
             subject=target_subject
         ).count()

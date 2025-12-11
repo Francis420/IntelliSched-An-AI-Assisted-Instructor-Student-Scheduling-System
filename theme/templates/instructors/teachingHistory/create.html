@@ -1,80 +1,71 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="max-w-xl mx-auto mt-6 p-6 bg-white rounded-2xl shadow">
-  <h2 class="text-2xl font-semibold mb-4">Add Teaching History</h2>
+<div class="max-w-2xl mx-auto mt-10 bg-white p-8 rounded-xl shadow-md border border-gray-100">
+    <h2 class="text-2xl font-bold mb-6 text-gray-800">Add Legacy Experience</h2>
+    <p class="text-sm text-gray-500 mb-6 bg-blue-50 p-3 rounded-lg border border-blue-100">
+        Use this form to record subjects you have taught before using this system. This helps the AI understand your expertise.
+    </p>
 
-  <form method="post">
-    {% csrf_token %}
+    <form method="POST" class="space-y-5">
+        {% csrf_token %}
 
-    <div class="mb-4">
-      <label class="block font-medium mb-1">Subject</label>
-      <select name="subject" class="subject-select w-full" required>
-        <option value="" disabled selected>Select a subject</option>
-        {% for subject in subjects %}
-          <option value="{{ subject.subjectId }}">{{ subject.code }} - {{ subject.name }}</option>
-        {% endfor %}
-      </select>
-    </div>
+        <div>
+            <label for="subject" class="block mb-1 text-sm font-medium text-gray-700">Subject</label>
+            <select name="subject" id="subject" class="subject-select w-full" required>
+                <option value="" disabled selected>Select a subject...</option>
+                {% for subject in subjects %}
+                    <option value="{{ subject.subjectId }}">{{ subject.code }} - {{ subject.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
 
-    <div class="mb-4">
-      <label class="block font-medium mb-1">Semester</label>
-      <select name="semester" class="semester-select w-full" required>
-        <option value="" disabled selected>Select a semester</option>
-        {% for sem in semesters %}
-          <option value="{{ sem.semesterId }}">{{ sem.name }}</option>
-        {% endfor %}
-      </select>
-    </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label for="priorTimesTaught" class="block mb-1 text-sm font-medium text-gray-700">Times Taught (Count)</label>
+                <input type="number" name="priorTimesTaught" id="priorTimesTaught" min="0" value="1" required
+                    class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-primary focus:border-primary p-2.5">
+                <p class="text-xs text-gray-500 mt-1">Approx. number of classes handled.</p>
+            </div>
 
-    <div class="mb-4">
-      <label class="block font-medium mb-1">Times Taught</label>
-      <input type="number" name="timesTaught" min="1" value="1"
-             class="w-full border border-gray-300 rounded px-3 py-2" required>
-    </div>
+            <div>
+                <label for="priorYearsExperience" class="block mb-1 text-sm font-medium text-gray-700">Years Experience</label>
+                <input type="number" name="priorYearsExperience" id="priorYearsExperience" step="0.1" min="0" value="0.5" required
+                    class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-primary focus:border-primary p-2.5">
+            </div>
+        </div>
 
-    <div class="flex space-x-3">
-      <button type="submit"
-              class="flex-1 bg-indigo-600 text-white font-medium py-2 px-4 rounded-md hover:bg-indigo-700 transition">
-        Save
-      </button>
+        <div>
+            <label for="lastTaughtYear" class="block mb-1 text-sm font-medium text-gray-700">Last Year Taught <span class="text-gray-400 font-normal">(Optional)</span></label>
+            <input type="number" name="lastTaughtYear" id="lastTaughtYear" placeholder="e.g. 2023" min="1900" max="2100"
+                class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-primary focus:border-primary p-2.5">
+        </div>
 
-      <a href="javascript:history.back()" 
-         class="flex-1 text-center bg-gray-300 text-black font-medium py-2 px-4 rounded-md hover:bg-gray-400 transition">
-        Back
-      </a>
-    </div>
-  </form>
+        <div>
+            <label for="remarks" class="block mb-1 text-sm font-medium text-gray-700">Remarks <span class="text-gray-400 font-normal">(Optional)</span></label>
+            <textarea name="remarks" id="remarks" rows="3" placeholder="e.g. Taught at previous university..."
+                class="w-full border-gray-300 rounded-lg shadow-sm focus:ring-primary focus:border-primary p-2.5"></textarea>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
+            <a href="{% url 'legacyExperienceList' %}" 
+                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                Cancel
+            </a>
+            <button type="submit"
+                    class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition shadow-sm">
+                Save Record
+            </button>
+        </div>
+    </form>
 </div>
 
 <script>
   $(document).ready(function() {
-    // Initialize Select2
     $('.subject-select').select2({
       placeholder: "Select a subject",
       allowClear: true,
       width: '100%'
     });
-    $('.semester-select').select2({
-      placeholder: "Select a semester",
-      allowClear: true,
-      width: '100%'
-    });
-
-    // 👇 This makes single-select searchable immediately when tabbed into
-    function enableKeyboardSearch(selector) {
-      $(selector).on('select2:open', function() {
-        // Focus the search field automatically
-        document.querySelector('.select2-search__field').focus();
-      });
-
-      // Open dropdown when element gains focus via tab
-      $(selector).on('focus', function() {
-        $(this).select2('open');
-      });
-    }
-
-    enableKeyboardSearch('.subject-select');
-    enableKeyboardSearch('.semester-select');
   });
 </script>
 {% endblock %}

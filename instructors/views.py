@@ -5,11 +5,10 @@ from instructors.models import (
     InstructorExperience, 
     InstructorAvailability, 
     InstructorCredentials, 
-    InstructorSubjectPreference,
-    TeachingHistory,
     InstructorRank,
     InstructorDesignation,
     InstructorAcademicAttainment,
+    InstructorLegacyExperience,
 )
 from core.models import UserLogin
 from scheduling.models import Semester
@@ -30,8 +29,9 @@ def instructorDashboard(request):
 
 
 # ---------- Instructor Experience ----------
+
 @login_required
-@has_role('instructor')
+# @has_role('instructor') 
 def experienceList(request):
     login = UserLogin.objects.filter(user=request.user).first()
     if not login or not login.instructor:
@@ -50,8 +50,10 @@ def experienceList(request):
         experiences = experiences.filter(
             Q(title__icontains=query) |
             Q(organization__icontains=query) |
+            Q(location__icontains=query) | # Added search by location
             Q(description__icontains=query) |
             Q(experienceType__icontains=query) |
+            Q(employmentType__icontains=query) | # Added search by employment type
             Q(relatedSubjects__name__icontains=query) |
             Q(relatedSubjects__code__icontains=query)
         ).distinct()
@@ -66,7 +68,7 @@ def experienceList(request):
 
 
 @login_required
-@has_role('instructor')
+# @has_role('instructor')
 def experienceListLive(request):
     login = UserLogin.objects.filter(user=request.user).first()
     if not login or not login.instructor:
@@ -84,8 +86,10 @@ def experienceListLive(request):
         experiences = experiences.filter(
             Q(title__icontains=query) |
             Q(organization__icontains=query) |
+            Q(location__icontains=query) | # Added search by location
             Q(description__icontains=query) |
             Q(experienceType__icontains=query) |
+            Q(employmentType__icontains=query) | # Added search by employment type
             Q(relatedSubjects__name__icontains=query) |
             Q(relatedSubjects__code__icontains=query)
         ).distinct()
@@ -107,7 +111,7 @@ def experienceListLive(request):
 
 
 @login_required
-@has_role('instructor')
+# @has_role('instructor')
 def experienceCreate(request):
     login = UserLogin.objects.filter(user=request.user).first()
     if not login or not login.instructor:
@@ -119,33 +123,52 @@ def experienceCreate(request):
     if request.method == 'POST':
         title = request.POST.get('title')
         organization = request.POST.get('organization')
+        location = request.POST.get('location') # New field
         startDate = request.POST.get('startDate')
-        endDate = request.POST.get('endDate') or None
+        endDate = request.POST.get('endDate')
         description = request.POST.get('description')
         experienceType = request.POST.get('experienceType')
-        relatedSubjectIds = list(map(int, request.POST.getlist('relatedSubjects')))
+        employmentType = request.POST.get('employmentType') # New field
+        relatedSubjectIds = request.POST.getlist('relatedSubjects') # Use standard list retrieval
+        
+        # Handle current job checkbox
+        isCurrent = request.POST.get('isCurrent') == 'on'
+        
+        if isCurrent:
+            endDate = None
+        elif not endDate:
+             endDate = None
 
         experience = InstructorExperience.objects.create(
             instructor=instructor,
             title=title,
             organization=organization,
+            location=location,
             startDate=startDate,
             endDate=endDate,
+            isCurrent=isCurrent,
             description=description,
-            experienceType=experienceType
+            experienceType=experienceType,
+            employmentType=employmentType
         )
+        
         if relatedSubjectIds:
             experience.relatedSubjects.set(relatedSubjectIds)
 
         messages.success(request, 'Experience added successfully.')
         return redirect('instructorDashboard')
 
-    subjects = Subject.objects.all()
-    return render(request, 'instructors/experiences/create.html', {'subjects': subjects})
+    subjects = Subject.objects.all().order_by('code')
+    context = {
+        'subjects': subjects,
+        'experience_types': InstructorExperience.EXPERIENCE_TYPE_CHOICES,
+        'employment_types': InstructorExperience.EMPLOYMENT_TYPE_CHOICES
+    }
+    return render(request, 'instructors/experiences/create.html', context)
 
 
 @login_required
-@has_role('instructor')
+# @has_role('instructor')
 def experienceUpdate(request, experienceId):
     login = UserLogin.objects.filter(user=request.user).first()
     if not login or not login.instructor:
@@ -158,11 +181,24 @@ def experienceUpdate(request, experienceId):
     if request.method == 'POST':
         experience.title = request.POST.get('title')
         experience.organization = request.POST.get('organization')
+        experience.location = request.POST.get('location') # New field
         experience.startDate = request.POST.get('startDate')
-        experience.endDate = request.POST.get('endDate') or None
+        
+        # Handle current job logic
+        isCurrent = request.POST.get('isCurrent') == 'on'
+        experience.isCurrent = isCurrent
+        
+        if isCurrent:
+            experience.endDate = None
+        else:
+            endDate = request.POST.get('endDate')
+            experience.endDate = endDate if endDate else None
+
         experience.description = request.POST.get('description')
-        experience.experienceType = request.POST.get('type')
-        relatedSubjectIds = list(map(int, request.POST.getlist('relatedSubjects')))
+        experience.experienceType = request.POST.get('experienceType')
+        experience.employmentType = request.POST.get('employmentType') # New field
+        
+        relatedSubjectIds = request.POST.getlist('relatedSubjects')
 
         experience.save()
         experience.relatedSubjects.set(relatedSubjectIds)
@@ -170,11 +206,19 @@ def experienceUpdate(request, experienceId):
         messages.success(request, 'Experience updated successfully.')
         return redirect('instructorDashboard')
 
-    subjects = Subject.objects.all()
-    return render(request, 'instructors/experiences/update.html', {
+    subjects = Subject.objects.all().order_by('code')
+    
+    # Pre-select logic
+    selected_subject_ids = list(experience.relatedSubjects.values_list('subjectId', flat=True))
+
+    context = {
         'experience': experience,
-        'subjects': subjects
-    })
+        'subjects': subjects,
+        'experience_types': InstructorExperience.EXPERIENCE_TYPE_CHOICES,
+        'employment_types': InstructorExperience.EMPLOYMENT_TYPE_CHOICES,
+        'selected_subjects': selected_subject_ids
+    }
+    return render(request, 'instructors/experiences/update.html', context)
 
 
 @login_required
@@ -341,16 +385,17 @@ def credentialList(request):
     query = request.GET.get("q", "").strip()
     page = int(request.GET.get("page", 1))
 
+    # Fetch credentials
     credentials = InstructorCredentials.objects.filter(
         instructor=instructor
     ).prefetch_related("relatedSubjects").order_by("-dateEarned")
 
+    # Apply search filter
     if query:
         credentials = credentials.filter(
             Q(title__icontains=query) |
-            Q(type__icontains=query) |
-            Q(description__icontains=query) |
-            Q(issuer__icontains=query) |
+            Q(credentialType__icontains=query) | # Updated field name
+            Q(issuer__icontains=query) |         # Updated field name
             Q(relatedSubjects__code__icontains=query) |
             Q(relatedSubjects__name__icontains=query)
         ).distinct()
@@ -365,7 +410,7 @@ def credentialList(request):
 
 
 @login_required
-@has_role('instructor')
+# @has_role('instructor')
 def credentialListLive(request):
     login = UserLogin.objects.filter(user=request.user).first()
     if not login or not login.instructor:
@@ -382,9 +427,8 @@ def credentialListLive(request):
     if query:
         credentials = credentials.filter(
             Q(title__icontains=query) |
-            Q(type__icontains=query) |
-            Q(description__icontains=query) |
-            Q(issuer__icontains=query) |
+            Q(credentialType__icontains=query) | # Updated field name
+            Q(issuer__icontains=query) |         # Updated field name
             Q(relatedSubjects__code__icontains=query) |
             Q(relatedSubjects__name__icontains=query)
         ).distinct()
@@ -406,7 +450,7 @@ def credentialListLive(request):
 
 
 @login_required
-@has_role('instructor')
+# @has_role('instructor')
 def credentialCreate(request):
     login = UserLogin.objects.filter(user=request.user).first()
     if not login or not login.instructor:
@@ -415,27 +459,36 @@ def credentialCreate(request):
 
     instructor = login.instructor
     subjects = Subject.objects.all()
-    types = ['Certification', 'Workshop', 'Training', 'License']
+    # Use choices from model
+    types = InstructorCredentials.CREDENTIAL_TYPE_CHOICES 
 
     if request.method == 'POST':
-        type = request.POST.get('type')
+        # Retrieve fields based on NEW model definition
+        credentialType = request.POST.get('credentialType')
         title = request.POST.get('title')
-        description = request.POST.get('description')
-        relatedSubjectIds = request.POST.getlist('relatedSubjects')
-        isVerified = request.POST.get('isVerified') == 'on'
-        documentUrl = request.POST.get('documentUrl')
+        issuer = request.POST.get('issuer')
         dateEarned = request.POST.get('dateEarned')
+        expirationDate = request.POST.get('expirationDate')
+        
+        # Handle empty expiration date
+        if not expirationDate:
+            expirationDate = None
+            
+        relatedSubjectIds = request.POST.getlist('relatedSubjects')
 
+        # Create object
         credential = InstructorCredentials.objects.create(
             instructor=instructor,
-            type=type,
+            credentialType=credentialType, # Updated field
             title=title,
-            description=description,
-            isVerified=isVerified,
-            documentUrl=documentUrl,
-            dateEarned=dateEarned
+            issuer=issuer,                 # New field
+            dateEarned=dateEarned,
+            expirationDate=expirationDate  # New field
         )
-        credential.relatedSubjects.set(relatedSubjectIds)
+        
+        # Set Many-to-Many relationship
+        if relatedSubjectIds:
+            credential.relatedSubjects.set(relatedSubjectIds)
 
         messages.success(request, "Credential added successfully.")
         return redirect('instructorDashboard')
@@ -447,7 +500,7 @@ def credentialCreate(request):
 
 
 @login_required
-@has_role('instructor')
+# @has_role('instructor')
 def credentialUpdate(request, credentialId):
     login = UserLogin.objects.filter(user=request.user).first()
     if not login or not login.instructor:
@@ -456,16 +509,24 @@ def credentialUpdate(request, credentialId):
 
     credential = get_object_or_404(InstructorCredentials, pk=credentialId, instructor=login.instructor)
     subjects = Subject.objects.all()
-    types = ['Certification', 'Workshop', 'Training', 'License']
+    types = InstructorCredentials.CREDENTIAL_TYPE_CHOICES
 
     if request.method == 'POST':
-        credential.type = request.POST.get('type')
+        # Update fields based on NEW model definition
+        credential.credentialType = request.POST.get('credentialType')
         credential.title = request.POST.get('title')
-        credential.description = request.POST.get('description')
-        credential.isVerified = request.POST.get('isVerified') == 'on'
-        credential.documentUrl = request.POST.get('documentUrl')
+        credential.issuer = request.POST.get('issuer')
         credential.dateEarned = request.POST.get('dateEarned')
+        
+        expirationDate = request.POST.get('expirationDate')
+        if not expirationDate:
+            credential.expirationDate = None
+        else:
+            credential.expirationDate = expirationDate
+            
+        # Update Many-to-Many relationship
         credential.relatedSubjects.set(request.POST.getlist('relatedSubjects'))
+        
         credential.save()
 
         messages.success(request, "Credential updated successfully.")
@@ -474,7 +535,8 @@ def credentialUpdate(request, credentialId):
     return render(request, 'instructors/credentials/update.html', {
         'credential': credential,
         'types': types,
-        'subjects': subjects
+        'subjects': subjects,
+        'selected_subjects': list(credential.relatedSubjects.values_list('subjectId', flat=True))
     })
 
 
@@ -492,159 +554,10 @@ def credentialDelete(request, credentialId):
     return redirect('instructorDashboard')
 
 
-# ---------- Instructor Preferences ----------
-@login_required
-@has_role('instructor')
-def preferenceList(request):
-    login = UserLogin.objects.filter(user=request.user).first()
-    if not login or not login.instructor:
-        messages.error(request, "Instructor account not found.")
-        return redirect('home')
-
-    instructor = login.instructor
-    query = request.GET.get("q", "").strip()
-    page = int(request.GET.get("page", 1))
-
-    preferences = InstructorSubjectPreference.objects.filter(
-        instructor=instructor
-    ).select_related("subject").order_by("subject__code")
-
-    if query:
-        preferences = preferences.filter(
-            Q(subject__code__icontains=query) |
-            Q(subject__name__icontains=query) |
-            Q(preferenceType__icontains=query) |
-            Q(reason__icontains=query)
-        )
-
-    paginator = Paginator(preferences, 5)
-    page_obj = paginator.get_page(page)
-
-    return render(request, "instructors/preferences/list.html", {
-        "preferences": page_obj,
-        "query": query,
-    })
-
-
-@login_required
-@has_role('instructor')
-def preferenceListLive(request):
-    login = UserLogin.objects.filter(user=request.user).first()
-    if not login or not login.instructor:
-        return JsonResponse({"error": "Instructor not found"}, status=400)
-
-    instructor = login.instructor
-    query = request.GET.get("q", "").strip()
-    page = int(request.GET.get("page", 1))
-
-    preferences = InstructorSubjectPreference.objects.filter(
-        instructor=instructor
-    ).select_related("subject").order_by("subject__code")
-
-    if query:
-        preferences = preferences.filter(
-            Q(subject__code__icontains=query) |
-            Q(subject__name__icontains=query) |
-            Q(preferenceType__icontains=query) |
-            Q(reason__icontains=query)
-        )
-
-    paginator = Paginator(preferences, 5)
-    page_obj = paginator.get_page(page)
-
-    html = render_to_string("instructors/preferences/_table.html", {
-        "preferences": page_obj,
-    }, request=request)
-
-    return JsonResponse({
-        "html": html,
-        "page": page_obj.number,
-        "num_pages": paginator.num_pages,
-        "has_next": page_obj.has_next(),
-        "has_previous": page_obj.has_previous(),
-    })
-
-
-
-@login_required
-@has_role('instructor')
-def preferenceCreate(request):
-    login = UserLogin.objects.filter(user=request.user).first()
-    if not login or not login.instructor:
-        messages.error(request, "Instructor account not found.")
-        return redirect('home')
-
-    subjects = Subject.objects.all()
-    types = ['Prefer', 'Neutral', 'Avoid']
-
-    if request.method == 'POST':
-        subjectId = request.POST.get('subject')
-        subject = get_object_or_404(Subject, pk=subjectId)
-        preferenceType = request.POST.get('preferenceType')
-        reason = request.POST.get('reason')
-
-        InstructorSubjectPreference.objects.create(
-            instructor=login.instructor,
-            subject=subject,
-            preferenceType=preferenceType,
-            reason=reason
-        )
-        messages.success(request, 'Preference added successfully.')
-        return redirect('instructorDashboard')
-
-    return render(request, 'instructors/preferences/create.html', {
-        'subjects': subjects,
-        'types': types
-    })
-
-
-@login_required
-@has_role('instructor')
-def preferenceUpdate(request, preferenceId):
-    login = UserLogin.objects.filter(user=request.user).first()
-    if not login or not login.instructor:
-        messages.error(request, "Instructor account not found.")
-        return redirect('home')
-
-    preference = get_object_or_404(InstructorSubjectPreference, pk=preferenceId, instructor=login.instructor)
-    types = ['Prefer', 'Neutral', 'Avoid']
-
-    if request.method == 'POST':
-        preference.preferenceType = request.POST.get('preferenceType')
-        preference.reason = request.POST.get('reason')
-        preference.save()
-        messages.success(request, 'Preference updated successfully.')
-        return redirect('instructorDashboard')
-
-    return render(request, 'instructors/preferences/update.html', {
-        'preference': preference,
-        'types': types
-    })
-
-
-@login_required
-@has_role('instructor')
-def preferenceDelete(request, preferenceId):
-    login = UserLogin.objects.filter(user=request.user).first()
-    if not login or not login.instructor:
-        messages.error(request, "Instructor account not found.")
-        return redirect('home')
-
-    preference = get_object_or_404(InstructorSubjectPreference, pk=preferenceId, instructor=login.instructor)
-
-    if request.method == 'POST':
-        preference.delete()
-        messages.success(request, 'Preference deleted successfully.')
-        return redirect('instructorDashboard')
-
-    return render(request, 'instructors/preferences/delete.html', {'preference': preference})
-
-
-
 # ---------- Instructor Teaching History ----------
 @login_required
 @has_role('instructor')
-def teachingHistoryList(request):
+def legacyExperienceList(request):
     login = UserLogin.objects.filter(user=request.user).first()
     if not login or not login.instructor:
         messages.error(request, "Instructor account not found.")
@@ -654,29 +567,29 @@ def teachingHistoryList(request):
     query = request.GET.get("q", "").strip()
     page = int(request.GET.get("page", 1))
 
-    histories = TeachingHistory.objects.filter(
+    experiences = InstructorLegacyExperience.objects.filter(
         instructor=instructor
-    ).select_related("subject", "semester").order_by("-createdAt")
+    ).select_related("subject").order_by("-lastTaughtYear", "-updatedAt")
 
     if query:
-        histories = histories.filter(
+        experiences = experiences.filter(
             Q(subject__code__icontains=query) |
             Q(subject__name__icontains=query) |
-            Q(semester__name__icontains=query)
+            Q(remarks__icontains=query)
         )
 
-    paginator = Paginator(histories, 5)
+    paginator = Paginator(experiences, 5)
     page_obj = paginator.get_page(page)
 
     return render(request, "instructors/teachingHistory/list.html", {
-        "histories": page_obj,
+        "experiences": page_obj,
         "query": query,
     })
 
 
 @login_required
 @has_role('instructor')
-def teachingHistoryListLive(request):
+def legacyExperienceListLive(request):
     login = UserLogin.objects.filter(user=request.user).first()
     if not login or not login.instructor:
         return JsonResponse({"error": "Instructor not found"}, status=400)
@@ -685,22 +598,22 @@ def teachingHistoryListLive(request):
     query = request.GET.get("q", "").strip()
     page = int(request.GET.get("page", 1))
 
-    histories = TeachingHistory.objects.filter(
+    experiences = InstructorLegacyExperience.objects.filter(
         instructor=instructor
-    ).select_related("subject", "semester").order_by("-createdAt")
+    ).select_related("subject").order_by("-lastTaughtYear", "-updatedAt")
 
     if query:
-        histories = histories.filter(
+        experiences = experiences.filter(
             Q(subject__code__icontains=query) |
             Q(subject__name__icontains=query) |
-            Q(semester__name__icontains=query)
+            Q(remarks__icontains=query)
         )
 
-    paginator = Paginator(histories, 5)
+    paginator = Paginator(experiences, 5)
     page_obj = paginator.get_page(page)
 
     html = render_to_string("instructors/teachingHistory/_table.html", {
-        "histories": page_obj,
+        "experiences": page_obj,
     }, request=request)
 
     return JsonResponse({
@@ -714,84 +627,108 @@ def teachingHistoryListLive(request):
 
 @login_required
 @has_role('instructor')
-def teachingHistoryCreate(request):
+def legacyExperienceCreate(request):
     login = UserLogin.objects.filter(user=request.user).first()
     if not login or not login.instructor:
         messages.error(request, "Instructor account not found.")
         return redirect('home')
 
-    subjects = Subject.objects.all()
-    semesters = Semester.objects.all()
+    subjects = Subject.objects.all().order_by('code')
 
     if request.method == 'POST':
-        subjectId = request.POST.get('subject')
-        semesterId = request.POST.get('semester')
-        timesTaught = request.POST.get('timesTaught', 1)
+        try:
+            subjectId = request.POST.get('subject')
+            priorTimesTaught = request.POST.get('priorTimesTaught', 0)
+            priorYearsExperience = request.POST.get('priorYearsExperience', 0)
+            lastTaughtYear = request.POST.get('lastTaughtYear')
+            remarks = request.POST.get('remarks', '')
 
-        subject = get_object_or_404(Subject, pk=subjectId)
-        semester = get_object_or_404(Semester, pk=semesterId)
+            subject = get_object_or_404(Subject, pk=subjectId)
+            
+            # Handle empty lastTaughtYear
+            if not lastTaughtYear:
+                lastTaughtYear = None
 
-        history, created = TeachingHistory.objects.get_or_create(
-            instructor=login.instructor,
-            subject=subject,
-            semester=semester,
-            defaults={'timesTaught': timesTaught}
-        )
+            # Check for duplicates manually or rely on get_or_create
+            obj, created = InstructorLegacyExperience.objects.get_or_create(
+                instructor=login.instructor,
+                subject=subject,
+                defaults={
+                    'priorTimesTaught': priorTimesTaught,
+                    'priorYearsExperience': priorYearsExperience,
+                    'lastTaughtYear': lastTaughtYear,
+                    'remarks': remarks
+                }
+            )
 
-        if not created:
-            messages.error(request, "Record already exists. Try updating it instead.")
-        else:
-            messages.success(request, "Teaching history added successfully.")
-        return redirect('instructorDashboard')
+            if not created:
+                messages.error(request, f"Legacy record for {subject.code} already exists. Please update the existing record.")
+            else:
+                messages.success(request, "Legacy teaching experience added successfully.")
+                return redirect('instructorDashboard')
+
+        except Exception as e:
+            messages.error(request, f"Error creating record: {e}")
 
     return render(request, 'instructors/teachingHistory/create.html', {
         'subjects': subjects,
-        'semesters': semesters
     })
 
 
 @login_required
 @has_role('instructor')
-def teachingHistoryUpdate(request, teachingId):
+def legacyExperienceUpdate(request, experienceId):
     login = UserLogin.objects.filter(user=request.user).first()
     if not login or not login.instructor:
         messages.error(request, "Instructor account not found.")
         return redirect('home')
 
-    history = get_object_or_404(TeachingHistory, pk=teachingId, instructor=login.instructor)
+    experience = get_object_or_404(InstructorLegacyExperience, pk=experienceId, instructor=login.instructor)
 
     if request.method == 'POST':
-        history.timesTaught = request.POST.get('timesTaught', 1)
-        history.subject_id = request.POST.get('subject')
-        history.semester_id = request.POST.get('semester')
-        history.save()
-        messages.success(request, "Teaching history updated successfully.")
-        return redirect('instructorDashboard')
+        try:
+            # We allow changing the subject, but must catch unique constraint errors if the new subject already exists
+            new_subject_id = request.POST.get('subject')
+            
+            experience.subject_id = new_subject_id
+            experience.priorTimesTaught = request.POST.get('priorTimesTaught', 0)
+            experience.priorYearsExperience = request.POST.get('priorYearsExperience', 0)
+            
+            lastTaught = request.POST.get('lastTaughtYear')
+            experience.lastTaughtYear = lastTaught if lastTaught else None
+            
+            experience.remarks = request.POST.get('remarks', '')
+            
+            experience.save()
+            messages.success(request, "Legacy teaching experience updated successfully.")
+            return redirect('instructorDashboard')
 
-    subjects = Subject.objects.all()
-    semesters = Semester.objects.all()
+        except Exception as e:
+            # Likely an IntegrityError if changing subject to one that already exists
+            messages.error(request, f"Error updating record. Ensure this subject doesn't already have a legacy entry.")
+
+    subjects = Subject.objects.all().order_by('code')
 
     return render(request, 'instructors/teachingHistory/update.html', {
-        'history': history,
+        'experience': experience,
         'subjects': subjects,
-        'semesters': semesters,
     })
-
 
 @login_required
 @has_role('instructor')
-def teachingHistoryDelete(request, teachingId):
+def legacyExperienceDelete(request, experienceId):
     login = UserLogin.objects.filter(user=request.user).first()
     if not login or not login.instructor:
-        messages.error(request, "Instructor account not found.")
         return redirect('home')
 
-    history = get_object_or_404(TeachingHistory, pk=teachingId, instructor=login.instructor)
-    history.delete()
-    messages.success(request, "Teaching history deleted successfully.")
+    experience = get_object_or_404(InstructorLegacyExperience, pk=experienceId, instructor=login.instructor)
+
+    if request.method == 'POST':
+        experience.delete()
+        messages.success(request, "Legacy experience deleted successfully.")
+        return redirect('instructorDashboard')
+    
     return redirect('instructorDashboard')
-
-
 
 # ---------- Instructor Rank Configuration ----------
 @login_required

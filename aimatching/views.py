@@ -250,9 +250,11 @@ def _matching_results_common(request, batchId, live=False):
     progress = get_object_or_404(MatchingProgress, batchId=batchId)
     semester = progress.semester
 
-    term_map = {'1st': 0, '2nd': 1, 'Midyear': 2}
+    term_map = {'1st': 0, '2nd': 1, 'Midyear': 2, 'Summer': 2}
+    # term_value = term_map.get(semester.term, 0) # Use get for safety
+
     valid_subjects = Subject.objects.filter(
-        defaultTerm=term_map[semester.term],
+        defaultTerm=term_map.get(semester.term, 0),
         isActive=True
     ).values_list("subjectId", flat=True)
 
@@ -264,6 +266,7 @@ def _matching_results_common(request, batchId, live=False):
         .first()
     )
 
+    # Cache ranking calculation to avoid re-running expensive Window functions on every page load
     cache_key_base = f"ranked_matches:{batchId}:{semester.term}"
     ranked_matches = cache.get(cache_key_base)
 
@@ -298,6 +301,7 @@ def _matching_results_common(request, batchId, live=False):
             Q(subject__name__icontains=subject_query) |
             Q(subject__code__icontains=subject_query)
         )
+    
     qs = qs.annotate(
         full_name=Concat(
             F("instructor__userlogin__user__firstName"),
@@ -317,17 +321,17 @@ def _matching_results_common(request, batchId, live=False):
             obj.latestHistory.teachingScorePct = obj.latestHistory.teachingScore * 100
             obj.latestHistory.credentialScorePct = obj.latestHistory.credentialScore * 100
             obj.latestHistory.experienceScorePct = obj.latestHistory.experienceScore * 100
-            obj.latestHistory.preferenceScorePct = obj.latestHistory.preferenceScore * 100
+            # Removed Preference Pct
             obj.latestHistory.confidenceScorePct = obj.latestHistory.confidenceScore * 100
 
         results.append(obj)
 
+    # Sorting Logic (Removed Preference)
     sort_map = {
         "rank": lambda x: (x.fixed_rank if x.fixed_rank is not None else 9999),
         "teaching": lambda x: x.latestHistory.teachingScore if x.latestHistory else 0,
         "credentials": lambda x: x.latestHistory.credentialScore if x.latestHistory else 0,
         "experience": lambda x: x.latestHistory.experienceScore if x.latestHistory else 0,
-        "preference": lambda x: x.latestHistory.preferenceScore if x.latestHistory else 0,
         "total": lambda x: x.latestHistory.confidenceScore if x.latestHistory else 0,
     }
 
@@ -341,12 +345,11 @@ def _matching_results_common(request, batchId, live=False):
         "matches": page_obj,
         "batchId": batchId,
         "semester": semester,
-        "generated_at": localtime(latest_generated) if latest_generated else None,  # ✅ Add here
+        "generated_at": localtime(latest_generated) if latest_generated else None,
         "columns": [
             ("teaching", "Teaching Score"),
             ("credentials", "Credentials Score"),
             ("experience", "Experience Score"),
-            ("preference", "Preference Score"),
             ("total", "Total Score"),
         ],
         "sort_by": sort_by,
@@ -364,7 +367,6 @@ def _matching_results_common(request, batchId, live=False):
 
 
 # ---------- CONFIG ----------
-
 @login_required
 @has_role('deptHead')
 def configList(request):
@@ -373,10 +375,9 @@ def configList(request):
         MatchingConfig.objects.get_or_create(
             semester=sem,
             defaults={
-                "teachingWeight": 0.2,
+                "teachingWeight": 0.4,      
                 "credentialsWeight": 0.3,
                 "experienceWeight": 0.3,
-                "preferenceWeight": 0.2,
             }
         )
 
@@ -392,19 +393,24 @@ def configUpdate(request, semesterId):
     config, created = MatchingConfig.objects.get_or_create(semester=semester)
 
     if request.method == 'POST':
-        config.teachingWeight = float(request.POST.get('teachingWeight', 0.2))
-        config.credentialsWeight = float(request.POST.get('credentialsWeight', 0.3))
-        config.experienceWeight = float(request.POST.get('experienceWeight', 0.3))
-        config.preferenceWeight = float(request.POST.get('preferenceWeight', 0.2))
+        # Retrieve values, defaulting to current config if missing
+        # Note: We float() the input to ensure math works correctly
+        config.teachingWeight = float(request.POST.get('teachingWeight', config.teachingWeight))
+        config.credentialsWeight = float(request.POST.get('credentialsWeight', config.credentialsWeight))
+        config.experienceWeight = float(request.POST.get('experienceWeight', config.experienceWeight))
+        
+        # Removed preferenceWeight retrieval
 
+        # Validate total sum equals 1.0
         total = (
             config.teachingWeight
             + config.credentialsWeight
             + config.experienceWeight
-            + config.preferenceWeight
         )
+        
+        # Use a small epsilon for float comparison safety
         if abs(total - 1.0) > 0.01:
-            messages.error(request, "❌ Weights must add up to 1.0")
+            messages.error(request, f"❌ Weights must add up to 1.0 (Current total: {total:.2f})")
         else:
             config.save()
             messages.success(request, f"✅ Matching config updated for {semester.name}")

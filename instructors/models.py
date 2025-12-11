@@ -9,146 +9,134 @@ from django.core.exceptions import ValidationError
 # ---------- Instructor Experience ----------
 class InstructorExperience(models.Model):
     EXPERIENCE_TYPE_CHOICES = [
-        ('Academic Position', 'Academic Position'), 
-        ('Teaching Experience', 'Teaching Experience'),    
-        ('Work Experience', 'Work Experience'),               
-        ('Research Role', 'Research Role'),                   
-        ('Administrative Role', 'Administrative Role'),       
-        ('Extension Service', 'Extension Service'),           
-        ('Consultancy', 'Consultancy'),                      
+        ('Academic Position', 'Academic Position'),
+        ('Industry', 'Industry/Work Experience'),
+        ('Research Role', 'Research Role'),
+        ('Administrative Role', 'Administrative Role'),
+        ('Consultancy', 'Consultancy'),
+    ]
+
+    EMPLOYMENT_TYPE_CHOICES = [
+        ('FT', 'Full Time'),
+        ('PT', 'Part Time'),
+        ('CT', 'Contractual'),
     ]
 
     experienceId = models.AutoField(primary_key=True)
-    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE, related_name='experiences')
+    instructor = models.ForeignKey('core.Instructor', on_delete=models.CASCADE, related_name='experiences')
+    
     title = models.CharField(max_length=100)
     organization = models.CharField(max_length=100)
+    location = models.CharField(max_length=100, blank=True)
+    
     startDate = models.DateField()
     endDate = models.DateField(null=True, blank=True)
-    description = models.TextField()
+    isCurrent = models.BooleanField(default=False)
+
+    description = models.TextField(blank=True)
+    
     experienceType = models.CharField(max_length=30, choices=EXPERIENCE_TYPE_CHOICES)
+    employmentType = models.CharField(max_length=2, choices=EMPLOYMENT_TYPE_CHOICES, default='FT')
+    
     relatedSubjects = models.ManyToManyField('scheduling.Subject', blank=True)
-    isVerified = models.BooleanField(default=False)
+    
     createdAt = models.DateTimeField(auto_now_add=True)
     updatedAt = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ('instructor', 'title', 'organization', 'startDate')
+        ordering = ['-startDate']
         indexes = [
-            models.Index(fields=['instructor', 'isVerified']),
+            models.Index(fields=['instructor', 'experienceType']),
         ]
 
-    def __str__(self):
-        return f"{self.instructor.instructorId} - {self.title}"
-
-    def is_current(self):
-        # Returns True if the experience is ongoing (no endDate)
-        return self.endDate is None
-
-    def durationInMonths(self):
-        # Returns duration of the experience in months
-        from datetime import date
-        end = self.endDate or date.today()
-        return (end.year - self.startDate.year) * 12 + (end.month - self.startDate.month)
-    
     def clean(self):
         if self.endDate and self.endDate < self.startDate:
             raise ValidationError("End date cannot be before start date.")
 
+    def save(self, *args, **kwargs):
+        self.isCurrent = (self.endDate is None)
+        super().save(*args, **kwargs)
+        
 
-# ---------- Teaching History ---------- 
-class TeachingHistory(models.Model):
-    teachingId = models.AutoField(primary_key=True)
-    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE, related_name='teachingHistory')
+class TeachingAssignment(models.Model):
+    """
+    AUTO-GENERATED: Represents one specific SECTION taught in one specific semester.
+    Populated automatically when a Schedule is marked as 'finalized'.
+    """
+    assignmentId = models.AutoField(primary_key=True)
+    instructor = models.ForeignKey('core.Instructor', on_delete=models.CASCADE, related_name='system_assignments')
     subject = models.ForeignKey('scheduling.Subject', on_delete=models.CASCADE)
-    semester = models.ForeignKey('scheduling.Semester', on_delete=models.PROTECT, null=True)
-    timesTaught = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
+    semester = models.ForeignKey('scheduling.Semester', on_delete=models.CASCADE)
+    section = models.ForeignKey('scheduling.Section', on_delete=models.CASCADE)
+    
+    # Sum of hours from Schedule (e.g., 3.0 hrs)
+    totalTeachingHours = models.DecimalField(max_digits=6, decimal_places=2, default=0.0)
+    
     createdAt = models.DateTimeField(auto_now_add=True)
-    updatedAt = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ('instructor', 'subject', 'semester')
-        indexes = [
-            models.Index(fields=['instructor', 'subject', 'semester']),
-        ]
+        # Ensures we don't count the same section twice for the same person
+        unique_together = ('instructor', 'subject', 'semester', 'section')
+        verbose_name = "Automated Teaching Assignment Tracking"
 
     def __str__(self):
-        return f"{self.instructor.instructorId} - {self.subject.code} ({self.semester}) x{self.timesTaught}"
-
-    def incrementTimesTaught(self, count=1):
-        if self.timesTaught + count < 0:
-            raise ValueError("timesTaught cannot be negative.")
-        self.timesTaught += count
-        self.save()
+        return f"{self.subject.code} - {self.section} ({self.semester})"
 
 
-
-# ---------- Instructor Credential ----------
-class InstructorCredentials(models.Model):
-    CREDENTIAL_TYPE_CHOICES = [
-        ('License', 'License'),
-        ('Certification', 'Certification'),
-        ('Workshop', 'Workshop'),
-        ('Seminar', 'Seminar'),
-        ('Training', 'Training'),
-        ('Short Course', 'Short Course'), 
-    ]
-
-    credentialId = models.AutoField(primary_key=True)
-    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE, related_name='credentials')
-    type = models.CharField(max_length=30, choices=CREDENTIAL_TYPE_CHOICES)
-    title = models.CharField(max_length=100)
-    description = models.TextField()
-    issuer = models.CharField(max_length=100)
-    relatedSubjects = models.ManyToManyField('scheduling.Subject', blank=True)
-    isVerified = models.BooleanField(default=False)
-    documentUrl = models.CharField(max_length=255, null=True, blank=True)
-    dateEarned = models.DateField()
-    createdAt = models.DateTimeField(auto_now_add=True)
-    updatedAt = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        indexes = [
-            models.Index(fields=['instructor', 'isVerified']),
-        ]
-        ordering = ['-dateEarned']
-
-    def __str__(self):
-        return f"{self.instructor.instructorId} - {self.title}"
-
-
-# ---------- Instructor Subject Preference ---------- 60 list all subjects, set all preferences to default "Neutral" then let the instructor update
-# This model allows instructors to set their preferences for subjects they would like to teach.
-class InstructorSubjectPreference(models.Model):
-    PREFERENCE_TYPE_CHOICES = [
-        ('Prefer', 'Prefer'),
-        ('Neutral', 'Neutral'),
-        ('Avoid', 'Avoid'),
-    ]
-
-    preferenceId = models.AutoField(primary_key=True)
-    instructor = models.ForeignKey(Instructor, on_delete=models.CASCADE, related_name='preferences')
-    subject = models.ForeignKey("scheduling.Subject", on_delete=models.CASCADE)
-    preferenceType = models.CharField(max_length=20, choices=PREFERENCE_TYPE_CHOICES)
-    reason = models.TextField(blank=True, null=True)
-    createdAt = models.DateTimeField(auto_now_add=True)
+class InstructorLegacyExperience(models.Model):
+    """
+    USER-ENTERED: Populated manually to account for history before this system existed.
+    """
+    instructor = models.ForeignKey('core.Instructor', on_delete=models.CASCADE, related_name='legacy_experiences')
+    subject = models.ForeignKey('scheduling.Subject', on_delete=models.CASCADE)
+    
+    # The "Starting Stats"
+    priorTimesTaught = models.PositiveIntegerField(default=0, help_text="Count of sections handled before system usage")
+    priorYearsExperience = models.DecimalField(max_digits=4, decimal_places=1, default=0, help_text="Years of experience before system usage")
+    
+    lastTaughtYear = models.IntegerField(null=True, blank=True, help_text="Year most recently taught (legacy)")
+    remarks = models.TextField(blank=True, help_text="Context (e.g., 'Taught at Previous University')")
+    
     updatedAt = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = ('instructor', 'subject')
-        indexes = [
-            models.Index(fields=['instructor', 'preferenceType']),
-        ]
-        ordering = ['instructor', 'subject']
-
-    def is_preferred(self):
-        return self.preferenceType == 'Prefer'
-
-    def is_avoided(self):
-        return self.preferenceType == 'Avoid'
+        verbose_name = "Legacy/Manual Experience"
 
     def __str__(self):
-        return f"{self.instructor.instructorId} prefers {self.subject.code} ({self.preferenceType})"
+        return f"{self.instructor} - Legacy {self.subject.code}"
 
+
+# ---------- Instructor Credential ---------- 60
+class InstructorCredentials(models.Model):
+    CREDENTIAL_TYPE_CHOICES = [
+        ('PhD', 'Doctorate Degree'),
+        ('Masters', 'Masters Degree'),
+        ('Bachelors', 'Bachelors Degree'),
+        ('License', 'Professional License'),
+        ('Certification', 'Industry Certification'),
+        ('Training', 'Training/Workshop'),
+    ]
+
+    credentialId = models.AutoField(primary_key=True)
+    instructor = models.ForeignKey('core.Instructor', on_delete=models.CASCADE, related_name='credentials')
+    
+    credentialType = models.CharField(max_length=30, choices=CREDENTIAL_TYPE_CHOICES)
+    title = models.CharField(max_length=150)
+    issuer = models.CharField(max_length=150)
+    
+    relatedSubjects = models.ManyToManyField('scheduling.Subject', blank=True) 
+    
+    dateEarned = models.DateField()
+    expirationDate = models.DateField(null=True, blank=True)
+    
+    updatedAt = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-dateEarned']
+
+    def __str__(self):
+        return f"{self.instructor_id} - {self.title}"
     
 
 # ---------- Instructor Designation ----------

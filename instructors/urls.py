@@ -26,19 +26,12 @@ urlpatterns = [
     path('credentials/<int:credentialId>/update/', views.credentialUpdate, name='credentialUpdate'),
     path('credentials/<int:credentialId>/delete/', views.credentialDelete, name='credentialDelete'),
 
-    # Instructor Preferences
-    path('preferences/', views.preferenceList, name='preferenceList'),
-    path("preferences/live/", views.preferenceListLive, name="preferenceListLive"),
-    path('preferences/create/', views.preferenceCreate, name='preferenceCreate'),
-    path('preferences/<int:preferenceId>/update/', views.preferenceUpdate, name='preferenceUpdate'),
-    path('preferences/<int:preferenceId>/delete/', views.preferenceDelete, name='preferenceDelete'),
-
-    # Teaching History
-    path('teachingHistory/', views.teachingHistoryList, name='teachingHistoryList'),
-    path("teachingHistory/live/", views.teachingHistoryListLive, name="teachingHistoryListLive"),
-    path('teachingHistory/create/', views.teachingHistoryCreate, name='teachingHistoryCreate'),
-    path('teachingHistory/<int:teachingId>/update/', views.teachingHistoryUpdate, name='teachingHistoryUpdate'),
-    path('teachingHistory/<int:teachingId>/delete/', views.teachingHistoryDelete, name='teachingHistoryDelete'),
+    # Teaching History / Legacy Experience
+    path('legacyExperience/', views.legacyExperienceList, name='legacyExperienceList'),
+    path('legacyExperience/live/', views.legacyExperienceListLive, name='legacyExperienceListLive'),
+    path('legacyExperience/create/', views.legacyExperienceCreate, name='legacyExperienceCreate'),
+    path('legacyExperience/<int:experienceId>/update/', views.legacyExperienceUpdate, name='legacyExperienceUpdate'),
+    path('legacyExperience/<int:experienceId>/delete/', views.legacyExperienceDelete, name='legacyExperienceDelete'),
 
     # Instructor Ranks
     path('ranks/', views.instructorRankList, name='instructorRankList'),

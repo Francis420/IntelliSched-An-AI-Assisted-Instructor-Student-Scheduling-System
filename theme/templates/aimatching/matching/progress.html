@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% block header %}| Matching Progress{% endblock %}
+
 {% block content %}
 <div class="max-w-2xl mx-auto p-6 bg-white shadow-md rounded-xl text-center">
     <h2 class="text-2xl font-bold mb-6">Matching Progress</h2>
 
-    <!-- Progress bar -->
     <div class="w-full bg-gray-200 rounded-full h-6 mb-4">
         <div id="progress-fill" class="bg-blue-600 h-6 rounded-full text-white text-sm flex items-center justify-center"
              style="width: 0%;">
@@ -12,12 +12,14 @@
         </div>
     </div>
 
-    <!-- Progress details -->
     <p id="progress-details" class="text-gray-700">Waiting for updates...</p>
     <p id="progress-status" class="mt-2 font-semibold text-blue-700"></p>
     <p id="progress-current" class="text-gray-800 mt-2 italic"></p>
     <p id="progress-debug" class="text-sm text-gray-500 mt-1"></p>
-    <button id="cancel-btn" class="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Cancel Matching</button>
+    
+    <button id="cancel-btn" class="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors duration-200">
+        Cancel Matching
+    </button>
 </div>
 
 <script>
@@ -41,6 +43,7 @@
 
     const csrftoken = getCookie('csrftoken');
 
+    // Setup WebSocket connection
     const socket = new WebSocket(
         (window.location.protocol === "https:" ? "wss://" : "ws://") + 
         window.location.host + "/ws/progress/" + batchId + "/"
@@ -82,17 +85,45 @@
         document.getElementById("progress-debug").textContent = 
             `Subjects: ${subjects}, Instructors: ${instructors}, Total Tasks: ${total}`;
 
+        // Handle Cancelled State UI
         if (data.status === "cancelled") {
-            document.getElementById("progress-status").textContent = "❌ Matching Cancelled";
-            document.getElementById("cancel-btn").disabled = true;
+            const statusText = document.getElementById("progress-status");
+            statusText.textContent = "❌ Matching Cancelled";
+            statusText.classList.remove("text-blue-700");
+            statusText.classList.add("text-red-700");
+            
+            const btn = document.getElementById("cancel-btn");
+            btn.disabled = true;
+            btn.classList.add("opacity-50", "cursor-not-allowed");
+            btn.textContent = "Cancelled";
+        }
+        
+        // Handle Completed State UI
+        if (data.status === "completed") {
+             document.getElementById("cancel-btn").style.display = 'none';
         }
     };
 
     socket.onclose = function() {
-        document.getElementById("progress-status").textContent = "⚠️ Connection closed";
+        const statusText = document.getElementById("progress-status");
+        statusText.textContent = "⚠️ Connection closed";
+        statusText.classList.add("text-yellow-600");
     };
 
+    // Updated Cancel Button Logic with Confirmation
     document.getElementById("cancel-btn").onclick = function() {
+        // 1. Show Browser Confirmation
+        if (!confirm("Are you sure you want to stop the matching process? Progress will be saved up to this point, but the batch will be marked as cancelled.")) {
+            return;
+        }
+
+        // 2. Disable button and update text to show processing
+        const btn = this;
+        btn.disabled = true;
+        btn.textContent = "Cancelling...";
+        btn.classList.add("opacity-75");
+
+        // 3. Send Cancel Request
         fetch(`/aimatching/matching/cancel/${batchId}/`, {
             method: "POST",
             headers: {
@@ -100,16 +131,26 @@
                 "Content-Type": "application/json",
             },
         })
-
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert("Matching cancelled successfully.");
+                console.log("Cancellation request sent successfully.");
+                // The WebSocket 'onmessage' will update the UI to "Cancelled" automatically
             } else {
                 alert("Failed to cancel: " + data.message);
+                // Re-enable button if the server rejected the cancellation
+                btn.disabled = false;
+                btn.textContent = "Cancel Matching";
+                btn.classList.remove("opacity-75");
             }
         })
-        .catch(() => alert("Network error while cancelling."));
+        .catch(() => {
+            alert("Network error while cancelling.");
+            // Re-enable button on network failure
+            btn.disabled = false;
+            btn.textContent = "Cancel Matching";
+            btn.classList.remove("opacity-75");
+        });
     };
 </script>
 {% endblock %}
