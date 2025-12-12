@@ -35,60 +35,73 @@
     {% include "core/subjects/_list_table.html" %}
   </div>
 </div>
-
 <script>
-const searchInput = document.getElementById("subjectSearch");
-const curriculumSelect = document.getElementById("curriculumSelect");
+  const searchInput = document.getElementById("subjectSearch");
+  const curriculumSelect = document.getElementById("curriculumSelect");
 
-// Restore search query from localStorage
-if (localStorage.getItem("subjectSearch")) {
-  searchInput.value = localStorage.getItem("subjectSearch");
-}
+  // Restore search query from localStorage
+  if (localStorage.getItem("subjectSearch")) {
+    searchInput.value = localStorage.getItem("subjectSearch");
+  }
 
-function fetchSubjects(page = 1) {
-  const q = searchInput.value;
-  const curriculumId = curriculumSelect.value;
-
-  // Save query for persistence
-  localStorage.setItem("subjectSearch", q);
-
-  const url = new URL(window.location);
-  url.searchParams.set("q", q);
-  url.searchParams.set("page", page);
-  url.searchParams.set("curriculumId", curriculumId);
-  window.history.replaceState({}, "", url);
-
-  fetch(`{% url 'subjectListLive' %}?q=${encodeURIComponent(q)}&page=${page}&curriculumId=${curriculumId}`)
-    .then(response => response.json())
-    .then(data => {
-      document.getElementById("subjectsContainer").innerHTML = data.html;
-      document.getElementById("addSubjectBtn").href = `{% url 'subjectCreate' %}?curriculumId=${curriculumId}`;
-
-      // Rebind pagination links
-      document.querySelectorAll(".live-page-link").forEach(link => {
-        link.addEventListener("click", function(e) {
-          e.preventDefault();
-          fetchSubjects(this.dataset.page);
-        });
+  // 1. Create a reusable function to bind events
+  function bindPaginationEvents() {
+    document.querySelectorAll(".live-page-link").forEach(link => {
+      // Clone the node to remove existing listeners (prevents duplicate firing)
+      // or simply bind. Since we often replace innerHTML, simple binding is usually fine.
+      // But to be safe, we just add the listener.
+      link.addEventListener("click", function(e) {
+        e.preventDefault();
+        const page = this.dataset.page;
+        fetchSubjects(page);
       });
     });
-}
+  }
 
-// Debounce search
-let timeout = null;
-searchInput.addEventListener("input", () => {
-  clearTimeout(timeout);
-  timeout = setTimeout(() => fetchSubjects(1), 300);
-});
+  function fetchSubjects(page = 1) {
+    const q = searchInput.value;
+    const curriculumId = curriculumSelect.value;
 
-// Fetch on curriculum change
-curriculumSelect.addEventListener("change", () => {
-  fetchSubjects(1);
-});
+    // Save query for persistence
+    localStorage.setItem("subjectSearch", q);
 
-// Initial load if localStorage had a query
-if (searchInput.value) {
-  fetchSubjects(1);
-}
+    const url = new URL(window.location);
+    url.searchParams.set("q", q);
+    url.searchParams.set("page", page);
+    url.searchParams.set("curriculumId", curriculumId);
+    window.history.replaceState({}, "", url);
+
+    fetch(`{% url 'subjectListLive' %}?q=${encodeURIComponent(q)}&page=${page}&curriculumId=${curriculumId}`)
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById("subjectsContainer").innerHTML = data.html;
+        
+        // Update the Add Button URL based on current selection
+        document.getElementById("addSubjectBtn").href = `{% url 'subjectCreate' %}?curriculumId=${curriculumId}`;
+
+        // 2. Rebind pagination links after content replacement
+        bindPaginationEvents();
+      });
+  }
+
+  // Debounce search
+  let timeout = null;
+  searchInput.addEventListener("input", () => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => fetchSubjects(1), 300);
+  });
+
+  // Fetch on curriculum change
+  curriculumSelect.addEventListener("change", () => {
+    fetchSubjects(1);
+  });
+
+  // 3. INITIALIZE: Bind events to the buttons rendered by Django on first load
+  bindPaginationEvents();
+
+  // If there was a saved search, fetch immediately (which will rebind again)
+  if (searchInput.value) {
+    fetchSubjects(1);
+  }
 </script>
 {% endblock %}

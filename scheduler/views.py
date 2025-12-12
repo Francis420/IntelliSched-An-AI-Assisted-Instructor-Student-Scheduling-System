@@ -104,10 +104,16 @@ def revertSchedule(request):
         try:
             dt_obj = datetime.fromisoformat(batch_key)
             
+            # Ensure the datetime object is timezone-aware
+            if dt_obj.tzinfo is None:
+                dt_obj = timezone.make_aware(dt_obj)
+            
+            # Fix: Use a range query to ignore microsecond differences
             schedules_to_promote = Schedule.objects.filter(
                 semester__semesterId=semester_id,
                 status='archived',
-                createdAt=dt_obj 
+                createdAt__gte=dt_obj,
+                createdAt__lt=dt_obj + timedelta(seconds=1)
             ).select_related('semester')
             
             if not schedules_to_promote.exists():
@@ -376,7 +382,7 @@ def scheduleOutput(request):
 def instructorScheduleView(request):
     """
     Displays the logged-in instructor's schedule in a timetable matrix format.
-    Shows Subject + Section (Year+Letter) + Room.
+    Shows Subject + Section (Year+Letter) + Room with consistent coloring.
     """
     user = request.user
     
@@ -413,7 +419,7 @@ def instructorScheduleView(request):
     schedules = Schedule.objects.filter(
         instructor=instructor,
         semester=current_semester,
-        status='finalized' # Show only official schedules
+        status='finalized' 
     ).select_related("subject", "section", "room")
 
     # 4. Prepare Timetable Matrix
@@ -452,6 +458,18 @@ def instructorScheduleView(request):
     # Map: day -> slot -> [schedules]
     raw_data = defaultdict(lambda: defaultdict(list))
 
+    # --- COLOR PALETTE SETUP ---
+    # Define distinct colors.
+    color_palette = [
+        'bg-blue-600', 'bg-red-600', 'bg-emerald-600', 'bg-purple-600', 
+        'bg-orange-600', 'bg-teal-600', 'bg-pink-600', 'bg-indigo-600', 
+        'bg-cyan-600', 'bg-rose-600', 'bg-amber-600', 'bg-lime-600'
+    ]
+    # This dictionary will store "SubjectCode_SectionStr" -> "bg-color-class"
+    section_color_map = {}
+    color_index = 0
+    # ---------------------------
+
     for s in schedule_list:
         if s.dayOfWeek not in DAYS_OF_WEEK:
             continue
@@ -479,6 +497,21 @@ def instructorScheduleView(request):
         section_str = f"{year_level}{section_letter}" 
         # -----------------------------------------------------------
 
+        # ### --- COLOR ASSIGNMENT LOGIC --- ###
+        # Create a unique key for this Subject + Section combo
+        unique_key = f"{subject_code}_{section_str}"
+
+        # If we haven't seen this combo, assign it a color
+        if unique_key not in section_color_map:
+            section_color_map[unique_key] = color_palette[color_index % len(color_palette)]
+            color_index += 1
+        
+        # Retrieve the assigned color
+        assigned_color_class = section_color_map[unique_key]
+        # Generate a hover color (simple string replacement for Tailwind)
+        assigned_hover_class = assigned_color_class.replace('600', '700')
+        # ----------------------------------------
+
         subject_str = s.subject.code
         room_str = s.room.roomCode if s.room else "TBA"
         
@@ -494,13 +527,17 @@ def instructorScheduleView(request):
                 
                 raw_data[s.dayOfWeek][slot_time_str].append({
                     'subject': subject_str,
-                    'section': section_str, # Now uses "1B" format
+                    'section': section_str,
                     'room': room_str,
                     'start_time': s.startTime.strftime('%I:%M %p'),
                     'end_time': s.endTime.strftime('%I:%M %p'),
                     'rowspan': rowspan,
                     'height_px': rowspan * 40,
-                    'is_start_slot': (sched_start_dt >= current_slot_dt and sched_start_dt < slot_end_dt) or (current_slot_dt == start_dt and sched_start_dt < start_dt)
+                    'is_start_slot': (sched_start_dt >= current_slot_dt and sched_start_dt < slot_end_dt) or (current_slot_dt == start_dt and sched_start_dt < start_dt),
+                    
+                    # Pass the colors to the template
+                    'color_class': assigned_color_class,
+                    'hover_class': assigned_hover_class
                 })
             
             current_slot_dt = slot_end_dt
@@ -584,7 +621,6 @@ def scheduler_status(request):
     })
 
 
-# ----- Room Utilization -----
 @login_required
 @has_role('deptHead')
 def roomUtilization(request):
@@ -650,6 +686,15 @@ def roomUtilization(request):
 
     raw_room_data = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 
+    # --- COLOR PALETTE SETUP ---
+    color_palette = [
+        'bg-blue-600', 'bg-red-600', 'bg-emerald-600', 'bg-purple-600', 
+        'bg-orange-600', 'bg-teal-600', 'bg-pink-600', 'bg-indigo-600', 
+        'bg-cyan-600', 'bg-rose-600', 'bg-amber-600', 'bg-lime-600'
+    ]
+    section_color_map = {}
+    color_index = 0
+
     for s in schedule_list:
         if s.dayOfWeek not in DAYS_OF_WEEK:
             continue
@@ -659,29 +704,33 @@ def roomUtilization(request):
         if sched_end_dt < sched_start_dt:
              sched_end_dt += timedelta(days=1)
         
-        # --- NEW SECTION LABEL LOGIC ---
-        # Goal: "1B" (Year 1, Section B)
-        
-        # 1. Extract Year from Subject Code (e.g. "IT 143" -> "1")
+        # --- SECTION LABEL LOGIC ---
         subject_code = s.subject.code
         year_level = ""
-        # Find the first digit in the subject code
         match_year = re.search(r'\d', subject_code)
         if match_year:
             year_level = match_year.group()
         
-        # 2. Extract Section Letter from Section Code (e.g. "143-B" -> "B")
         raw_section = s.section.sectionCode
         if '-' in raw_section:
-            # Take the part after the last hyphen (e.g., "B" from "IT 143-B")
             section_letter = raw_section.split('-')[-1].strip()
         else:
-            # Fallback if no hyphen exists (e.g., just "B")
             section_letter = raw_section.strip()
             
-        # Combine: "1" + "B" = "1B"
         section_label = f"{year_level}{section_letter}" 
-        # -------------------------------
+        # ---------------------------
+
+        # ### --- COLOR ASSIGNMENT LOGIC --- ###
+        # Create unique key based on Subject Code + Section (e.g., "IT101_1B")
+        unique_key = f"{subject_code} - {section_label}"
+
+        if unique_key not in section_color_map:
+            section_color_map[unique_key] = color_palette[color_index % len(color_palette)]
+            color_index += 1
+        
+        assigned_color_class = section_color_map[unique_key]
+        assigned_hover_class = assigned_color_class.replace('600', '700')
+        # ----------------------------------------
         
         current_slot_dt = start_dt
         slot_index = 0
@@ -695,12 +744,16 @@ def roomUtilization(request):
                 
                 raw_room_data[s.room.roomCode][s.dayOfWeek][slot_time_str].append({
                     'subject_code': s.subject.code,
-                    'section_label': section_label,  # Now uses the "1B" format
+                    'section_label': section_label,
                     'start_time': s.startTime.strftime('%I:%M %p'),
                     'end_time': s.endTime.strftime('%I:%M %p'),
                     'rowspan': rowspan,
                     'height_px': rowspan * 40, 
-                    'is_start_slot': (sched_start_dt >= current_slot_dt and sched_start_dt < slot_end_dt) or (current_slot_dt == start_dt and sched_start_dt < start_dt)
+                    'is_start_slot': (sched_start_dt >= current_slot_dt and sched_start_dt < slot_end_dt) or (current_slot_dt == start_dt and sched_start_dt < start_dt),
+                    
+                    # Pass colors to template
+                    'color_class': assigned_color_class,
+                    'hover_class': assigned_hover_class
                 })
             
             current_slot_dt = slot_end_dt

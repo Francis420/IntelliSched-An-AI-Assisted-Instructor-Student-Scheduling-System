@@ -76,9 +76,10 @@
                                                 <div class="absolute top-0 left-0 w-full p-1 z-10"
                                                      style="height: calc({{ s.height_px }}px); padding-right: 2px;">
                                                     
-                                                    <div class="w-full h-full bg-blue-600 text-white rounded shadow-sm 
+                                                    {# --- UPDATED: Dynamic Colors --- #}
+                                                    <div class="w-full h-full {{ s.color_class }} {{ s.hover_class }} text-white rounded shadow-sm 
                                                                 text-xs font-semibold overflow-hidden flex flex-col justify-center p-1
-                                                                hover:bg-blue-700 transition-colors cursor-default"
+                                                                transition-colors cursor-default"
                                                          title="{{ s.subject }} - {{ s.section }} @ {{ s.room }}">
                                                         
                                                         {# SUBJECT #}
@@ -86,9 +87,9 @@
                                                             {{ s.subject }} - {{ s.section }}
                                                         </span>
                                                         
-
                                                         {# ROOM #}
-                                                        <span class="block truncate text-[10px] bg-blue-800 bg-opacity-40 rounded px-1 mt-0.5 mx-auto inline-block">
+                                                        {# --- UPDATED: Universal Contrast Badge --- #}
+                                                        <span class="block truncate text-[10px] bg-black bg-opacity-20 rounded px-1 mt-0.5 mx-auto inline-block">
                                                             {{ s.room }}
                                                         </span>
 
@@ -109,10 +110,14 @@
                     </table>
                 </div>
             </div>
-            <a href="{% url 'exportWorkloadPDF' %}?semester={{ current_semester.pk }}" 
-            class="bg-red-600 text-white px-4 py-2 rounded shadow hover:bg-red-700">
-            Export to PDF
-            </a>
+            
+            <div class="mt-4">
+                <a href="{% url 'exportWorkloadPDF' %}?semester={{ current_semester.pk }}" 
+                   class="bg-red-600 text-white px-4 py-2 rounded shadow hover:bg-red-700 inline-block transition-colors">
+                    Export to PDF
+                </a>
+            </div>
+
         {% else %}
             <div class="text-center p-12 bg-white shadow-lg rounded-xl border border-gray-200">
                 <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
