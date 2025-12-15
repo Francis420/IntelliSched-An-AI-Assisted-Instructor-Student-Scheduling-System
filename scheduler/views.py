@@ -159,27 +159,35 @@ def scheduleOutput(request):
         if latest_semester:
             semester_id = str(latest_semester.semesterId)
         else:
-            # Handle case where no semesters exist at all
             return render(request, "scheduler/scheduleOutput.html", {"error": "No semesters found."})
 
+    # --- NEW LOGIC: Check for Finalized Schedule ---
+    finalized_exists = Schedule.objects.filter(
+        semester__semesterId=semester_id, 
+        status='finalized'
+    ).exists()
+
+    raw_batch_key = request.GET.get("batch_key")
+
+    # AUTO-REDIRECT: If finalized exists, and user is viewing 'active' (or default), redirect to 'finalized'
+    if finalized_exists and (raw_batch_key is None or raw_batch_key == 'active'):
+        return redirect(reverse('scheduleOutput') + f'?semester={semester_id}&batch_key=finalized')
+
+    # Set default batch_key
+    batch_key = raw_batch_key if raw_batch_key else 'active'
     
-    batch_key = request.GET.get("batch_key", 'active') # batch_key defaults to 'active'
-    
-    # 1. Get all unique creation timestamps for archived schedules
-    # We must first truncate/group by the second for reliable batch identification.
+    # 2. Get all unique creation timestamps for archived schedules
     raw_archived_datetimes = Schedule.objects.filter(
         semester__semesterId=semester_id, 
         status='archived'
     ).order_by('-createdAt').values_list('createdAt', flat=True).distinct()
     
-    # Python grouping to ensure only one timestamp per second exists for a batch
     unique_batch_times = {}
     for dt in raw_archived_datetimes:
         truncated_dt_key = dt.replace(microsecond=0)
         if truncated_dt_key not in unique_batch_times:
             unique_batch_times[truncated_dt_key] = truncated_dt_key
             
-    # Sorted list of unique batch datetimes
     archived_batch_times = sorted(unique_batch_times.keys(), reverse=True)
 
     archived_batches = [
@@ -188,35 +196,25 @@ def scheduleOutput(request):
     ]
 
     # --- BATCH SELECTION LOGIC ---
-    
-    # Determine if a finalized run exists for the current semester
-    finalized_exists = Schedule.objects.filter(
-        semester__semesterId=semester_id, 
-        status='finalized'
-    ).exists()
-
-    schedules = Schedule.objects.none() # Initialize to an empty QuerySet
+    schedules = Schedule.objects.none() 
     current_status = 'N/A'
     
     if batch_key == 'finalized' and finalized_exists:
         schedules = Schedule.objects.filter(semester__semesterId=semester_id, status='finalized')
         current_status = 'Finalized Schedule (Locked)'
     
-    elif batch_key == 'active' or (batch_key == 'finalized' and not finalized_exists):
-        # Default to active if requested or if finalized was requested but doesn't exist
+    elif batch_key == 'active':
         schedules = Schedule.objects.filter(semester__semesterId=semester_id, status='active')
         current_status = 'Active Draft'
 
-        # If no active schedules, try to load the latest archived batch
+        # Fallback: If no active schedules, try to load latest archived
         if not schedules.exists() and archived_batches:
              try:
                  latest_batch_time_iso = archived_batches[0]['key']
-                 # Ensure datetime is timezone-aware for filtering
                  latest_batch_time = datetime.fromisoformat(latest_batch_time_iso)
                  if latest_batch_time.tzinfo is None:
                      latest_batch_time = timezone.make_aware(latest_batch_time)
 
-                 # Filter the database records using the 1-second range
                  schedules = Schedule.objects.filter(
                      semester__semesterId=semester_id, 
                      createdAt__gte=latest_batch_time,
@@ -231,27 +229,21 @@ def scheduleOutput(request):
                  current_status = 'No Schedules Found'
                  batch_key = 'none'
 
-
     elif batch_key:
-        # Load a specific archived batch using the batch_key (timestamp)
+        # Load specific archived batch
         try:
             selected_timestamp = datetime.fromisoformat(batch_key)
-            
-            # Handle timezone if necessary
             if selected_timestamp.tzinfo is None:
                 selected_timestamp = timezone.make_aware(selected_timestamp)
-            
-            # Truncate to the second to match grouping logic
             selected_timestamp = selected_timestamp.replace(microsecond=0)
             
-            # Filter the database records using the 1-second range
             schedules = Schedule.objects.filter(
                 semester__semesterId=semester_id, 
                 createdAt__gte=selected_timestamp,
                 createdAt__lt=selected_timestamp + timedelta(seconds=1),
                 status='archived'
             )
-            # Find the correct label for display
+            # Find label
             label = next((b['label'] for b in archived_batches if b['key'] == batch_key), f"Archived Run ({selected_timestamp.strftime('%b %d, %I:%M %p')})")
             current_status = label
 
@@ -259,23 +251,19 @@ def scheduleOutput(request):
             messages.error(request, "Invalid schedule batch key provided. Falling back to active draft.")
             return redirect(reverse('scheduleOutput') + f'?semester={semester_id}&batch_key=active')
     
-    # 2. Fetch Data with necessary lookups
+    # 3. Fetch Data
     schedules = schedules.select_related(
-        'instructor', 
-        'room'
+        'instructor', 'room'
     ).prefetch_related(
-        # This prefetch is necessary for schedule.instructor.full_name property
         'instructor__userlogin_set__user'
     ).order_by('dayOfWeek', 'startTime')
     
-    # --- Aggregation Dictionaries Initialization and Logic ---
+    # --- Aggregation Logic ---
     DAYS_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     
     room_usage = defaultdict(lambda: {
-        "room_code": None, 
-        "total_minutes": 0, 
-        "usage_hours": 0.0,
-        "daily_spread": defaultdict(int) # Tracks daily usage in minutes
+        "room_code": None, "total_minutes": 0, "usage_hours": 0.0,
+        "daily_spread": defaultdict(int)
     })
     
     instructor_load = defaultdict(lambda: {
@@ -283,29 +271,23 @@ def scheduleOutput(request):
         "daily_spread": defaultdict(int)
     })
     
-    # Populate the aggregation dictionaries
     for schedule in schedules:
-        # Assuming schedule.duration_minutes is a property on the Schedule model
         duration_minutes = schedule.duration_minutes 
         
-        # Room Usage
+        # Room
         room_name = schedule.room.roomCode if schedule.room else "TBA"
         room_usage[room_name]["room_code"] = room_name
         room_usage[room_name]["total_minutes"] += duration_minutes
+        room_usage[room_name]["daily_spread"][schedule.dayOfWeek] += duration_minutes
         
-        # Track daily usage for rooms
-        day = schedule.dayOfWeek
-        room_usage[room_name]["daily_spread"][day] += duration_minutes
-        
-        # Instructor Load and Daily Spread 
+        # Instructor
         if schedule.instructor:
-            instr_id = schedule.instructor.instructorId # Use unique ID as dictionary key
-            instr_name = schedule.instructor.full_name # Assumes full_name is a property on Instructor
+            instr_id = schedule.instructor.instructorId 
+            instr_name = schedule.instructor.full_name
         else:
             instr_id = 'TBA_UNASSIGNED' 
             instr_name = 'Unassigned Sections'
 
-        # Use the unique ID as the key for aggregation
         instructor_load[instr_id]["id"] = instr_id
         instructor_load[instr_id]["name"] = instr_name
         
@@ -314,75 +296,55 @@ def scheduleOutput(request):
         else:
             instructor_load[instr_id]["normal_min"] += duration_minutes
             
-        day = schedule.dayOfWeek
-        instructor_load[instr_id]["daily_spread"][day] += duration_minutes
+        instructor_load[instr_id]["daily_spread"][schedule.dayOfWeek] += duration_minutes
 
-    # --- Final calculations and formatting for Room Usage ---
+    # Format Room Data
     formatted_room_data = [] 
-    
     for room_code, data in room_usage.items():
         data["usage_hours"] = round(data["total_minutes"] / 60.0, 2)
-        
-        # Prepare daily spread list (in hours) for template
         daily_list = []
         for day in DAYS_ORDER:
             daily_list.append({"day": day, "hours": round(data["daily_spread"].get(day, 0) / 60.0, 2)})
         data["daily_spread_list"] = daily_list
         formatted_room_data.append(data)
-
-    # Sort room usage descending by total hours
     ordered_room_usage = sorted(formatted_room_data, key=lambda item: item["usage_hours"], reverse=True)
 
-
-    # --- Final calculations and formatting for Instructor Load ---
+    # Format Instructor Data
     formatted_instructor_data = []
-    
-    # Final calculations for Instructor Load
     for instr_id, data in instructor_load.items(): 
-        if instr_id == 'TBA_UNASSIGNED': # Exclude the unassigned aggregation from the load table
+        if instr_id == 'TBA_UNASSIGNED': 
             continue 
-            
         data["total_hours"] = round((data["normal_min"] + data["overload_min"]) / 60.0, 2)
         data["normal_hours"] = round(data["normal_min"] / 60.0, 2)
         data["overload_hours"] = round(data["overload_min"] / 60.0, 2)
-        
-        # Prepare daily spread list for template/chart
         daily_list = []
         for day in DAYS_ORDER:
             daily_list.append({"day": day, "hours": round(data["daily_spread"].get(day, 0) / 60.0, 2)})
         data["daily_spread_list"] = daily_list
         formatted_instructor_data.append(data)
-
-    # Sort instructor load descending by total hours
     ordered_instructor_load = sorted(formatted_instructor_data, key=lambda item: item["total_hours"], reverse=True)
 
-    # Get all semesters for the dropdown
+    # Context
     semesters = Semester.objects.all().order_by("-createdAt")
-    
-    # Get the current semester object for its term display
     try:
         current_semester = Semester.objects.get(semesterId=semester_id)
     except Semester.DoesNotExist:
         current_semester = None
-
 
     context = {
         "current_semester_id": semester_id,
         "current_status": current_status,
         "batch_key": batch_key,
         "finalized_exists": finalized_exists,
-        "schedules": schedules, # Keeping this here just in case, even though the table is removed
+        "schedules": schedules,
         "semesters": semesters,
         "archived_batches": archived_batches,
         "current_semester": current_semester,
-        
-        # Data for the metrics tables/charts
-        "room_usage_data": ordered_room_usage, # NOTE: This is now a list of dicts, not dict of dicts
+        "room_usage_data": ordered_room_usage,
         "instructor_load_data": ordered_instructor_load,
         "days_order": DAYS_ORDER, 
         
-        # Flags for action buttons (Can be used in scheduleOutput.html)
-        "can_finalize": batch_key == 'active' and schedules.exists(), 
+        "can_finalize": (batch_key == 'active' and schedules.exists() and not finalized_exists),
         "is_finalized": current_status.startswith('Finalized'),
         "can_revert": (batch_key not in ['active', 'finalized', 'none', 'N/A']) and schedules.exists(), 
     }
@@ -973,15 +935,27 @@ def process_schedule_group(s_list):
 # 2. EXCEL UTILS
 # ==========================================
 
-def safe_write(ws, row, col, value):
+def safe_write(ws, row, col, value, align_center=False):
+    """
+    Safely writes to a cell. If the cell is merged, writes to the top-left cell.
+    Optionally centers the text.
+    """
     cell = ws.cell(row=row, column=col)
+    target_cell = cell
+
+    # Handle merged cells
     if isinstance(cell, MergedCell):
         for merged_range in ws.merged_cells.ranges:
             if cell.coordinate in merged_range:
-                ws.cell(row=merged_range.min_row, column=merged_range.min_col).value = value
-                return
-    else:
-        cell.value = value
+                target_cell = ws.cell(row=merged_range.min_row, column=merged_range.min_col)
+                break
+    
+    # Write Value
+    target_cell.value = value
+    
+    # Apply Alignment if requested
+    if align_center:
+        target_cell.alignment = Alignment(horizontal='center', vertical='center')
 
 def copy_row_style(ws, source_row_idx, target_row_idx):
     source_row = ws[source_row_idx]
@@ -996,17 +970,60 @@ def copy_row_style(ws, source_row_idx, target_row_idx):
             tgt_cell.protection = copy(src_cell.protection)
             tgt_cell.alignment = copy(src_cell.alignment)
 
+def write_section_totals(ws, total_row_idx, data_rows, col_map):
+    """
+    Calculates sums for Units, Lec, Lab, and Students.
+    Writes standard totals to the TOTAL row.
+    Writes the GRAND TOTAL (Lec + Lab) to the row BELOW the Total row.
+    """
+    if not data_rows or not col_map:
+        return
+
+    # 1. Calculate Sums
+    t_units = 0
+    t_lec = 0
+    t_lab = 0
+    t_students = 0
+
+    for row in data_rows:
+        def val(k):
+            v = row.get(k)
+            try:
+                if v is None or v == "": return 0
+                return float(v)
+            except (ValueError, TypeError):
+                return 0
+        
+        t_units += val('units')
+        t_lec += val('lec')
+        t_lab += val('lab')
+        t_students += val('students')
+
+    # 2. Write STANDARD TOTALS to the "TOTAL" Row (total_row_idx)
+    if 'units' in col_map:
+        safe_write(ws, total_row_idx, col_map['units'], t_units, align_center=True)
+
+    if 'lec' in col_map:
+        safe_write(ws, total_row_idx, col_map['lec'], t_lec, align_center=True)
+        
+    if 'lab' in col_map:
+        safe_write(ws, total_row_idx, col_map['lab'], t_lab, align_center=True)
+
+    if 'students' in col_map:
+        safe_write(ws, total_row_idx, col_map['students'], t_students, align_center=True)
+
+    # 3. Write GRAND TOTAL (Lec + Lab) to the NEXT ROW (total_row_idx + 1)
+    if 'lec' in col_map:
+        grand_total = t_lec + t_lab
+        # We write this into the 'lec' column on the row BELOW the totals
+        safe_write(ws, total_row_idx + 1, col_map['lec'], grand_total, align_center=True)
+
+
 def fill_list_section(ws, data_rows, start_search_row=1):
     """
-    Robust function to fill Excel rows.
-    1. Finds placeholder row ('code').
-    2. Safely inserts rows without breaking 'Total' or 'Overload' sections.
-    3. Handles 'MergedCell' read-only errors.
-    4. Enforces '0' for empty Lab values.
+    Fills data and finds the correct TOTAL row index.
+    Returns: (total_row_idx, col_map)
     """
-    if not data_rows:
-        return start_search_row
-
     # 1. Find the Template/Placeholder Row
     template_row_idx = None
     col_map = {} 
@@ -1014,22 +1031,31 @@ def fill_list_section(ws, data_rows, start_search_row=1):
     for row in ws.iter_rows(min_row=start_search_row):
         possible_map = {}
         found_code = False
-        
         for cell in row:
             if cell.value and isinstance(cell.value, str):
                 val = cell.value.strip()
                 possible_map[val.lower()] = cell.column
-                if val == 'code': 
-                    found_code = True
+                if val == 'code': found_code = True
         
         if found_code:
             template_row_idx = row[0].row
             col_map = possible_map
             break
     
+    # If no placeholder found, return inputs so we don't crash
     if not template_row_idx:
-        print(f"Warning: Placeholder row 'code' not found starting from {start_search_row}")
-        return start_search_row
+        return start_search_row, {}
+
+    # If no data, we still need to find the Total row to return its position
+    if not data_rows:
+        # Scan down to find "TOTAL"
+        for r_idx in range(template_row_idx + 1, template_row_idx + 20):
+            # Check first few columns for "TOTAL"
+            # Assuming TOTAL is in column B (index 2) based on your template
+            cell_val = ws.cell(row=r_idx, column=2).value
+            if cell_val and "TOTAL" in str(cell_val).upper():
+                return r_idx, col_map
+        return template_row_idx, col_map
 
     # 2. Prepare for Insertion
     num_to_insert = len(data_rows) - 1
@@ -1037,7 +1063,6 @@ def fill_list_section(ws, data_rows, start_search_row=1):
     if num_to_insert > 0:
         merges_to_shift = []
         template_row_merges = []
-        
         all_merges = list(ws.merged_cells.ranges)
         
         for merged_range in all_merges:
@@ -1069,36 +1094,33 @@ def fill_list_section(ws, data_rows, start_search_row=1):
         current_row = template_row_idx + i
         for key, val in row_data.items():
             key_lower = key.lower()
-            
-            # FIX 2: Force 0 for Lab if empty/None
-            if key_lower == 'lab':
-                if val is None or val == "":
-                    val = 0
+            if key_lower == 'lab' and (val is None or val == ""):
+                val = 0
 
             if key_lower in col_map:
                 col_idx = col_map[key_lower]
-                cell = ws.cell(row=current_row, column=col_idx)
+                safe_write(ws, current_row, col_idx, val)
 
-                is_merged = False
-                if isinstance(cell, MergedCell):
-                    is_merged = True
-                
-                if not is_merged:
-                    for rng in ws.merged_cells.ranges:
-                        if cell.coordinate in rng:
-                            top_left = ws.cell(row=rng.min_row, column=rng.min_col)
-                            top_left.value = val
-                            is_merged = True
-                            break
-                
-                if not is_merged:
-                    cell.value = val
+    # 4. Find the TOTAL Row
+    # Start searching immediately after the last data row
+    last_data_row = template_row_idx + len(data_rows) - 1
+    total_row_idx = None
 
-    return template_row_idx + len(data_rows)
+    # Scan next 10 rows to find the word "TOTAL"
+    for r_idx in range(last_data_row + 1, last_data_row + 10):
+        # We check column 2 (B) or 1 (A) or search the row
+        # Based on your template, "TOTAL" is in Column B
+        val = ws.cell(row=r_idx, column=2).value 
+        if val and "TOTAL" in str(val).upper():
+            total_row_idx = r_idx
+            break
+    
+    # If we couldn't find "TOTAL", default to the next row (fallback)
+    if not total_row_idx:
+        total_row_idx = last_data_row + 1
 
-# ==========================================
-# 3. VIEW FUNCTIONS
-# ==========================================
+    return total_row_idx, col_map
+
 
 @login_required
 def previewWorkload(request):
@@ -1224,7 +1246,6 @@ def exportWorkloadExcel(request):
         except FileNotFoundError:
             return HttpResponse("Template file not found.", status=404)
 
-        # Helper to safely convert strings to numbers
         def to_number(val):
             if not val or val.strip() == "": return None 
             try:
@@ -1233,18 +1254,13 @@ def exportWorkloadExcel(request):
             except (ValueError, TypeError):
                 return val 
 
-        # 1. Prepare Data
         def extract_rows(prefix):
             codes = request.POST.getlist(f'{prefix}_code[]')
             titles = request.POST.getlist(f'{prefix}_title[]')
-            
-            # Numeric fields
             units = request.POST.getlist(f'{prefix}_units[]')
             lecs = request.POST.getlist(f'{prefix}_lec[]')
             labs = request.POST.getlist(f'{prefix}_lab[]')
             students = request.POST.getlist(f'{prefix}_students[]')
-            
-            # Text fields
             times = request.POST.getlist(f'{prefix}_time[]')
             days = request.POST.getlist(f'{prefix}_days[]')
             rooms = request.POST.getlist(f'{prefix}_room[]')
@@ -1270,7 +1286,6 @@ def exportWorkloadExcel(request):
         regular_rows = extract_rows('reg')
         overload_rows = extract_rows('over')
 
-        # Get Faculty Name for Filename
         faculty_name_raw = request.POST.get('header_faculty', 'INSTRUCTOR')
         
         variables = {
@@ -1281,15 +1296,15 @@ def exportWorkloadExcel(request):
             'header_college': request.POST.get('header_college'),
             'header_date': request.POST.get('header_date'),
             
-            'inv_admin': request.POST.get('inv_admin', ''),
-            'inv_research': request.POST.get('inv_research', ''),
-            'nv_research': request.POST.get('inv_research', ''),
-            'inv_extension': request.POST.get('inv_extension', ''),
-            'inv_consultation': request.POST.get('inv_consultation', ''),
-            'inv_others': request.POST.get('inv_others', ''), 
+            'inv_admin': to_number(request.POST.get('inv_admin', '')),
+            'inv_research': to_number(request.POST.get('inv_research', '')),
+            'nv_research': to_number(request.POST.get('inv_research', '')),
+            'inv_extension': to_number(request.POST.get('inv_extension', '')),
+            'inv_consultation': to_number(request.POST.get('inv_consultation', '')),
+            'inv_others': to_number(request.POST.get('inv_others', '')), 
+            'inv_classes': to_number(request.POST.get('inv_classes', '')),
+            'inv_total': to_number(request.POST.get('inv_total', '')),
             'inv_note': request.POST.get('inv_note', ''),
-            'inv_classes': request.POST.get('inv_classes', ''),
-            'inv_total': request.POST.get('inv_total', ''),
 
             'sig_faculty': request.POST.get('sig_faculty'),
             'sig_dept_head': request.POST.get('sig_dept_head'),
@@ -1298,18 +1313,22 @@ def exportWorkloadExcel(request):
             'sig_president': request.POST.get('sig_president'),
         }
 
-        # 2. Write Variables
         for row in ws.iter_rows():
             for cell in row:
                 if cell.value in variables:
                     safe_write(ws, cell.row, cell.column, variables[cell.value])
 
-        # 3. Fill Tables
-        last_row = fill_list_section(ws, regular_rows, start_search_row=1)
-        fill_list_section(ws, overload_rows, start_search_row=last_row + 1)
+        # --- Regular Section ---
+        reg_total_row_idx, reg_col_map = fill_list_section(ws, regular_rows, start_search_row=1)
+        if regular_rows and reg_col_map:
+            write_section_totals(ws, reg_total_row_idx, regular_rows, reg_col_map)
 
-        # 4. Generate Dynamic Filename
-        # Replace spaces with dashes and uppercase it: "KYLA YU" -> "KYLA-YU"
+        # --- Overload Section ---
+        # Start search AFTER the Regular section's total row
+        over_total_row_idx, over_col_map = fill_list_section(ws, overload_rows, start_search_row=reg_total_row_idx + 2)
+        if overload_rows and over_col_map:
+            write_section_totals(ws, over_total_row_idx, overload_rows, over_col_map)
+
         safe_name = faculty_name_raw.strip().replace(" ", "-").upper()
         filename = f"ACTUAL-TEACHING-LOAD-{safe_name}.xlsx"
 
