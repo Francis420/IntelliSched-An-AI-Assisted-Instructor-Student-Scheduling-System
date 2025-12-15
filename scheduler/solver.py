@@ -503,6 +503,7 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
         solver.parameters.max_time_in_seconds = time_limit_seconds
     
     solver.parameters.num_search_workers = 8
+    solver.parameters.log_search_progress = True
     
     print(f"[Solver] Starting solve (Time limit: {time_limit_seconds})...")
     status = solver.Solve(model)

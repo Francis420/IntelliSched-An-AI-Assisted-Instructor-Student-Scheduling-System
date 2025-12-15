@@ -21,6 +21,18 @@ from django.http import HttpResponse
 from django.template.loader import get_template
 from xhtml2pdf import pisa
 from django.db.models import Sum
+from weasyprint import HTML 
+from django.template.loader import render_to_string
+import math
+from weasyprint import HTML, CSS
+import openpyxl
+from openpyxl.styles import Alignment
+from openpyxl.utils import get_column_letter
+from django.conf import settings
+from openpyxl.cell.cell import MergedCell
+from copy import copy
+from openpyxl.utils import get_column_letter
+from openpyxl import load_workbook
 
 
 @login_required
@@ -377,12 +389,11 @@ def scheduleOutput(request):
     return render(request, "scheduler/scheduleOutput.html", context)
 
 
-# Individual Instructor Schedule View
 @login_required
 def instructorScheduleView(request):
     """
     Displays the logged-in instructor's schedule in a timetable matrix format.
-    Shows Subject + Section (Year+Letter) + Room with consistent coloring.
+    Shows Subject + Section (Year+Letter) + Room + Type (Lec/Lab).
     """
     user = request.user
     
@@ -459,13 +470,11 @@ def instructorScheduleView(request):
     raw_data = defaultdict(lambda: defaultdict(list))
 
     # --- COLOR PALETTE SETUP ---
-    # Define distinct colors.
     color_palette = [
         'bg-blue-600', 'bg-red-600', 'bg-emerald-600', 'bg-purple-600', 
         'bg-orange-600', 'bg-teal-600', 'bg-pink-600', 'bg-indigo-600', 
         'bg-cyan-600', 'bg-rose-600', 'bg-amber-600', 'bg-lime-600'
     ]
-    # This dictionary will store "SubjectCode_SectionStr" -> "bg-color-class"
     section_color_map = {}
     color_index = 0
     # ---------------------------
@@ -479,15 +488,13 @@ def instructorScheduleView(request):
         if sched_end_dt < sched_start_dt:
              sched_end_dt += timedelta(days=1)
         
-        # --- NEW SECTION LABEL LOGIC (Year + Section, e.g. "1B") ---
+        # --- SECTION LABEL LOGIC (Year + Section, e.g. "1B") ---
         subject_code = s.subject.code
         year_level = ""
-        # 1. Extract Year (first digit in Subject Code)
         match_year = re.search(r'\d', subject_code)
         if match_year:
             year_level = match_year.group()
         
-        # 2. Extract Section Letter (after last hyphen in Section Code)
         raw_section = s.section.sectionCode
         if '-' in raw_section:
             section_letter = raw_section.split('-')[-1].strip()
@@ -497,20 +504,25 @@ def instructorScheduleView(request):
         section_str = f"{year_level}{section_letter}" 
         # -----------------------------------------------------------
 
-        # ### --- COLOR ASSIGNMENT LOGIC --- ###
-        # Create a unique key for this Subject + Section combo
+        # --- DETERMINE TYPE (Lec/Lab) ---
+        # Assuming model has a field 'type' or 'schedType'. 
+        # Adjust 'getattr(s, "type", ...)' to match your actual model field name.
+        raw_type = str(getattr(s, 'type', 'Lec')).lower() 
+        type_label = "Lec"
+        if "lab" in raw_type:
+            type_label = "Lab"
+        # --------------------------------
+
+        # --- COLOR ASSIGNMENT LOGIC ---
         unique_key = f"{subject_code}_{section_str}"
 
-        # If we haven't seen this combo, assign it a color
         if unique_key not in section_color_map:
             section_color_map[unique_key] = color_palette[color_index % len(color_palette)]
             color_index += 1
         
-        # Retrieve the assigned color
         assigned_color_class = section_color_map[unique_key]
-        # Generate a hover color (simple string replacement for Tailwind)
         assigned_hover_class = assigned_color_class.replace('600', '700')
-        # ----------------------------------------
+        # ------------------------------
 
         subject_str = s.subject.code
         room_str = s.room.roomCode if s.room else "TBA"
@@ -529,13 +541,13 @@ def instructorScheduleView(request):
                     'subject': subject_str,
                     'section': section_str,
                     'room': room_str,
+                    'type_label': type_label, # "Lec" or "Lab"
                     'start_time': s.startTime.strftime('%I:%M %p'),
                     'end_time': s.endTime.strftime('%I:%M %p'),
                     'rowspan': rowspan,
                     'height_px': rowspan * 40,
                     'is_start_slot': (sched_start_dt >= current_slot_dt and sched_start_dt < slot_end_dt) or (current_slot_dt == start_dt and sched_start_dt < start_dt),
                     
-                    # Pass the colors to the template
                     'color_class': assigned_color_class,
                     'hover_class': assigned_hover_class
                 })
@@ -801,123 +813,509 @@ def roomUtilization(request):
     return render(request, "scheduler/roomUtilization.html", context)
 
 
-@login_required
-def exportWorkloadPDF(request):
-    """
-    Generates the Instructor Workload Form (EVSU-ACA-F-002) as a PDF.
-    FIX: Calculates filler rows in the view to replace the invalid 'make_range' filter.
-    """
-    user = request.user
-    
-    # 1. Identify Instructor and Semester
-    login_entry = UserLogin.objects.filter(user=user).select_related("instructor").first()
-    if not login_entry or not login_entry.instructor:
-        return HttpResponse("No instructor profile found.", status=404)
+# PDF export
+# Helper to merge multiple schedule blocks for the same subject/section
+def format_number(num):
+    try:
+        f_num = float(num)
+        if f_num.is_integer(): return int(f_num)
+        return f_num
+    except (ValueError, TypeError): return 0
 
-    instructor = login_entry.instructor
+def get_semester_text(term):
+    mapping = {'1st': 'FIRST', '2nd': 'SECOND', 'Midyear': 'MIDYEAR'}
+    return mapping.get(term, str(term).upper())
+
+def get_short_day(day_full):
+    mapping = {'Monday': 'M', 'Tuesday': 'T', 'Wednesday': 'W', 'Thursday': 'TH', 'Friday': 'F', 'Saturday': 'SAT', 'Sunday': 'SUN'}
+    return mapping.get(day_full, day_full)
+
+def get_instructor_involvement(instructor):
+    """
+    Calculates involvement hours based on Designation (priority) or Rank.
+    """
+    context = {
+        'inv_admin': 0,
+        'inv_research': 0,
+        'inv_extension': 0,
+        'inv_consultation': 0, # Instruction + Consultation (+ Adviser)
+        'inv_others': 0,       # Production
+    }
+
+    if instructor.designation:
+        d = instructor.designation
+        context['inv_admin'] = d.adminSupervisionHours
+        context['inv_research'] = d.researchHours
+        context['inv_extension'] = d.extensionHours
+        # Designation: Instruction + Consultation
+        context['inv_consultation'] = d.instructionHours + d.consultationHours
+        # Designation: Production -> Others
+        context['inv_others'] = d.productionHours
+    elif instructor.rank:
+        r = instructor.rank
+        context['inv_admin'] = 0 
+        context['inv_research'] = r.researchHours
+        context['inv_extension'] = r.extensionHours
+        # Rank: Instruction + Consultation + Class Adviser
+        context['inv_consultation'] = r.instructionHours + r.consultationHours + r.classAdviserHours
+        # Rank: Production -> Others
+        context['inv_others'] = r.productionHours
+
+    return context
+
+def format_section_time(section):
+    """
+    Formats time string based on available schedules.
+    - Single Slot: "09:00-12:00" (Formal)
+    - Multiple Slots: "9-12 / 1-3" (Compact)
+    """
+    # Get all schedules for this section (Lec, Lab, etc.)
+    schedules = list(section.schedule_set.all())
     
+    # Sort by day and time to keep order consistent
+    # Assuming dayOfWeek uses full names, we might want a map, 
+    # but standard sort is usually fine for grouping. 
+    # Better to sort by startTime if days are equal.
+    schedules.sort(key=lambda x: x.startTime)
+
+    times = []
+    use_compact = len(schedules) > 1  # Logic: Use compact format if > 1 slot
+
+    for s in schedules:
+        if use_compact:
+            # Compact: "5" or "5:30" (No leading zero, no :00)
+            def fmt(t):
+                h = t.hour % 12 or 12
+                # If minutes exist, show them. If 00, hide them.
+                return f"{h}:{t.minute:02d}" if t.minute > 0 else f"{h}"
+            
+            t_str = f"{fmt(s.start_time)}-{fmt(s.end_time)}"
+        else:
+            # Standard: "05:00-08:00"
+            def fmt_std(t):
+                return t.strftime("%I:%M")
+            t_str = f"{fmt_std(s.start_time)}-{fmt_std(s.end_time)}"
+            
+        times.append(t_str)
+
+    return " / ".join(times) if times else "TBA"
+
+
+def process_schedule_group(s_list):
+    """Calculates Lec/Lab hours and formats row data with smart time formatting."""
+    if not s_list: return None
+    
+    first = s_list[0]
+    subject = first.subject
+    
+    # 1. Calculate Minutes/Hours
+    lec_minutes = getattr(subject, 'durationMinutes', 0)
+    lab_minutes = getattr(subject, 'labDurationMinutes', 0) if getattr(subject, 'hasLab', False) else 0
+    
+    total_lec_hours = lec_minutes / 60
+    total_lab_hours = lab_minutes / 60
+
+    # 2. Sort and Format Time/Days
+    sorted_list = sorted(s_list, key=lambda x: (x.dayOfWeek, x.startTime))
+    times, days = [], []
+    
+    # Check if we have multiple slots (e.g. Lec + Lab)
+    use_compact = len(sorted_list) > 1
+
+    for s in sorted_list:
+        # --- TIME FORMATTING LOGIC ---
+        if use_compact:
+            # Compact: 5-8
+            def fmt(t):
+                h = t.hour % 12 or 12
+                return f"{h}:{t.minute:02d}" if t.minute > 0 else f"{h}"
+            t_str = f"{fmt(s.startTime)}-{fmt(s.endTime)}"
+        else:
+            # Formal: 05:00-08:00
+            t_str = f"{s.startTime.strftime('%I:%M')}-{s.endTime.strftime('%I:%M')}"
+        # -----------------------------
+
+        times.append(t_str)
+        days.append(get_short_day(s.dayOfWeek))
+
+    time_str = " / ".join(times) 
+    day_str = " / ".join(days)
+
+    # 3. Section Formatting
+    sec_obj = getattr(first, 'section', None)
+    year_val = getattr(subject, 'yearLevel', '')
+    if year_val is None: year_val = ""
+
+    raw_sec = getattr(sec_obj, 'sectionCode', '') if sec_obj else ""
+    if raw_sec:
+        sec_letter = raw_sec.split('-')[-1].strip() if '-' in raw_sec else raw_sec.strip()
+    else:
+        sec_letter = "?" 
+
+    formatted_section = f"BSIT {year_val}{sec_letter}"
+    
+    student_count = sec_obj.numberOfStudents if (sec_obj and hasattr(sec_obj, 'numberOfStudents')) else 0
+
+    return {
+        'code': subject.code,
+        'description': subject.name,
+        'units': format_number(subject.units),
+        'time': time_str,
+        'days': day_str,
+        'lec': format_number(total_lec_hours) if total_lec_hours > 0 else "", 
+        'lab': format_number(total_lab_hours) if total_lab_hours > 0 else 0,
+        'students': student_count,
+        'room': first.room.roomCode if (hasattr(first, 'room') and first.room) else "TBA",
+        'section': formatted_section
+    }
+
+# ==========================================
+# 2. EXCEL UTILS
+# ==========================================
+
+def safe_write(ws, row, col, value):
+    cell = ws.cell(row=row, column=col)
+    if isinstance(cell, MergedCell):
+        for merged_range in ws.merged_cells.ranges:
+            if cell.coordinate in merged_range:
+                ws.cell(row=merged_range.min_row, column=merged_range.min_col).value = value
+                return
+    else:
+        cell.value = value
+
+def copy_row_style(ws, source_row_idx, target_row_idx):
+    source_row = ws[source_row_idx]
+    target_row = ws[target_row_idx]
+
+    for src_cell, tgt_cell in zip(source_row, target_row):
+        if src_cell.has_style:
+            tgt_cell.font = copy(src_cell.font)
+            tgt_cell.border = copy(src_cell.border)
+            tgt_cell.fill = copy(src_cell.fill)
+            tgt_cell.number_format = copy(src_cell.number_format)
+            tgt_cell.protection = copy(src_cell.protection)
+            tgt_cell.alignment = copy(src_cell.alignment)
+
+def fill_list_section(ws, data_rows, start_search_row=1):
+    """
+    Robust function to fill Excel rows.
+    1. Finds placeholder row ('code').
+    2. Safely inserts rows without breaking 'Total' or 'Overload' sections.
+    3. Handles 'MergedCell' read-only errors.
+    4. Enforces '0' for empty Lab values.
+    """
+    if not data_rows:
+        return start_search_row
+
+    # 1. Find the Template/Placeholder Row
+    template_row_idx = None
+    col_map = {} 
+
+    for row in ws.iter_rows(min_row=start_search_row):
+        possible_map = {}
+        found_code = False
+        
+        for cell in row:
+            if cell.value and isinstance(cell.value, str):
+                val = cell.value.strip()
+                possible_map[val.lower()] = cell.column
+                if val == 'code': 
+                    found_code = True
+        
+        if found_code:
+            template_row_idx = row[0].row
+            col_map = possible_map
+            break
+    
+    if not template_row_idx:
+        print(f"Warning: Placeholder row 'code' not found starting from {start_search_row}")
+        return start_search_row
+
+    # 2. Prepare for Insertion
+    num_to_insert = len(data_rows) - 1
+    
+    if num_to_insert > 0:
+        merges_to_shift = []
+        template_row_merges = []
+        
+        all_merges = list(ws.merged_cells.ranges)
+        
+        for merged_range in all_merges:
+            if merged_range.min_row == template_row_idx and merged_range.max_row == template_row_idx:
+                template_row_merges.append((merged_range.min_col, merged_range.max_col))
+            elif merged_range.min_row > template_row_idx:
+                merges_to_shift.append(merged_range)
+
+        for m in merges_to_shift:
+            ws.merged_cells.remove(m)
+
+        ws.insert_rows(template_row_idx + 1, amount=num_to_insert)
+
+        for m in merges_to_shift:
+            new_min_row = m.min_row + num_to_insert
+            new_max_row = m.max_row + num_to_insert
+            ws.merge_cells(start_row=new_min_row, start_column=m.min_col,
+                           end_row=new_max_row, end_column=m.max_col)
+
+        for i in range(num_to_insert):
+            target_row = template_row_idx + 1 + i
+            copy_row_style(ws, template_row_idx, target_row)
+            for min_col, max_col in template_row_merges:
+                ws.merge_cells(start_row=target_row, start_column=min_col, 
+                               end_row=target_row, end_column=max_col)
+
+    # 3. Write Data
+    for i, row_data in enumerate(data_rows):
+        current_row = template_row_idx + i
+        for key, val in row_data.items():
+            key_lower = key.lower()
+            
+            # FIX 2: Force 0 for Lab if empty/None
+            if key_lower == 'lab':
+                if val is None or val == "":
+                    val = 0
+
+            if key_lower in col_map:
+                col_idx = col_map[key_lower]
+                cell = ws.cell(row=current_row, column=col_idx)
+
+                is_merged = False
+                if isinstance(cell, MergedCell):
+                    is_merged = True
+                
+                if not is_merged:
+                    for rng in ws.merged_cells.ranges:
+                        if cell.coordinate in rng:
+                            top_left = ws.cell(row=rng.min_row, column=rng.min_col)
+                            top_left.value = val
+                            is_merged = True
+                            break
+                
+                if not is_merged:
+                    cell.value = val
+
+    return template_row_idx + len(data_rows)
+
+# ==========================================
+# 3. VIEW FUNCTIONS
+# ==========================================
+
+@login_required
+def previewWorkload(request):
+    user = request.user
+    instructor = None
+    
+    login_entry = UserLogin.objects.filter(user=user).select_related("instructor").first()
+    if login_entry:
+        instructor = login_entry.instructor
+
+    # Semester & Curriculum
     semester_id = request.GET.get("semester")
     if semester_id:
-        current_semester = get_object_or_404(Semester, pk=semester_id)
+        current_semester = Semester.objects.filter(pk=semester_id).first()
     else:
-        current_semester = Semester.objects.order_by("-createdAt").first()
-        if not current_semester:
-             return HttpResponse("No semesters found.", status=404)
+        current_semester = Semester.objects.order_by('-academicYear', 'term').first()
 
-    # 2. Fetch Schedules & 3. Prepare Load Data (Logic remains the same as before)
-    schedules = Schedule.objects.filter(
+    curriculum = Curriculum.objects.filter(isActive=True).order_by('-createdAt').first()
+    
+    dept_head_obj = Instructor.objects.filter(designation__designationId=5).first()
+    dept_head_name = dept_head_obj.full_name.upper() if dept_head_obj else "TBA"
+
+    # --- INVOLVEMENT LOGIC (Use Helper) ---
+    inv_context = get_instructor_involvement(instructor)
+    
+    # Extract values for the totals calculation
+    admin_h = inv_context['inv_admin']
+    research_h = inv_context['inv_research']
+    extension_h = inv_context['inv_extension']
+    instructional_h = inv_context['inv_consultation']
+    
+    # --- SCHEDULES ---
+    all_schedules = Schedule.objects.filter(
         instructor=instructor,
         semester=current_semester,
         status='finalized'
     ).select_related('subject', 'section', 'room')
 
-    regular_load = []
-    overload_load = []
-    reg_units = reg_hours_lec = reg_hours_lab = 0
-    over_units = over_hours_lec = over_hours_lab = 0
+    reg_schedules_list = []
+    over_schedules_list = []
+    unique_sections = set()
 
-    for s in schedules:
-        duration_hours = s.duration_minutes / 60
-        lec_hours = duration_hours if s.scheduleType == 'lecture' else 0
-        lab_hours = duration_hours if s.scheduleType == 'lab' else 0
-        
-        # Section/Subject logic for display formatting...
-        subject_code = s.subject.code
-        year_level = re.search(r'\d', subject_code).group() if re.search(r'\d', subject_code) else ""
-        raw_section = s.section.sectionCode
-        section_letter = raw_section.split('-')[-1].strip() if '-' in raw_section else raw_section.strip()
-        section_display = f"{s.subject.code}, {year_level}{section_letter}"
-
-        item = {
-            'code': s.subject.code,
-            'title': s.subject.name,
-            'units': s.subject.units if hasattr(s.subject, 'units') else 3, 
-            'time': f"{s.startTime.strftime('%I:%M %p')} - {s.endTime.strftime('%I:%M %p')}",
-            'days': s.dayOfWeek[:3],
-            'lec': lec_hours,
-            'lab': lab_hours,
-            'students': s.section.defaultStudentsPerSection if hasattr(s.section, 'defaultStudentsPerSection') else 40,
-            'room': s.room.roomCode if s.room else "TBA",
-            'section': section_display
-        }
-
-        # Assuming 'isOvertime' field exists on the Schedule model
-        if hasattr(s, 'isOvertime') and s.isOvertime: 
-            overload_load.append(item)
-            over_units += item['units']
-            over_hours_lec += lec_hours
-            over_hours_lab += lab_hours
+    for s in all_schedules:
+        unique_sections.add(s.section.sectionId)
+        if s.isOvertime:
+            over_schedules_list.append(s)
         else:
-            regular_load.append(item)
-            reg_units += item['units']
-            reg_hours_lec += lec_hours
-            reg_hours_lab += lab_hours
+            reg_schedules_list.append(s)
+            
+    no_of_classes = len(unique_sections)
 
-    # 4. Calculate Filler Rows for Template (THE FIX)
-    MAX_REGULAR_ROWS = 10
-    MAX_OVERLOAD_ROWS = 3
-    
-    # Calculate how many empty rows are needed
-    reg_filler_count = max(0, MAX_REGULAR_ROWS - len(regular_load))
-    overload_filler_count = max(0, MAX_OVERLOAD_ROWS - len(overload_load))
-    
-    # Create iterable lists for the template loop
-    regular_filler = list(range(reg_filler_count)) 
-    overload_filler = list(range(overload_filler_count))
-    
-    # 5. Fetch Signatories
-    active_curriculum = Curriculum.objects.filter(isActive=True).first() # Requires Curriculum model
+    def group_and_process(s_list):
+        grouped = defaultdict(list)
+        for s in s_list:
+            key = (s.subject.subjectId, s.section.sectionId) 
+            grouped[key].append(s)
+        rows = []
+        for key, group in grouped.items():
+            processed = process_schedule_group(group)
+            if processed:
+                rows.append(processed)
+        return rows
 
-    context = {
-        "instructor": instructor,
-        "semester": current_semester,
-        # ... (other context variables)
-        "regular_load": regular_load,
-        "overload_load": overload_load,
-        "reg_total": {'units': reg_units, 'lec': reg_hours_lec, 'lab': reg_hours_lab},
-        "over_total": {'units': over_units, 'lec': over_hours_lec, 'lab': over_hours_lab},
-        
-        # --- NEW CONTEXT VARIABLES FOR FIX ---
-        "regular_filler": regular_filler,
-        "overload_filler": overload_filler,
-        # -------------------------------------
-        
-        "dean": active_curriculum.dean if active_curriculum else "DEAN NAME",
-        "vp_academic": active_curriculum.vicePresidentForAcademicAffairs if active_curriculum else "VP NAME",
-        "president": active_curriculum.universityPresident if active_curriculum else "PRESIDENT NAME",
-        "date_now": timezone.now()
+    regular_rows = group_and_process(reg_schedules_list)
+    overload_rows = group_and_process(over_schedules_list)
+
+    def sum_prop(rows, prop):
+        total = 0
+        for r in rows:
+            val = r.get(prop, "")
+            if val != "":
+                try: total += float(val)
+                except ValueError: pass
+        return total
+
+    # Totals
+    total_involvement = sum([float(admin_h), float(research_h), float(extension_h), float(instructional_h)])
+    
+    involvement_data = {
+        'admin': format_number(admin_h),
+        'research': format_number(research_h),
+        'extension': format_number(extension_h),
+        'consultation': format_number(instructional_h),
+        'total': format_number(total_involvement),
+        'note_text': "COE GAD Coordinator" if float(admin_h) > 0 else "", 
+        'no_of_classes': no_of_classes
     }
 
-    # 6. Render to PDF
-    template_path = 'scheduler/workload_pdf.html' 
-    template = get_template(template_path)
-    html = template.render(context)
-    
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="Workload_{instructor.full_name}.pdf"'
-    
-    pisa_status = pisa.CreatePDF(html, dest=response)
-    
-    if pisa_status.err:
-        return HttpResponse('We had some errors generating the PDF.', status=500)
-    return response
+    context = {
+        'instructor': instructor,
+        'semester': current_semester,
+        'semester_text': get_semester_text(current_semester.term) if current_semester else "",
+        'curriculum': curriculum,
+        'dept_head_name': dept_head_name,
+        
+        # Merge involvement keys directly for the template forms
+        **inv_context, 
+        
+        'involvement_data': involvement_data,
+        'regular_rows': regular_rows,
+        'regular_totals': {
+            'units': format_number(sum_prop(regular_rows, 'units')),
+            'lec': format_number(sum_prop(regular_rows, 'lec')),
+            'lab': format_number(sum_prop(regular_rows, 'lab')),
+        },
+        'overload_rows': overload_rows, 
+        'overload_totals': {
+            'units': format_number(sum_prop(overload_rows, 'units')),
+            'lec': format_number(sum_prop(overload_rows, 'lec')),
+            'lab': format_number(sum_prop(overload_rows, 'lab')),
+        }
+    }
+
+    return render(request, 'scheduler/workload_preview.html', context)
+
+@login_required
+def exportWorkloadExcel(request):
+    if request.method == "POST":
+        template_path = os.path.join(settings.BASE_DIR, 'static', 'excel_templates', 'workload_template.xlsx')
+        try:
+            wb = load_workbook(template_path)
+            ws = wb.active 
+        except FileNotFoundError:
+            return HttpResponse("Template file not found.", status=404)
+
+        # Helper to safely convert strings to numbers
+        def to_number(val):
+            if not val or val.strip() == "": return None 
+            try:
+                f = float(val)
+                return int(f) if f.is_integer() else f
+            except (ValueError, TypeError):
+                return val 
+
+        # 1. Prepare Data
+        def extract_rows(prefix):
+            codes = request.POST.getlist(f'{prefix}_code[]')
+            titles = request.POST.getlist(f'{prefix}_title[]')
+            
+            # Numeric fields
+            units = request.POST.getlist(f'{prefix}_units[]')
+            lecs = request.POST.getlist(f'{prefix}_lec[]')
+            labs = request.POST.getlist(f'{prefix}_lab[]')
+            students = request.POST.getlist(f'{prefix}_students[]')
+            
+            # Text fields
+            times = request.POST.getlist(f'{prefix}_time[]')
+            days = request.POST.getlist(f'{prefix}_days[]')
+            rooms = request.POST.getlist(f'{prefix}_room[]')
+            sections = request.POST.getlist(f'{prefix}_section[]')
+            
+            rows = []
+            for i in range(len(codes)):
+                if codes[i].strip() or titles[i].strip(): 
+                    rows.append({
+                        'code': codes[i], 
+                        'description': titles[i], 
+                        'units': to_number(units[i]),    
+                        'time': times[i], 
+                        'days': days[i], 
+                        'lec': to_number(lecs[i]),       
+                        'lab': to_number(labs[i]),       
+                        'students': to_number(students[i]), 
+                        'room': rooms[i], 
+                        'section': sections[i]
+                    })
+            return rows
+
+        regular_rows = extract_rows('reg')
+        overload_rows = extract_rows('over')
+
+        # Get Faculty Name for Filename
+        faculty_name_raw = request.POST.get('header_faculty', 'INSTRUCTOR')
+        
+        variables = {
+            'header_faculty': faculty_name_raw,
+            'header_semester': request.POST.get('header_semester'),
+            'header_rank': request.POST.get('header_rank'),
+            'header_sy': request.POST.get('header_sy'),
+            'header_college': request.POST.get('header_college'),
+            'header_date': request.POST.get('header_date'),
+            
+            'inv_admin': request.POST.get('inv_admin', ''),
+            'inv_research': request.POST.get('inv_research', ''),
+            'nv_research': request.POST.get('inv_research', ''),
+            'inv_extension': request.POST.get('inv_extension', ''),
+            'inv_consultation': request.POST.get('inv_consultation', ''),
+            'inv_others': request.POST.get('inv_others', ''), 
+            'inv_note': request.POST.get('inv_note', ''),
+            'inv_classes': request.POST.get('inv_classes', ''),
+            'inv_total': request.POST.get('inv_total', ''),
+
+            'sig_faculty': request.POST.get('sig_faculty'),
+            'sig_dept_head': request.POST.get('sig_dept_head'),
+            'sig_dean': request.POST.get('sig_dean'),
+            'sig_vp': request.POST.get('sig_vp'),
+            'sig_president': request.POST.get('sig_president'),
+        }
+
+        # 2. Write Variables
+        for row in ws.iter_rows():
+            for cell in row:
+                if cell.value in variables:
+                    safe_write(ws, cell.row, cell.column, variables[cell.value])
+
+        # 3. Fill Tables
+        last_row = fill_list_section(ws, regular_rows, start_search_row=1)
+        fill_list_section(ws, overload_rows, start_search_row=last_row + 1)
+
+        # 4. Generate Dynamic Filename
+        # Replace spaces with dashes and uppercase it: "KYLA YU" -> "KYLA-YU"
+        safe_name = faculty_name_raw.strip().replace(" ", "-").upper()
+        filename = f"ACTUAL-TEACHING-LOAD-{safe_name}.xlsx"
+
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        wb.save(response)
+        return response
+
+    return HttpResponse("Method not allowed")

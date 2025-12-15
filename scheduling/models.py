@@ -74,7 +74,7 @@ class Semester(models.Model):
     semesterId = models.AutoField(primary_key=True)
     curriculum = models.ForeignKey('Curriculum', on_delete=models.CASCADE, null=True)
     name = models.CharField(max_length=50)
-    academicYear = models.CharField(max_length=20) 
+    academicYear = models.CharField(max_length=20) # 2025-2026
     term = models.CharField(max_length=10, choices=[('1st', '1st'), ('2nd', '2nd'), ('Midyear', 'Midyear')])
     isActive = models.BooleanField(default=False)
     createdAt = models.DateTimeField(auto_now_add=True)

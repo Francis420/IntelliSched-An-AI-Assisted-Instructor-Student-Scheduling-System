@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Teaching Load</title>
+</head>
+<body>
+    <div style="text-align:center; margin-bottom: 20px;">
+        <div style="font-weight:bold;">EASTERN VISAYAS STATE UNIVERSITY</div>
+        <div>Tacloban City</div>
+        <div style="margin-top:10px; font-weight:bold; font-size:14px;">ACTUAL TEACHING LOAD</div>
+        <div style="font-size:10px; text-align:right; margin-top:-30px;">
+            EVSU-ACA-F-002<br>Rev 002<br>Date: {{ headers.date }}
+        </div>
+    </div>
+
+    <table class="no-border" style="width:100%; margin-bottom:10px; border:none;">
+        <tr>
+            <td class="text-left no-border" style="width:15%"><strong>Faculty:</strong></td>
+            <td class="text-left no-border" style="border-bottom:1px solid black; width:35%">{{ headers.faculty }}</td>
+            <td class="text-right no-border" style="width:15%"><strong>Semester:</strong></td>
+            <td class="text-left no-border" style="border-bottom:1px solid black; width:35%">{{ headers.semester }}</td>
+        </tr>
+        <tr>
+            <td class="text-left no-border"><strong>Rank:</strong></td>
+            <td class="text-left no-border" style="border-bottom:1px solid black;">{{ headers.rank }}</td>
+            <td class="text-right no-border"><strong>School Year:</strong></td>
+            <td class="text-left no-border" style="border-bottom:1px solid black;">{{ headers.sy }}</td>
+        </tr>
+        <tr>
+            <td class="text-left no-border"><strong>College:</strong></td>
+            <td class="text-left no-border" style="border-bottom:1px solid black;">{{ headers.college }}</td>
+            <td class="text-right no-border"></td>
+            <td class="text-left no-border"></td>
+        </tr>
+    </table>
+
+    <div style="font-weight:bold; margin-top:10px; margin-bottom:2px;">REGULAR</div>
+    <table>
+        <thead>
+            <tr>
+                <th rowspan="2" style="width:10%">COURSE NO.</th>
+                <th rowspan="2" style="width:25%">DESCRIPTIVE TITLE</th>
+                <th rowspan="2" style="width:5%">UNITS</th>
+                <th rowspan="2" style="width:10%">TIME</th>
+                <th rowspan="2" style="width:5%">DAYS</th>
+                <th colspan="2" style="width:10%">No. of Hrs./Week</th>
+                <th rowspan="2" style="width:5%">No. of Students</th>
+                <th rowspan="2" style="width:10%">ROOM NO.</th>
+                <th rowspan="2" style="width:15%">Course, Yr., & Sec.</th>
+            </tr>
+            <tr>
+                <th style="width:5%">Lec</th>
+                <th style="width:5%">Lab</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in regular_rows %}
+            <tr>
+                <td>{{ row.code }}</td>
+                <td class="text-left">{{ row.description }}</td>
+                <td>{{ row.units }}</td>
+                <td>{{ row.time }}</td>
+                <td>{{ row.days }}</td>
+                <td>{{ row.lec }}</td>
+                <td>{{ row.lab }}</td>
+                <td>{{ row.students }}</td>
+                <td>{{ row.room }}</td>
+                <td>{{ row.section }}</td>
+            </tr>
+            {% endfor %}
+            <tr>
+                <td colspan="2" class="text-right font-bold">TOTAL</td>
+                <td class="font-bold">{{ totals.reg_units }}</td>
+                <td colspan="2"></td>
+                <td class="font-bold">{{ totals.reg_lec }}</td>
+                <td class="font-bold">{{ totals.reg_lab }}</td>
+                <td colspan="3"></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div style="font-weight:bold; margin-top:10px; margin-bottom:2px;">OVERLOAD/PART-TIME</div>
+    <table>
+        <thead>
+            <tr>
+                <th rowspan="2" style="width:10%">COURSE NO.</th>
+                <th rowspan="2" style="width:25%">DESCRIPTIVE TITLE</th>
+                <th rowspan="2" style="width:5%">UNITS</th>
+                <th rowspan="2" style="width:10%">TIME</th>
+                <th rowspan="2" style="width:5%">DAYS</th>
+                <th colspan="2" style="width:10%">No. of Hrs./Week</th>
+                <th rowspan="2" style="width:5%">No. of Students</th>
+                <th rowspan="2" style="width:10%">ROOM NO.</th>
+                <th rowspan="2" style="width:15%">Course, Yr., & Sec.</th>
+            </tr>
+            <tr>
+                <th style="width:5%">Lec</th>
+                <th style="width:5%">Lab</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in overload_rows %}
+            <tr>
+                <td>{{ row.code }}</td>
+                <td class="text-left">{{ row.description }}</td>
+                <td>{{ row.units }}</td>
+                <td>{{ row.time }}</td>
+                <td>{{ row.days }}</td>
+                <td>{{ row.lec }}</td>
+                <td>{{ row.lab }}</td>
+                <td>{{ row.students }}</td>
+                <td>{{ row.room }}</td>
+                <td>{{ row.section }}</td>
+            </tr>
+            {% endfor %}
+            <tr>
+                <td colspan="2" class="text-right font-bold">TOTAL</td>
+                <td class="font-bold">{{ totals.over_units }}</td>
+                <td colspan="2"></td>
+                <td class="font-bold">{{ totals.over_lec }}</td>
+                <td class="font-bold">{{ totals.over_lab }}</td>
+                <td colspan="3"></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div style="border-top: 1px solid black; padding-top: 5px; margin-top: 15px;">
+        <div style="font-weight: bold; margin-bottom: 5px;">Other In-School Involvement/Assignment Per Week</div>
+        
+        <table class="no-border" style="width: 100%;">
+            <tr>
+                <td class="no-border" style="width: 60%; vertical-align: top;">
+                    <table class="no-border">
+                        <tr>
+                            <td class="text-left no-border" style="width: 30%;">Administrative:</td>
+                            <td class="no-border" style="width: 20%; border-bottom: 1px solid black !important; text-align: center;">{{ involvement.admin }}</td>
+                            <td class="text-left no-border" style="width: 50%;">Hours</td>
+                        </tr>
+                        <tr>
+                            <td class="text-left no-border">Research:</td>
+                            <td class="no-border" style="border-bottom: 1px solid black !important; text-align: center;">{{ involvement.research }}</td>
+                            <td class="text-left no-border">Hours</td>
+                        </tr>
+                        <tr>
+                            <td class="text-left no-border">Extension Services:</td>
+                            <td class="no-border" style="border-bottom: 1px solid black !important; text-align: center;">{{ involvement.extension }}</td>
+                            <td class="text-left no-border">Hours</td>
+                        </tr>
+                        <tr>
+                            <td class="text-left no-border">Consultation/Instr:</td>
+                            <td class="no-border" style="border-bottom: 1px solid black !important; text-align: center;">{{ involvement.consultation }}</td>
+                            <td class="text-left no-border">Hours</td>
+                        </tr>
+                    </table>
+                </td>
+                
+                <td class="no-border" style="width: 40%; vertical-align: top; padding-left: 20px;">
+                    <table class="no-border">
+                        <tr>
+                            <td class="no-border text-left" style="width: 20%; font-weight: bold;">NOTE:</td>
+                            <td class="no-border text-left" style="width: 80%; border-bottom: 1px solid black !important;">{{ involvement.note_text }}</td>
+                        </tr>
+                        <tr>
+                            <td class="no-border text-left" colspan="2" style="padding-top: 20px;">
+                                No. of Classes: <span style="display:inline-block; width: 50px; border-bottom: 1px solid black; text-align: center;">{{ involvement.no_of_classes }}</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="no-border text-left" colspan="2" style="padding-top: 20px; font-weight: bold;">
+                                Total Workload: <span style="display:inline-block; width: 60px; border-bottom: 1px solid black; text-align: center;">{{ involvement.total }}</span> Hours
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div style="margin-top: 20px; font-size:10px;">
+        <table class="no-border">
+            <tr>
+                <td class="no-border text-left" style="width:30%">Conforme:</td>
+                <td class="no-border" style="width:5%"></td>
+                <td class="no-border text-left" style="width:30%">Recommending Approval:</td>
+                <td class="no-border" style="width:35%"></td>
+            </tr>
+            <tr><td class="no-border" style="height:20px;"></td></tr>
+            <tr>
+                <td class="no-border" style="border-bottom:1px solid black !important; font-weight:bold;">{{ headers.sig_faculty }}</td>
+                <td class="no-border"></td>
+                <td class="no-border" style="border-bottom:1px solid black !important; font-weight:bold;">{{ headers.sig_dept_head }}</td>
+                <td class="no-border"></td>
+            </tr>
+            <tr>
+                <td class="no-border">Faculty Member</td>
+                <td class="no-border"></td>
+                <td class="no-border">Department Head</td>
+                <td class="no-border"></td>
+            </tr>
+        </table>
+        
+        <table class="no-border" style="margin-top:20px;">
+            <tr>
+                <td class="no-border" style="width:35%"></td>
+                <td class="no-border" style="width:30%; border-bottom:1px solid black !important; font-weight:bold;">{{ headers.sig_dean }}</td>
+                <td class="no-border" style="width:35%"></td>
+            </tr>
+            <tr>
+                <td class="no-border"></td>
+                <td class="no-border">Dean</td>
+                <td class="no-border"></td>
+            </tr>
+        </table>
+
+        <table class="no-border" style="margin-top:20px;">
+            <tr>
+                <td class="no-border text-left" style="width:30%">Approved:</td>
+                <td class="no-border" style="width:5%"></td>
+                <td class="no-border" style="width:30%"></td>
+                <td class="no-border" style="width:35%"></td>
+            </tr>
+            <tr><td class="no-border" style="height:20px;"></td></tr>
+            <tr>
+                <td class="no-border" style="border-bottom:1px solid black !important; font-weight:bold;">{{ headers.sig_vp }}</td>
+                <td class="no-border"></td>
+                <td class="no-border" style="border-bottom:1px solid black !important; font-weight:bold;">{{ headers.sig_president }}</td>
+                <td class="no-border"></td>
+            </tr>
+            <tr>
+                <td class="no-border">Vice President for Academic Affairs</td>
+                <td class="no-border"></td>
+                <td class="no-border">University President</td>
+                <td class="no-border"></td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>
