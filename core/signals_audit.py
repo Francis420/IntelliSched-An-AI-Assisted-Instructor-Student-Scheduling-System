@@ -2,6 +2,7 @@ from django.contrib.auth.signals import user_logged_in, user_logged_out, user_lo
 from auditlog.models import LogEntry
 from django.contrib.contenttypes.models import ContentType
 from django.dispatch import receiver
+from django.contrib.auth import get_user_model # Import this for the fallback
 
 @receiver(user_logged_in)
 def log_user_login(sender, request, user, **kwargs):
@@ -27,10 +28,17 @@ def log_user_logout(sender, request, user, **kwargs):
 
 @receiver(user_login_failed)
 def log_failed_login(sender, credentials, request, **kwargs):
+    # FIX: Check if sender is a string (e.g., 'django.contrib.auth')
+    if isinstance(sender, str):
+        # Use the User model as a logical fallback context
+        content_type = ContentType.objects.get_for_model(get_user_model())
+    else:
+        content_type = ContentType.objects.get_for_model(sender)
+
     LogEntry.objects.create(
         actor=None,
         action=1,  
-        content_type=ContentType.objects.get_for_model(sender),
+        content_type=content_type,
         object_pk="-",
         object_repr=credentials.get("username", "Unknown"),
         changes="Failed login attempt"

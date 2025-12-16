@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 class Curriculum(models.Model):
     curriculumId = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100, unique=True)  # e.g., "2021 Curriculum"
-    effectiveSy = models.CharField(max_length=20)  # e.g., "S.Y. 2021-2022"
+    effectiveSy = models.CharField(max_length=50)  # e.g., "First Semester, S.Y. 2025-2026"
     dean = models.CharField(max_length=100, null=True, blank=True)
     vicePresidentForAcademicAffairs = models.CharField(max_length=100, null=True, blank=True)
     universityPresident = models.CharField(max_length=100, null=True, blank=True)

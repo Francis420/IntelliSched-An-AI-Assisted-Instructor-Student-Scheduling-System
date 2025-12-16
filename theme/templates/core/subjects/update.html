@@ -26,7 +26,7 @@
         <select name="curriculumId" required class="w-full p-2 border rounded">
           {% for curriculum in curriculums %}
             <option value="{{ curriculum.curriculumId }}" {% if curriculum.curriculumId == subject.curriculum.curriculumId %}selected{% endif %}>
-              {{ curriculum.name }} ({{ curriculum.academicYear }})
+              {{ curriculum.name }}
             </option>
           {% endfor %}
         </select>

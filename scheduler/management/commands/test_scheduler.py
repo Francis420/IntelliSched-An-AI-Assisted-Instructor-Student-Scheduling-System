@@ -17,7 +17,7 @@ class Command(BaseCommand):
         print(f"Running scheduler test for semester: {semester}")
 
         # Run solver (this already saves to DB)
-        solve_schedule_for_semester(semester, time_limit_seconds=60)
+        solve_schedule_for_semester(semester, time_limit_seconds=900)
 
         # Print saved schedules
         schedules = Schedule.objects.filter(semester=semester).order_by("dayOfWeek", "startTime")

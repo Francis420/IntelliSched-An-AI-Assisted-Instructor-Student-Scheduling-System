@@ -1,21 +1,26 @@
-instructorId,username,email,password,firstName,lastName,rank,designation,academicAttainment,employmentType
-2025-100001,ajavier,ajavier@example.com,Pass123,Anna,Javier,2,,3,permanent
-2025-100002,rdelacruz,rdelacruz@example.com,Teach123,Rico,Dela Cruz,2,,2,permanent
-2025-100003,mtorres,mtorres@example.com,Secure123,Maria,Torres,3,,1,permanent
-2025-100004,jbautista,jbautista@example.com,Hello123,Juan,Bautista,2,,2,permanent
-2025-100005,kyu,kyu@example.com,Password1,Kyla,Yu,4,,3,permanent
-2025-100006,lperez,lperez@example.com,Change123,Luis,Perez,2,,2,permanent
-2025-100007,tamor,tamor@example.com,TeachMe1,Teresa,Amor,1,,3,permanent
-2025-100008,droque,droque@example.com,Strong123,Daniel,Roque,3,,1,permanent
-2025-100009,bmendoza,bmendoza@example.com,Zxcv123,Bea,Mendoza,4,,3,permanent
-2025-100010,egabriel,egabriel@example.com,Code123,Elvin,Gabriel,2,,2,permanent
-2025-100011,sfernando,sfernando@example.com,Dev2025,Sofia,Fernando,1,1,1,permanent
-2025-100012,cjose,cjose@example.com,AppSecure1,Carlo,Jose,1,,3,permanent
-2025-100013,mluna,mluna@example.com,HardPass1,Monique,Luna,2,,3,permanent
-2025-100014,ecruz,ecruz@example.com,MyPass321,Edgar,Cruz,1,,3,permanent
-2025-100015,rocampo,rocampo@example.com,TryMe123,Rosa,Ocampo,1,,2,permanent
-2025-100016,vdelgado,vdelgado@example.com,CodeNow12,Victor,Delgado,1,,3,permanent
-2025-100017,cmanalo,cmanalo@example.com,TeachUp9,Cecille,Manalo,3,,3,permanent
-2025-100018,gbasa,gbasa@example.com,Pass456,George,Basa,4,,3,temporary
-2025-100019,fsantos,fsantos@example.com,Secret2025,Felicia,Santos,2,,2,temporary
-2025-100020,djimenez,djimenez@example.com,Easy123,Dante,Jimenez,2,,3,temporary
+instructorId,username,email,password,firstName,middleInitial,lastName,rank,designation,academicAttainment,employmentType
+2025-0001,EricsonAcebedo,ericson.acebedo@email.com,Acebedo,Ericson,D,Acebedo,18,5,2,permanent
+2025-0002,JolecoAgullo,joleco.agullo@email.com,Agullo,Joleco,C,Agullo,17,9,2,permanent
+2025-0003,LyndonAlberca,lyndon.alberca@email.com,Alberca,Lyndon,D,Alberca,17,9,2,permanent
+2025-0004,BenitoBadilla,benito.badilla@email.com,Badilla,Benito,V,Badilla Jr.,16,9,2,permanent
+2025-0005,DeborahBrosas,deborah.brosas@email.com,Brosas,Deborah,G,Brosas,11,7,1,permanent
+2025-0006,RonnieCabillan,ronnie.cabillan@email.com,Cabillan,Ronnie,G,Cabillan,16,7,2,permanent
+2025-0007,SarahJaneCabral,sarahjane.cabral@email.com,Cabral,Sarah Jane,L,Cabral,19,7,1,permanent
+2025-0008,RustomClemente,rustom.clemente@email.com,Clemente,Rustom,D,Clemente,8,4,2,permanent
+2025-0009,GiovannidelosSantos,giovanni.delossantos@email.com,de los Santos,Giovanni,N,de los Santos,15,5,2,permanent
+2025-0010,MilagrosEngao,milagros.engao@email.com,Engao,Milagros,C,Engao,17,7,2,permanent
+2025-0011,SalvadorFlores,salvador.flores@email.com,Flores,Salvador,L,Flores,14,7,2,permanent
+2025-0012,JosephVincentManeja,josephvincent.maneja@email.com,Maneja,Joseph Vincent,,Maneja,16,5,2,permanent
+2025-0013,LyraNuevas,lyra.nuevas@email.com,Nuevas,Lyra,K,Nuevas,12,7,1,permanent
+2025-0014,VienmarOgrimen,vienmar.ogrimen@email.com,Ogrimen,Vienmar,S,Ogrimen,13,5,2,permanent
+2025-0015,WitExcelsiorPaña,witexcelsior.pana@email.com,Paña,Wit Excelsior,T,Paña,19,7,2,permanent
+2025-0016,JessieParagas,jessie.paragas@email.com,Paragas,Jessie,R,Paragas,12,7,1,permanent
+2025-0017,NeilPascual,neil.pascual@email.com,Pascual,Neil,,Pascual,16,9,2,permanent
+2025-0018,DianeRemot,diane.remot@email.com,Remot,Diane,B,Remot,12,9,2,permanent
+2025-0019,EricSta.Singh,eric.stasingh@email.com,Sta. Singh,Eric,O,Sta. Singh,16,7,2,permanent
+2025-0020,JudeAllanUrmeneta,judeallan.urmeneta@email.com,Urmeneta,Jude Allan,A,Urmeneta,16,5,2,permanent
+2025-0021,Ma.WindieVelarde,ma.windie.velarde@email.com,Velarde,Ma. Windie,C,Velarde,12,5,1,permanent
+2025-0022,RitchellVillafuerte,ritchell.villafuerte@email.com,Villafuerte,Ritchell,S,Villafuerte,12,5,1,permanent
+2025-0023,RaymondDaylo,raymond.daylo@email.com,Daylo,Raymond,,Daylo,20,4,2,part-time
+2025-0024,DindoObediencia,dindo.obediencia@email.com,Obediencia,Dindo,C,Obediencia,12,9,2,part-time
+2025-0025,VanissaObina,vanissa.obina@email.com,Obina,Vanissa,E,Obina,17,9,2,part-time

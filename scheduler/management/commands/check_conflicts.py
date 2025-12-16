@@ -4,160 +4,161 @@ from datetime import datetime
 
 
 class Command(BaseCommand):
-    help = "Checks for overlapping room, instructor, section, and combined room+instructor conflicts for the active semester."
+    help = "Checks for conflicts among FINALIZED schedules in the active semester."
 
     def handle(self, *args, **options):
-        # 🧠 Try to find the active semester automatically
-        active_semester = Semester.objects.filter(isActive=True).order_by("-semesterId").first()
+        # 🧠 Auto-detect active semester
+        semester = Semester.objects.filter(isActive=True).order_by("-semesterId").first()
 
-        if not active_semester:
-            self.stdout.write("⚠️ No active semester found. Please activate one in the database.")
+        if not semester:
+            self.stdout.write("⚠️ No active semester found.")
             return
 
-        semester_name = active_semester.name
-        self.stdout.write(f"\n📘 Active semester detected: {semester_name}\n")
+        self.stdout.write(f"\n📘 Active semester: {semester.name}\n")
 
-        # ✅ Only include active schedules
-        schedules = (
+        finalized = (
             Schedule.objects
-            .filter(semester=active_semester, status="active")
+            .filter(semester=semester, status="finalized")
             .select_related("room", "section", "instructor")
             .order_by("dayOfWeek", "startTime")
         )
 
-        total = schedules.count()
-        self.stdout.write(f"🔍 Checking {total} active schedule(s)...\n")
-
+        total = finalized.count()
         if total == 0:
-            self.stdout.write("⚠️ No active schedules found — nothing to check.\n")
+            self.stdout.write("⚠️ No FINALIZED schedules found.\n")
             return
 
-        room_conf = self.check_room_conflicts(schedules)
-        instr_conf = self.check_instructor_conflicts(schedules)
-        sect_conf = self.check_section_conflicts(schedules)
-        combo_conf = self.check_combined_conflicts(schedules)
+        self.stdout.write(f"🔍 Checking {total} FINALIZED schedule(s)...\n")
 
-        if not any([room_conf, instr_conf, sect_conf, combo_conf]):
-            self.stdout.write("\n✅ No scheduling conflicts found among active schedules!\n")
+        room = self.check_room_conflicts(finalized)
+        instr = self.check_instructor_conflicts(finalized)
+        sect = self.check_section_conflicts(finalized)
+        combo = self.check_combined_conflicts(finalized)
 
-    # -----------------------------
-    # Room Conflicts
-    # -----------------------------
+        if not any([room, instr, sect, combo]):
+            self.stdout.write("\n✅ NO CONFLICTS FOUND IN FINALIZED SCHEDULES.\n")
+
+    # --------------------------------------------------
+    # ROOM conflicts
+    # --------------------------------------------------
     def check_room_conflicts(self, schedules):
-        grouped = {}
-        for sch in schedules:
-            room = getattr(sch.room, "roomCode", "TBA")
-            grouped.setdefault((room, sch.dayOfWeek), []).append(sch)
-
         found = False
-        for (room, day), lst in grouped.items():
+        grouped = {}
+
+        for s in schedules:
+            if not s.room_id:
+                continue
+            grouped.setdefault((s.room_id, s.dayOfWeek), []).append(s)
+
+        for (room_id, day), lst in grouped.items():
             lst.sort(key=lambda s: s.startTime)
             for i in range(len(lst) - 1):
-                cur, nxt = lst[i], lst[i + 1]
-                if self._overlaps(cur, nxt):
+                a, b = lst[i], lst[i + 1]
+                if self._overlaps(a, b):
                     if not found:
                         self.stdout.write("⚠️ ROOM CONFLICTS:\n")
                         found = True
                     self.stdout.write(
-                        f"  • {room} on {day}: "
-                        f"Section {cur.section.sectionId} ({cur.startTime}-{cur.endTime}) "
-                        f"overlaps with Section {nxt.section.sectionId} ({nxt.startTime}-{nxt.endTime})"
+                        f"  • Room {a.room.roomCode} on {day}: "
+                        f"Section {a.section.sectionId} ({a.startTime}-{a.endTime}) "
+                        f"↔ Section {b.section.sectionId} ({b.startTime}-{b.endTime})"
                     )
+
         if not found:
-            self.stdout.write("✅ No room conflicts found.\n")
+            self.stdout.write("✅ No room conflicts.\n")
         return found
 
-    # -----------------------------
-    # Instructor Conflicts
-    # -----------------------------
+    # --------------------------------------------------
+    # INSTRUCTOR conflicts
+    # --------------------------------------------------
     def check_instructor_conflicts(self, schedules):
-        grouped = {}
-        for sch in schedules:
-            instr = getattr(sch.instructor, "instructorId", None)
-            if not instr:
-                continue
-            grouped.setdefault((instr, sch.dayOfWeek), []).append(sch)
-
         found = False
+        grouped = {}
+
+        for s in schedules:
+            grouped.setdefault((s.instructor_id, s.dayOfWeek), []).append(s)
+
         for (instr, day), lst in grouped.items():
             lst.sort(key=lambda s: s.startTime)
             for i in range(len(lst) - 1):
-                cur, nxt = lst[i], lst[i + 1]
-                if self._overlaps(cur, nxt):
+                a, b = lst[i], lst[i + 1]
+                if self._overlaps(a, b):
                     if not found:
-                        self.stdout.write("\n⚠️ INSTRUCTOR CONFLICTS:\n")
+                        self.stdout.write("⚠️ INSTRUCTOR CONFLICTS:\n")
                         found = True
                     self.stdout.write(
-                        f"  • Instructor {instr} on {day}: "
-                        f"Section {cur.section.sectionId} ({cur.startTime}-{cur.endTime}) "
-                        f"overlaps with Section {nxt.section.sectionId} ({nxt.startTime}-{nxt.endTime})"
+                        f"  • Instructor {a.instructor.instructorId} on {day}: "
+                        f"{a.startTime}-{a.endTime} ↔ {b.startTime}-{b.endTime}"
                     )
+
         if not found:
-            self.stdout.write("✅ No instructor conflicts found.\n")
+            self.stdout.write("✅ No instructor conflicts.\n")
         return found
 
-    # -----------------------------
-    # Section Conflicts
-    # -----------------------------
+    # --------------------------------------------------
+    # SECTION conflicts
+    # --------------------------------------------------
     def check_section_conflicts(self, schedules):
-        grouped = {}
-        for sch in schedules:
-            sec = getattr(sch.section, "sectionId", None)
-            if not sec:
-                continue
-            grouped.setdefault((sec, sch.dayOfWeek), []).append(sch)
-
         found = False
+        grouped = {}
+
+        for s in schedules:
+            grouped.setdefault((s.section_id, s.dayOfWeek), []).append(s)
+
         for (sec, day), lst in grouped.items():
             lst.sort(key=lambda s: s.startTime)
             for i in range(len(lst) - 1):
-                cur, nxt = lst[i], lst[i + 1]
-                if self._overlaps(cur, nxt):
+                a, b = lst[i], lst[i + 1]
+                if self._overlaps(a, b):
                     if not found:
-                        self.stdout.write("\n⚠️ SECTION CONFLICTS:\n")
+                        self.stdout.write("⚠️ SECTION CONFLICTS:\n")
                         found = True
                     self.stdout.write(
-                        f"  • Section {sec} on {day}: "
-                        f"{cur.startTime}-{cur.endTime} overlaps with {nxt.startTime}-{nxt.endTime}"
+                        f"  • Section {a.section.sectionId} on {day}: "
+                        f"{a.startTime}-{a.endTime} ↔ {b.startTime}-{b.endTime}"
                     )
+
         if not found:
-            self.stdout.write("✅ No section conflicts found.\n")
+            self.stdout.write("✅ No section conflicts.\n")
         return found
 
-    # -----------------------------
-    # Combined Instructor + Room Conflicts
-    # -----------------------------
+    # --------------------------------------------------
+    # COMBINED Room + Instructor conflicts
+    # --------------------------------------------------
     def check_combined_conflicts(self, schedules):
-        grouped = {}
-        for sch in schedules:
-            instr = getattr(sch.instructor, "instructorId", None)
-            room = getattr(sch.room, "roomCode", "TBA")
-            grouped.setdefault((instr, room, sch.dayOfWeek), []).append(sch)
-
         found = False
-        for (instr, room, day), lst in grouped.items():
-            if not instr or not room or room == "TBA":
+        grouped = {}
+
+        for s in schedules:
+            if not s.room_id:
                 continue
+            grouped.setdefault((s.instructor_id, s.room_id, s.dayOfWeek), []).append(s)
+
+        for (instr, room, day), lst in grouped.items():
             lst.sort(key=lambda s: s.startTime)
             for i in range(len(lst) - 1):
-                cur, nxt = lst[i], lst[i + 1]
-                if self._overlaps(cur, nxt):
+                a, b = lst[i], lst[i + 1]
+                if self._overlaps(a, b):
                     if not found:
-                        self.stdout.write("\n⚠️ COMBINED ROOM+INSTRUCTOR CONFLICTS:\n")
+                        self.stdout.write("⚠️ COMBINED ROOM + INSTRUCTOR CONFLICTS:\n")
                         found = True
                     self.stdout.write(
-                        f"  • Instructor {instr} & Room {room} on {day}: "
-                        f"Section {cur.section.sectionId} ({cur.startTime}-{cur.endTime}) "
-                        f"overlaps with Section {nxt.section.sectionId} ({nxt.startTime}-{nxt.endTime})"
+                        f"  • Instructor {a.instructor.instructorId} "
+                        f"& Room {a.room.roomCode} on {day}: "
+                        f"{a.startTime}-{a.endTime} ↔ {b.startTime}-{b.endTime}"
                     )
+
         if not found:
-            self.stdout.write("✅ No combined room+instructor conflicts found.\n")
+            self.stdout.write("✅ No combined conflicts.\n")
         return found
 
-    # -----------------------------
-    # Helper overlap checker
-    # -----------------------------
+    # --------------------------------------------------
+    # Time overlap helper
+    # --------------------------------------------------
     def _overlaps(self, a, b):
-        a_end = datetime.combine(datetime.today(), a.endTime)
-        b_start = datetime.combine(datetime.today(), b.startTime)
-        return a_end > b_start
+        return (
+            datetime.combine(datetime.today(), a.startTime)
+            < datetime.combine(datetime.today(), b.endTime)
+            and datetime.combine(datetime.today(), a.endTime)
+            > datetime.combine(datetime.today(), b.startTime)
+        )

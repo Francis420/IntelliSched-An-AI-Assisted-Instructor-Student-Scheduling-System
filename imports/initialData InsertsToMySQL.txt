@@ -1,109 +1,82 @@
-//dont forget to run first
-py manage.py shell
-from core.roles import seed_roles
-seed_roles()
-exit
+1. py manage.py makemigrations
+2. py manage.py migrate
+3. py manage.py shell
+4. from core.roles import seed_roles
+5. seed_roles()
+6. exit
 
-then create an account
-py manage.py createsuperuser
-http://127.0.0.1:8000/admin
-add roles to that user
-//on MySQL Workbench
-INSERT INTO intellisched.core_instructor (
-    instructorId,
-    employmentType,
-    createdAt,
-    updatedAt,
-    rank_id,
-    academicAttainment_id,
-    designation_id,
-    normalLoad,
-    overLoad
-) VALUES (
-    1,
-    'permanent',
-    '2025-08-10 08:29:02.412209',
-    '2025-08-10 08:29:02.412209',
-    1,
-    1,
-    1,
-    18,
-    6
-);
-SELECT * FROM intellisched.core_instructor;
+7. then create a superuser account
+    py manage.py createsuperuser
+8. do //Imports on MySQL Workbench
 
-
-INSERT INTO intellisched.core_student (
-    studentId,
-    createdAt
-) VALUES (
-    1,
-    '2025-08-10 08:29:02.412209'
-);
-SELECT * FROM intellisched.core_student;
-
-
-INSERT INTO intellisched.core_userlogin (loginId, createdAt, instructor_id, student_id, user_id)
-VALUES ('21', '2025-08-10 08:29:07.725088', '1', '1', '1');
-SELECT * FROM intellisched.core_userlogin;
+9. login to http://127.0.0.1:8000/admin
+10. then open http://127.0.0.1:8000/admin/core/user/1/change/
+11. add roles to that user (DeptHead, Instructor)
+12. then open http://127.0.0.1:8000/admin/core/instructor/add/
+13. add details(anything)
+14. then open http://127.0.0.1:8000/admin/core/userlogin/add/
+15. connect your login info to your instructor account
+16. done initial setup, next read howToImport.txt to easily propagate and data
 
 
 
-
+//Imports on MySQL Workbench
 //On MySQL Workbench
 ### Instructor Rank ###
-
 INSERT INTO intellisched.instructors_instructorrank (
     rankId, name,
     instructionHours, researchHours, extensionHours,
-    productionHours, consultationHours, classAdviserHours
+    productionHours, consultationHours, classAdviserHours, createdAt
 ) VALUES
-(1,  'University Professor',      6, 16, 9, 3, 3, 3),
-(2,  'Professor I',               9, 12, 9, 3, 3, 4),
-(3,  'Professor II',              9, 12, 9, 3, 3, 4),
-(4,  'Professor III',             9, 12, 9, 3, 3, 4),
-(5,  'Professor IV',              9, 12, 9, 3, 3, 4),
-(6,  'Professor V',               9, 12, 9, 3, 3, 4),
-(7,  'Professor VI',              9, 12, 9, 3, 3, 4),
-(8,  'Associate Professor I',    12,  9, 9, 3, 3, 4),
-(9,  'Associate Professor II',   12,  9, 9, 3, 3, 4),
-(10, 'Associate Professor III',  12,  9, 9, 3, 3, 4),
-(11, 'Associate Professor IV',   12,  9, 9, 3, 3, 4),
-(12, 'Associate Professor V',    12,  9, 9, 3, 3, 4),
-(13, 'Assistant Professor I',    15,  6, 9, 3, 3, 4),
-(14, 'Assistant Professor II',   15,  6, 9, 3, 3, 4),
-(15, 'Assistant Professor III',  15,  6, 9, 3, 3, 4),
-(16, 'Assistant Professor IV',   15,  6, 9, 3, 3, 4),
-(17, 'Instructor I',             18,  6, 6, 3, 3, 4),
-(18, 'Instructor II',            18,  6, 6, 3, 3, 4),
-(19, 'Instructor III',           18,  6, 6, 3, 3, 4);
-(20, 'N/A',           0,  0, 0, 0, 0, 0);
+(1,  'University Professor',      6, 16, 9, 3, 3, 3, NOW()),
+(2,  'Professor I',               9, 12, 9, 3, 3, 4, NOW()),
+(3,  'Professor II',              9, 12, 9, 3, 3, 4, NOW()),
+(4,  'Professor III',             9, 12, 9, 3, 3, 4, NOW()),
+(5,  'Professor IV',              9, 12, 9, 3, 3, 4, NOW()),
+(6,  'Professor V',               9, 12, 9, 3, 3, 4, NOW()),
+(7,  'Professor VI',              9, 12, 9, 3, 3, 4, NOW()),
+(8,  'Associate Professor I',    12,  9, 9, 3, 3, 4, NOW()),
+(9,  'Associate Professor II',   12,  9, 9, 3, 3, 4, NOW()),
+(10, 'Associate Professor III',  12,  9, 9, 3, 3, 4, NOW()),
+(11, 'Associate Professor IV',   12,  9, 9, 3, 3, 4, NOW()),
+(12, 'Associate Professor V',    12,  9, 9, 3, 3, 4, NOW()),
+(13, 'Assistant Professor I',    15,  6, 9, 3, 3, 4, NOW()),
+(14, 'Assistant Professor II',   15,  6, 9, 3, 3, 4, NOW()),
+(15, 'Assistant Professor III',  15,  6, 9, 3, 3, 4, NOW()),
+(16, 'Assistant Professor IV',   15,  6, 9, 3, 3, 4, NOW()),
+(17, 'Instructor I',             18,  6, 6, 3, 3, 4, NOW()),
+(18, 'Instructor II',            18,  6, 6, 3, 3, 4, NOW()),
+(19, 'Instructor III',           18,  6, 6, 3, 3, 4, NOW()),
+(20, 'N/A',           0,  0, 0, 0, 0, 0, NOW());
 
 
 ## Instructor Designation ##
-
 INSERT INTO intellisched.instructors_instructordesignation (
-    designationId, name,
-    adminSupervisionHours, instructionHours, researchHours,
-    extensionHours, productionHours, consultationHours
+    designationId, 
+    name,
+    adminSupervisionHours, 
+    instructionHours, 
+    researchHours,
+    extensionHours, 
+    productionHours, 
+    consultationHours, 
+    createdAt
 ) VALUES
-(1, 'Vice President',       18, 3, 10, 3, 3, 3),
-(2, 'Campus Director',      18, 3, 10, 3, 3, 3),
-(3, 'Dean',                 18, 6,  7, 3, 3, 3),
-(4, 'Director',             15, 9,  7, 3, 3, 3),
-(5, 'Head',                 12,12,  7, 3, 3, 3),
-(6, 'Chairperson',           9,15,  7, 3, 3, 3),
-(7, 'Coordinator',           9,15,  7, 3, 3, 3),
-(8, 'Officer in Faculty Association',            9,15,  7, 3, 3, 3);
-(9, 'N/A',            0,0,  0, 0, 0, 0);
+(1, 'Vice President',       18, 3, 10, 3, 3, 3, NOW()),
+(2, 'Campus Director',      18, 3, 10, 3, 3, 3, NOW()),
+(3, 'Dean',                 18, 6,  7, 3, 3, 3, NOW()),
+(4, 'Director',             15, 9,  7, 3, 3, 3, NOW()),
+(5, 'Head',                 12,12,  7, 3, 3, 3, NOW()),
+(6, 'Chairperson',           9,15,  7, 3, 3, 3, NOW()),
+(7, 'Coordinator',           9,15,  7, 3, 3, 3, NOW()),
+(8, 'Officer in Faculty Association',            9,15,  7, 3, 3, 3, NOW()),
+(9, 'N/A',            0,0,  0, 0, 0, 0, NOW());
 
 
 ## Instructor Attainment ##
-
 INSERT INTO intellisched.instructors_instructoracademicattainment (
-    attainmentId, name, suffix, overloadUnitsHasDesignation, overloadUnitsNoDesignation
+    attainmentId, name, suffix, overloadUnitsHasDesignation, overloadUnitsNoDesignation, createdAt
 ) VALUES
-(1, 'Doctor of Information Technology', 'D.IT', 6, 9),
-(2, 'Master of Information Technology', 'M.IT', 6, 6),
-(3, 'Bachelor of Information Technology', '', 6, 6);
-
+(1, 'Doctor of Information Technology', 'D.IT', 6, 9, NOW()),
+(2, 'Master of Information Technology', 'M.IT', 6, 6, NOW()),
+(3, 'Bachelor of Information Technology', '', 6, 6, NOW());

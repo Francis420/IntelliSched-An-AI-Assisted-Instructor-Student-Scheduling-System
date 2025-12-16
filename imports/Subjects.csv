@@ -1,16 +1,38 @@
 curriculumId,code,name,units,durationMinutes,isPriorityForRooms,defaultTerm,yearLevel,hasLab,labDurationMinutes,description,subjectTopics
-2,IT 123,Human Computer Interaction,3,120,0,1,1,1,180,no data,no data
-2,IT 143,Computer Programming 2,3,120,0,1,1,1,180,no data,no data
-2,IT 163,Statistics and Probability,3,180,0,1,1,0,0,no data,no data
-2,IT 223,Fundamental of Information Management,3,120,0,1,2,1,180,no data,no data
-2,IT 243,Quantitative Methods,3,180,0,1,2,0,0,no data,no data
-2,IT 263,Event-Driven Programming,3,120,0,1,2,1,180,no data,no data
-2,IT 283,Fundamentals of Artificial Intelligence,3,120,0,1,2,1,180,no data,no data
-2,NET 02,"Routing, Switching and Wireless Networks: Concept Configuration and Management",3,180,0,1,2,2,0,no data,no data
-2,IT 323,Project Management for IT,3,180,0,1,3,0,0,no data,no data
-2,IT 343,Multimedia Systems,3,120,0,1,3,1,180,no data,no data
-2,IT 353A,Vitualization and Cloud Platforms,3,120,0,1,3,1,180,no data,no data
-2,IT 363A,Information Technology Strategy,3,180,0,1,3,0,0,no data,no data
-2,IT 373A,Innovation and Technopreneurship,3,120,0,1,3,1,180,no data,no data
-2,IT 383A,Mobile Application Development and Emerging Technologies,3,120,0,1,3,1,180,no data,no data
-2,IT 393,IT Electives,3,180,0,1,3,0,0,no data,no data
+1,IT 113,Information Technology Fundamentals,3,120,0,0,1,1,180,No data yet.,No data yet.
+1,IT 133,Computer Programming 1,3,120,0,0,1,1,180,No data yet.,No data yet.
+1,IT 153,Discrete Structures,3,180,0,0,1,0,0,No data yet.,No data yet.
+1,GEN EL 001,GE Elective 1,3,180,0,0,1,0,0,No data yet.,No data yet.
+1,IT 123,Human Computer Interaction,3,120,0,1,1,1,180,No data yet.,No data yet.
+1,IT 143,Computer Programming 2,3,120,0,1,1,1,180,No data yet.,No data yet.
+1,IT 163,Statistics and Probability,3,180,0,1,1,0,0,No data yet.,No data yet.
+1,GEN EL 002,GE Elective 2,3,180,0,1,1,0,0,No data yet.,No data yet..
+1,IT 213,Data Structures and Algorithms,3,120,0,0,2,1,180,No data yet.,No data yet.
+1,IT 233,Object Oriented Programming,3,120,0,0,2,1,180,No data yet.,No data yet.
+1,IT 253,Platform Technologies,3,120,0,0,2,1,180,No data yet.,No data yet.
+1,NET 01,"Introduction to Networking and Network Protocols: Fundamental, Concepts, and Services",3,120,0,0,2,1,180,No data yet.,No data yet.
+1,GE EL 003,GE Elective 3,3,180,0,0,2,0,0,No data yet.,No data yet.
+1,IT 223,Fundamental of Information Management,3,120,0,1,2,1,180,No data yet.,No data yet.
+1,IT 243,Quantitative Methods,3,180,0,1,2,0,0,No data yet.,No data yet.
+1,IT 263,Event-Driven Programming,3,120,0,1,2,1,180,No data yet.,No data yet.
+1,IT 283,Fundamentals of Artificial Intelligence,3,120,0,1,2,1,180,No data yet.,No data yet.
+1,NET 02,"Routing, Switching, and Wireless Networks: Concept Configuration and Management",3,120,0,1,2,1,180,No data yet.,No data yet.
+1,IT 313,Advanced Database Systems,3,120,0,0,3,1,180,No data yet.,No data yet.
+1,IT 333,Data Mining and Analytics,3,120,0,0,3,1,180,No data yet.,No data yet.
+1,IT 353,Systems Integration and Architecture,3,120,0,0,3,1,180,No data yet.,No data yet.
+1,IT 363,Information Assurance and Security,3,120,0,0,3,1,180,No data yet.,No data yet.
+1,IT 373,Web Systems and Technology,3,120,0,0,3,1,180,No data yet.,No data yet.
+1,IT 383,Integrative Programming and Technologies,3,120,0,0,3,1,180,No data yet.,No data yet.
+1,NET 03,Enterprise Networking Security and Automation,3,120,0,0,3,1,180,No data yet.,No data yet.
+1,IT 323,Project Management for IT,3,180,0,1,3,0,0,No data yet.,No data yet.
+1,IT 343,Multimedia Systems,3,120,0,1,3,1,180,No data yet.,No data yet.
+1,IT 353A,Virtualization and Cloud Platforms,3,120,0,1,3,1,180,No data yet.,No data yet.
+1,IT 363A,Information Technology Strategy,3,180,0,1,3,0,0,No data yet.,No data yet.
+1,IT 373A,Innovation and Technopreneurship,3,120,0,1,3,1,180,No data yet.,No data yet.
+1,IT 383A,Mobile Application Development and Emerging Technologies,3,120,0,1,3,1,180,No data yet.,No data yet.
+1,IT 393,IT Electives,3,180,0,1,3,0,0,No data yet.,No data yet.
+1,IT 303,Social and Professional Issues,3,180,0,2,3,0,0,No data yet.,No data yet.
+1,IT 303A,Capstone Project and Research 1,3,120,0,2,3,1,180,No data yet.,No data yet.
+1,IT 413,System Administration and Maintenance,3,120,0,0,4,1,180,No data yet.,No data yet.
+1,IT 433,Capstone Project and Research 2,3,120,0,0,4,1,180,No data yet.,No data yet.
+1,IT 426,Practicum (486 hours),6,0,0,1,4,0,0,No data yet.,No data yet.
