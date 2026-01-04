@@ -32,6 +32,9 @@ from auditlog.models import LogEntry
 from datetime import date
 from django.db.models import Q, Count, F, Value, Case, When, IntegerField
 from django.utils import timezone
+from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.forms import PasswordChangeForm
+from .forms import InstructorProfileForm
 
 
 
@@ -39,13 +42,15 @@ from django.utils import timezone
 def home(request):
     return render(request, 'home.html')
 
+@login_required
 def checkUsernameAvailability(request):
-    username = request.GET.get('value', '').strip()
-    exists = User.objects.filter(username=username).exists()
-    return JsonResponse({
-        'isAvailable': not exists,
-        'message': 'Username available.' if not exists else 'Username already taken.'
-    })
+    username = request.GET.get('username', None)
+    if not username:
+        return JsonResponse({'is_taken': False})
+        
+    is_taken = User.objects.filter(username__iexact=username).exclude(pk=request.user.pk).exists()
+    
+    return JsonResponse({'is_taken': is_taken})
 
 @require_GET
 def checkInstructorIdAvailability(request):
@@ -770,4 +775,37 @@ def recommendInstructors(request):
         "target_subject": target_subject,
         "recommendations": recommendations,
         "subjects": Subject.objects.all()
+    })
+
+
+@login_required
+def instructorProfile(request):
+    user = request.user
+    # Fetch instructor details if needed for display (not for editing)
+    user_login = user.userlogin_set.first()
+    instructor = user_login.instructor if user_login else None
+
+    profile_form = InstructorProfileForm(instance=user)
+    password_form = PasswordChangeForm(user=user)
+
+    if request.method == 'POST':
+        if 'update_profile' in request.POST:
+            profile_form = InstructorProfileForm(request.POST, request.FILES, instance=user)
+            if profile_form.is_valid():
+                profile_form.save()
+                messages.success(request, "Your profile has been updated!")
+                return redirect('instructorProfile')
+        
+        elif 'change_password' in request.POST:
+            password_form = PasswordChangeForm(user, request.POST)
+            if password_form.is_valid():
+                user = password_form.save()
+                update_session_auth_hash(request, user)  # Keeps the user logged in
+                messages.success(request, "Your password was successfully updated!")
+                return redirect('instructorProfile')
+
+    return render(request, 'core/profile.html', {
+        'profile_form': profile_form,
+        'password_form': password_form,
+        'instructor': instructor
     })

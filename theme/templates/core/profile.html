@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900">Account Settings</h1>
+        <p class="text-gray-600 text-sm">Update your personal information and security settings.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 text-center">
+                <div class="mb-4">
+                    {% if user.profilePic %}
+                        <img src="{{ user.profilePic.url }}" class="w-32 h-32 rounded-full mx-auto object-cover border-4 border-indigo-50">
+                    {% else %}
+                        <div class="w-32 h-32 rounded-full bg-indigo-100 mx-auto flex items-center justify-center text-primary text-3xl font-bold">
+                            {{ user.firstName|first }}{{ user.lastName|first }}
+                        </div>
+                    {% endif %}
+                </div>
+                <h2 class="text-lg font-bold text-gray-800">{{ user.firstName }} {{ user.lastName }}</h2>
+                <div class="mt-4 pt-4 border-t border-gray-100 text-left space-y-3">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">Instructor ID:</span>
+                        <span class="font-mono font-semibold text-gray-800">
+                            {{ instructor.instructorId|default:"No Instructor ID Found" }}
+                        </span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">Designation:</span>
+                        <span class="font-semibold text-gray-800">
+                            {{ instructor.designation|default:"No Designation Found" }}
+                        </span>
+                    </div>
+
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">Rank:</span>
+                        <span class="font-semibold text-primary">
+                            {{ instructor.rank|default:"No Rank Found" }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="md:col-span-2 space-y-6">
+            <form method="POST" enctype="multipart/form-data" class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                {% csrf_token %}
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Personal Information</h3>
+                <div class="grid grid-cols-1 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                        {{ profile_form.username }}
+                        <div id="username-status" class="text-xs mt-1"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                            {{ profile_form.firstName }}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                            {{ profile_form.lastName }}
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                        {{ profile_form.email }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Change Profile Picture</label>
+                        {{ profile_form.profilePic }}
+                    </div>
+                </div>
+                <button type="submit" name="update_profile" class="mt-6 w-full bg-primary text-white py-2 rounded-xl font-bold hover:bg-secondary transition">
+                    Save Profile Changes
+                </button>
+            </form>
+
+            <form method="POST" class="bg-white p-6 rounded-2xl shadow-sm border border-red-50">
+                {% csrf_token %}
+                <h3 class="text-lg font-semibold text-red-600 mb-4">Security</h3>
+                <div class="space-y-4">
+                    {% for field in password_form %}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}</label>
+                            <input type="password" name="{{ field.name }}" class="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-red-500 outline-none">
+                            {% if field.errors %}
+                                <p class="text-red-500 text-xs mt-1">{{ field.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+                <button type="submit" name="change_password" class="mt-6 w-full bg-gray-800 text-white py-2 rounded-xl font-bold hover:bg-black transition">
+                    Update Password
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        // --- 1. Username Availability Check ---
+        const usernameInput = $('#id_username');
+        const statusDiv = $('#username-status');
+        const originalUsername = "{{ user.username }}";
+
+        usernameInput.on('input', function() {
+            const username = $(this).val().trim();
+            
+            if (username === originalUsername) {
+                statusDiv.text('').removeClass('text-red-500 text-green-500');
+                return;
+            }
+
+            if (username.length < 3) {
+                statusDiv.text('Username too short').addClass('text-red-500').removeClass('text-green-500');
+                return;
+            }
+
+            $.ajax({
+                url: "{% url 'check_username_availability' %}",
+                data: { 'username': username },
+                dataType: 'json',
+                success: function(data) {
+                    if (data.is_taken) {
+                        statusDiv.text('❌ This username is already taken').addClass('text-red-500').removeClass('text-green-500');
+                    } else {
+                        statusDiv.text('✅ Username available').addClass('text-green-500').removeClass('text-red-500');
+                    }
+                }
+            });
+        });
+
+        const pass1 = $('#id_new_password1');
+        const pass2 = $('#id_new_password2');
+        
+        // Create a status element for password matching
+        pass2.after('<div id="pass-status" class="text-xs mt-1"></div>');
+        const passStatus = $('#pass-status');
+
+        function checkPasswords() {
+            const p1 = pass1.val();
+            const p2 = pass2.val();
+
+            if (p2.length === 0) {
+                passStatus.text('');
+                return;
+            }
+
+            if (p1 === p2) {
+                passStatus.text('✅ Passwords match').addClass('text-green-500').removeClass('text-red-500');
+                pass2.addClass('border-green-500').removeClass('border-red-500');
+            } else {
+                passStatus.text('❌ Passwords do not match').addClass('text-red-500').removeClass('text-green-500');
+                pass2.addClass('border-red-500').removeClass('border-green-500');
+            }
+        }
+
+        pass1.on('keyup', checkPasswords);
+        pass2.on('keyup', checkPasswords);
+    });
+</script>
+{% endblock %}

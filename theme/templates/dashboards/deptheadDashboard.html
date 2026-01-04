@@ -35,11 +35,6 @@
       <p class="mt-2 text-sm text-teal-100">{{ instructor_count }} registered</p>
     </a>
 
-    <a href="{% url 'studentAccountList' %}" class="bg-orange-600 text-white p-6 rounded-2xl shadow hover:bg-orange-700 transition">
-      <h2 class="text-xl font-semibold">Student{{ student_count|pluralize }}</h2>
-      <p class="mt-2 text-sm text-orange-100">{{ student_count }} enrolled</p>
-    </a>
-
     <a href="{% url 'roomList' %}" class="bg-red-600 text-white p-6 rounded-2xl shadow hover:bg-red-700 transition">
       <h2 class="text-xl font-semibold">Room{{ room_count|pluralize }}</h2>
       <p class="mt-2 text-sm text-red-100">{{ room_count }} available</p>

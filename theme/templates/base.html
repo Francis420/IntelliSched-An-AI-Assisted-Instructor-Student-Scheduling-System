@@ -190,6 +190,17 @@
                 <span class="sidebar-text">Matcher Results</span>
              </a>
 
+            <a href="{% url 'instructorSchedulingConfig' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900
+                {% if request.resolver_match.url_name == 'instructorSchedulingConfig' %}bg-primary/10 text-primary{% endif %}">
+                
+                  <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  </svg>
+                  <span class="sidebar-text">Instructor Overload Hours</span>
+            </a>
+
              <a href="{% url 'schedulerDashboard' %}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900
                 {% if request.resolver_match.url_name == 'schedulerDashboard' %}bg-primary/10 text-primary{% endif %}">
                 <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
@@ -236,21 +247,45 @@
         <div class="relative group h-full flex items-center">
             <button class="flex items-center gap-3 focus:outline-none">
                 <div class="text-right hidden sm:block">
-                    <p class="text-sm font-semibold text-gray-800">{{ request.user.username }}</p>
-                    <p class="text-xs text-gray-500 uppercase">{{ request.user.get_roles.0|default:"User" }}</p>
+                    <p class="text-sm font-semibold text-gray-800">
+                        {{ request.user.firstName }} {{ request.user.lastName }}
+                    </p>
+                    <p class="text-xs text-gray-500 uppercase">
+                        {% with login=request.user.userlogin_set.first %}
+                            {% if login.instructor.designation and login.instructor.designation|upper != "N/A" and login.instructor.designation|upper != "NONE" %}
+                                {{ login.instructor.designation }}
+                            {% elif login.instructor.rank and login.instructor.rank|upper != "N/A" and login.instructor.rank|upper != "NONE" %}
+                                {{ login.instructor.rank }}
+                            {% elif login.instructor.employmentType and login.instructor.employmentType|upper != "N/A" %}
+                                {{ login.instructor.get_employmentType_display|default:login.instructor.employmentType }}
+                            {% else %}
+                                {{ request.user.get_roles.0|default:"User" }}
+                            {% endif %}
+                        {% endwith %}
+                    </p>
                 </div>
-                <div class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg border border-primary/20">
-                    {{ request.user.username|slice:":1"|upper }}
+                
+                <div class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg border border-primary/20 overflow-hidden">
+                    {% if request.user.profilePic %}
+                        <img src="{{ request.user.profilePic.url }}" alt="Profile" class="w-full h-full object-cover">
+                    {% else %}
+                        {{ request.user.firstName|slice:":1"|upper }}{{ request.user.lastName|slice:":1"|upper }}
+                    {% endif %}
                 </div>
             </button>
             
             <div class="absolute right-0 top-12 pt-4 w-48 hidden group-hover:block hover:block z-50">
                 <div class="bg-white rounded-lg shadow-xl border border-gray-100 py-2">
+                    <a href="{% url 'instructorProfile' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary border-b border-gray-50">
+                        Settings
+                    </a>
+
                     {% if 'instructor' in request.user.get_roles %}
-                    <a href="{% url 'instructorDashboard' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary">Profile</a>
+                    <a href="{% url 'instructorDashboard' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary">Dashboard</a>
                     <a href="{% url 'instructorScheduleView' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary">My Schedule</a>
-                    <div class="border-t border-gray-100 my-1"></div>
                     {% endif %}
+
+                    <div class="border-t border-gray-100 my-1"></div>
                     <a href="{% url 'logout' %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50">Sign Out</a>
                 </div>
             </div>

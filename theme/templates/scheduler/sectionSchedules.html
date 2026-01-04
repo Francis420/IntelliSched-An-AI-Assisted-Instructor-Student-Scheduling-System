@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="p-6 md:p-10 bg-gray-50 min-h-screen">
+    <div class="max-w-7xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">Student Block Schedules</h1>
+        <hr class="border-gray-300 mb-8">
+
+        {# --- Filter Section --- #}
+        <div class="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0 mb-8 p-4 bg-white shadow-lg rounded-xl">
+            <form method="GET" action="{% url 'sectionSchedules' %}" class="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-4 w-full md:w-2/3">
+                <div class="flex items-center space-x-2 w-full md:w-1/2">
+                    <label class="text-sm font-medium text-gray-700">Semester:</label>
+                    <select name="semester" onchange="this.form.submit()" class="form-select border border-gray-300 rounded-lg text-sm w-full">
+                        {% for sem in semesters %}
+                            <option value="{{ sem.semesterId }}" {% if current_semester_id|stringformat:"s" == sem.semesterId|stringformat:"s" %}selected{% endif %}>{{ sem.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="flex items-center space-x-2 w-full md:w-1/2">
+                    <label class="text-sm font-medium text-gray-700">Block:</label>
+                    <select name="group" onchange="this.form.submit()" class="form-select border border-gray-300 rounded-lg text-sm w-full">
+                        <option value="All">All Blocks</option>
+                        {% for g in all_groups %}
+                            <option value="{{ g }}" {% if selected_group == g %}selected{% endif %}>{{ g }} (Year-Section)</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+            <span class="px-3 py-1 text-sm rounded-full bg-blue-100 text-blue-800 font-semibold border border-blue-200 text-center">Finalized Blocks</span>
+        </div>
+
+        {# --- Schedule Tables --- #}
+        {% if group_data %}
+            {% for block in group_data %}
+                <div class="mb-12 bg-white shadow-lg rounded-lg overflow-hidden border border-gray-200">
+                    <div class="bg-indigo-700 text-white p-4">
+                        <h2 class="text-xl font-bold">{{ block.display_name }}</h2>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full border-collapse">
+                            <thead>
+                                <tr class="bg-gray-100">
+                                    <th class="p-2 border text-xs w-20">Time</th>
+                                    {% for day in days_of_week %}
+                                        <th class="p-2 border text-xs">{{ day }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in block.matrix %}
+                                <tr class="h-10">
+                                    <td class="border text-[10px] text-center bg-gray-50 font-medium">{{ row.time }}</td>
+                                    {% for day_slots in row.days %}
+                                    <td class="border p-0 relative h-10 min-w-[120px]">
+                                        {% for item in day_slots %}
+                                            {% if item.is_start %}
+                                            <div class="absolute top-0 left-0 w-full p-1 z-10" style="height: {{ item.height }}px;">
+                                                <div class="{{ item.color }} text-white text-[10px] p-1 rounded shadow-sm h-full flex flex-col justify-center overflow-hidden">
+                                                    <span class="font-bold truncate">{{ item.subject }}</span>
+                                                    <span class="opacity-90 truncate">Rm: {{ item.room }}</span>
+                                                    <span class="text-[8px] mt-1">{{ item.time_range }}</span>
+                                                </div>
+                                            </div>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% empty %}
+                    <p>No finalized schedules found for the selected block.</p>
+            {% endfor %}
+        {% else %}
+            <div class="text-center p-12 bg-white shadow-lg rounded-xl border border-gray-200">
+                <h3 class="mt-2 text-sm font-medium text-gray-900">No Finalized Blocks Found</h3>
+                <p class="mt-1 text-sm text-gray-500">Check if schedules have been finalized for this semester.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock content %}

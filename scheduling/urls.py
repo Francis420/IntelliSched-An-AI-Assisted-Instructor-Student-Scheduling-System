@@ -37,4 +37,7 @@ urlpatterns = [
     path('subject-offerings/update/<int:offeringId>/', views.subjectOfferingUpdate, name='subjectOfferingUpdate'),
     path("subject-offerings/generate-sections/<int:semesterId>/<int:curriculumId>/", views.generateSections, name="generateSections",),
     path('offerings/<int:offeringId>/sections/config/', views.sectionConfigList, name='sectionConfigList'),
+
+    # Instructor Scheduling Configuration
+    path('instructor-scheduling-config/', views.instructorSchedulingConfig, name='instructorSchedulingConfig'),
 ]

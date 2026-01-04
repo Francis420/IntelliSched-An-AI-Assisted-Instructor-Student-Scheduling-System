@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}Instructor Scheduling Config | IntelliSched{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto mt-6 p-8 bg-white rounded-2xl shadow-lg">
+    <div class="flex items-center justify-between mb-6 border-b pb-4">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">Instructor Scheduling Configuration</h2>
+            <p class="text-sm text-gray-500">Define the global hour limits for different employment types.</p>
+        </div>
+        <span class="bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full uppercase">Active Configuration</span>
+    </div>
+
+    <form method="POST" class="space-y-8">
+        {% csrf_token %}
+
+        <div>
+            <h3 class="text-lg font-semibold text-indigo-700 mb-4 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                Permanent Faculty Overload Limits
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">With Designation (e.g. Dean)</label>
+                    <input type="number" step="0.5" name="overload_limit_with_designation" value="{{ config.overload_limit_with_designation }}" 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                    <p class="text-xs text-gray-400 mt-1">Hours allowed on top of normal load.</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">No Designation (Regular)</label>
+                    <input type="number" step="0.5" name="overload_limit_no_designation" value="{{ config.overload_limit_no_designation }}" 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                </div>
+            </div>
+        </div>
+
+        <div class="pt-6 border-t border-gray-100">
+            <h3 class="text-lg font-semibold text-blue-700 mb-4 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Part-Time Faculty Limits
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Normal Load Limit</label>
+                    <input type="number" step="0.5" name="part_time_normal_limit" value="{{ config.part_time_normal_limit }}" 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Overload Limit</label>
+                    <input type="number" step="0.5" name="part_time_overload_limit" value="{{ config.part_time_overload_limit }}" 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition">
+                </div>
+            </div>
+        </div>
+
+        <div class="pt-6 border-t border-gray-100">
+            <h3 class="text-lg font-semibold text-orange-700 mb-4 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                Pure Overload (Part-Time Overload)
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Normal Load Limit</label>
+                    <input type="number" step="0.5" name="pure_overload_normal_limit" value="{{ config.pure_overload_normal_limit }}" 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition bg-gray-50" readonly>
+                    <p class="text-xs text-orange-600 mt-1 italic">Typically 0 for this employment type.</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Max Overload Limit</label>
+                    <input type="number" step="0.5" name="pure_overload_max_limit" value="{{ config.pure_overload_max_limit }}" 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition">
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end space-x-4 pt-8 border-t">
+            <a href="{% url 'semesterList' %}" class="px-6 py-2 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200 transition font-medium">
+                Cancel
+            </a>
+            <button type="submit" class="px-8 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-200 transition font-bold">
+                Save Configuration
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -539,10 +539,14 @@ def instructorScheduleView(request):
 
 
 # Scdeduler Dashboard View
+@login_required
+@has_role('deptHead')
 def scheduler_dashboard(request):
     batch_id = str(uuid.uuid4())
     return render(request, "scheduler/schedulerDashboard.html", {"batch_id": batch_id})
 
+@login_required
+@has_role('deptHead')
 def start_scheduler(request):
     batch_id = request.GET.get("batch_id")
     progress, _ = SchedulerProgress.objects.get_or_create(batch_id=batch_id)
@@ -552,6 +556,9 @@ def start_scheduler(request):
     progress.save()
     return JsonResponse({"message": "Scheduling started.", "batch_id": batch_id, "task_id": task.id})
 
+
+@login_required
+@has_role('deptHead')
 def stop_scheduler(request):
     batch_id = request.GET.get("batch_id")
     try:
@@ -577,6 +584,8 @@ def stop_scheduler(request):
         return JsonResponse({"status": "error", "message": "No running scheduler found."})
     
 
+@login_required
+@has_role('deptHead')
 def scheduler_status(request):
     batch_id = request.GET.get("batch_id")
     if not batch_id:
@@ -1338,3 +1347,110 @@ def exportWorkloadExcel(request):
         return response
 
     return HttpResponse("Method not allowed")
+
+
+@login_required
+def sectionSchedules(request):
+    semester_id = request.GET.get("semester")
+    if not semester_id:
+        latest = Semester.objects.order_by("-createdAt").first()
+        semester_id = latest.semesterId if latest else None
+
+    # 1. Fetch ALL finalized schedules for this semester
+    # We use select_related to get the Subject and Section details (for the student_group property)
+    schedules_qs = Schedule.objects.filter(
+        semester_id=semester_id, 
+        status='finalized'
+    ).select_related('section', 'section__subject', 'subject', 'room')
+
+    # 2. Group these schedules by the "Block" (e.g., "1-A")
+    # This is where IT 113-A and IT 133-A get merged into one bucket
+    blocks_map = defaultdict(list)
+    for s in schedules_qs:
+        block_id = s.section.student_group  # Accesses the property f"{yearLevel}-{sectionCode}"
+        blocks_map[block_id].append(s)
+
+    # 3. Handle Filtering
+    selected_block = request.GET.get("group", "All")
+    all_block_names = sorted(blocks_map.keys())
+
+    # 4. Define Table Time Range (07:00 AM - 09:00 PM)
+    start_hour, end_hour = 7, 21
+    time_slots = []
+    curr = datetime.combine(datetime.today(), time(start_hour, 0))
+    end_limit = datetime.combine(datetime.today(), time(end_hour, 0))
+    while curr < end_limit:
+        time_slots.append(curr.strftime('%I:%M %p'))
+        curr += timedelta(minutes=30)
+
+    DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+
+    # 5. Build the Matrix for each Block
+    final_group_data = []
+    
+    # Decide which blocks to show
+    target_blocks = all_block_names if selected_block == "All" else ([selected_block] if selected_block in blocks_map else [])
+
+    for b_name in target_blocks:
+        block_schedules = blocks_map[b_name]
+        
+        # Grid: [TimeSlot][Day]
+        grid = defaultdict(lambda: defaultdict(list))
+        
+        # Color palette for subjects
+        subject_colors = {}
+        color_list = ['bg-blue-600', 'bg-emerald-600', 'bg-purple-600', 'bg-orange-600', 'bg-rose-600', 'bg-cyan-600']
+        
+        for s in block_schedules:
+            if s.subject.code not in subject_colors:
+                subject_colors[s.subject.code] = color_list[len(subject_colors) % len(color_list)]
+            
+            # Use your Schedule model's duration_minutes property
+            rowspan = int(s.duration_minutes / 30)
+            
+            # Map start/end to datetime for slot checking
+            s_start = datetime.combine(datetime.today(), s.startTime)
+            s_end = datetime.combine(datetime.today(), s.endTime)
+
+            # Fill the grid slots
+            curr_slot_dt = datetime.combine(datetime.today(), time(start_hour, 0))
+            while curr_slot_dt < end_limit:
+                slot_str = curr_slot_dt.strftime('%I:%M %p')
+                slot_end = curr_slot_dt + timedelta(minutes=30)
+                
+                if s_start < slot_end and s_end > curr_slot_dt:
+                    grid[slot_str][s.dayOfWeek].append({
+                        'subject': s.subject.code,
+                        'room': s.room.roomCode if s.room else "TBA",
+                        'time_range': f"{s.startTime.strftime('%I:%M %p')} - {s.endTime.strftime('%I:%M %p')}",
+                        'is_start': (s_start >= curr_slot_dt and s_start < slot_end),
+                        'height': rowspan * 40,
+                        'color': subject_colors[s.subject.code]
+                    })
+                curr_slot_dt = slot_end
+
+        # Build final matrix rows
+        matrix = []
+        for slot in time_slots:
+            matrix.append({
+                'time': slot,
+                'days': [grid[slot][day] for day in DAYS]
+            })
+
+        # Pretty display name (convert "1-A" to "Year 1 - Section A")
+        parts = b_name.split('-', 1)
+        display = f"Year {parts[0]} - Section {parts[1]}" if len(parts) > 1 else b_name
+
+        final_group_data.append({
+            'display_name': display,
+            'matrix': matrix
+        })
+
+    return render(request, "scheduler/sectionSchedules.html", {
+        'group_data': final_group_data,
+        'all_groups': all_block_names,
+        'selected_group': selected_block,
+        'days_of_week': DAYS,
+        'semesters': Semester.objects.all().order_by("-createdAt"),
+        'current_semester_id': semester_id,
+    })

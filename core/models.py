@@ -46,6 +46,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     lastName = models.CharField(max_length=50)
     middleInitial = models.CharField(max_length=1, blank=True, null=True)
 
+    profilePic = models.ImageField(upload_to='profile_pics/', null=True, blank=True)
+
     roles = models.ManyToManyField(Role, blank=True)
 
     isActive = models.BooleanField(default=True)

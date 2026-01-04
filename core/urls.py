@@ -31,5 +31,8 @@ urlpatterns = [
 
     # Recommendation Dashboard
     path('recommendations/', views.recommendInstructors, name='recommendations'),
+
+    # Instructor Profile
+    path('profile/', views.instructorProfile, name='instructorProfile')
 ]
 

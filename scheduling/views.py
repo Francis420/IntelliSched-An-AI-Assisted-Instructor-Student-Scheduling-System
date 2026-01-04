@@ -11,6 +11,7 @@ from scheduling.models import (
     Section,
     SubjectOffering,
     Subject,
+    InstructorSchedulingConfiguration,
 )
 from core.models import (
     Student,
@@ -952,4 +953,32 @@ def sectionConfigList(request, offeringId):
     return render(request, "scheduling/sections/config_list.html", {
         "offering": offering,
         "sections": sections,
+    })
+
+
+@login_required
+@has_role('deptHead')
+def instructorSchedulingConfig(request):
+    # Fetch the active config or create a default one if it doesn't exist
+    config = InstructorSchedulingConfiguration.objects.filter(is_active=True).first()
+    if not config:
+        config = InstructorSchedulingConfiguration.objects.create(is_active=True)
+
+    if request.method == "POST":
+        try:
+            config.overload_limit_with_designation = float(request.POST.get('overload_limit_with_designation', 9.0))
+            config.overload_limit_no_designation = float(request.POST.get('overload_limit_no_designation', 12.0))
+            config.part_time_normal_limit = float(request.POST.get('part_time_normal_limit', 15.0))
+            config.part_time_overload_limit = float(request.POST.get('part_time_overload_limit', 0.0))
+            config.pure_overload_normal_limit = float(request.POST.get('pure_overload_normal_limit', 0.0))
+            config.pure_overload_max_limit = float(request.POST.get('pure_overload_max_limit', 12.0))
+            config.save()
+            
+            messages.success(request, "Instructor scheduling configuration updated successfully.")
+            return redirect('instructorSchedulingConfig')
+        except ValueError:
+            messages.error(request, "Invalid input. Please enter valid numbers for hours.")
+
+    return render(request, 'scheduling/instructorConfig.html', {
+        'config': config,
     })

@@ -119,6 +119,16 @@ class Section(models.Model):
         super().save(*args, **kwargs)
 
     @property
+    def yearLevel(self):
+        """Retrieves the year level from the associated subject."""
+        return self.subject.yearLevel
+
+    @property
+    def student_group(self):
+        clean_code = str(self.sectionCode).strip().upper()
+        return f"{self.yearLevel}-{clean_code}"
+
+    @property
     def lectureHours(self):
         return round(self.lectureMinutes / 60, 2)
 
@@ -218,6 +228,7 @@ class GenEdSchedule(models.Model):
     semester = models.ForeignKey(Semester, on_delete=models.CASCADE, null=True, blank=True)
     code = models.CharField(max_length=20)
     subjectName = models.CharField(max_length=100)
+    yearLevel = models.IntegerField(default=1)
     sectionCode = models.CharField(max_length=10)
     instructorName = models.CharField(max_length=100, null=True, blank=True)
     dayOfWeek = models.CharField(max_length=10)
@@ -230,6 +241,11 @@ class GenEdSchedule(models.Model):
         default='active'
     )
     createdAt = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def student_group(self):
+        clean_code = str(self.sectionCode).strip().upper()
+        return f"{self.yearLevel}-{clean_code}"
 
     def __str__(self):
         return f"GenEd {self.code} - {self.sectionCode}"
@@ -265,3 +281,27 @@ class SubjectOffering(models.Model):
     @property
     def curriculum(self):
         return self.subject.curriculum
+    
+
+
+# ---------- Instructor Scheduling Configuration ----------
+class InstructorSchedulingConfiguration(models.Model):
+    # --- Permanent Faculty Rules ---
+    overload_limit_with_designation = models.FloatField(default=9.0, help_text="Max overload for Deans/Heads/etc.")
+    overload_limit_no_designation = models.FloatField(default=12.0, help_text="Max overload for regular permanent faculty")
+
+    # --- Part-Time Rules ---
+    part_time_normal_limit = models.FloatField(default=15.0)
+    part_time_overload_limit = models.FloatField(default=0.0)
+
+    # --- Pure Overload (Part-Time Overload) Rules ---
+    pure_overload_normal_limit = models.FloatField(default=0.0)
+    pure_overload_max_limit = models.FloatField(default=12.0)
+
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Instructor Scheduling Configuration"
+
+    def __str__(self):
+        return "Active Scheduling Rules" if self.is_active else "Inactive Rules"

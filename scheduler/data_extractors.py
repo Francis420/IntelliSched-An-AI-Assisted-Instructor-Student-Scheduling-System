@@ -1,6 +1,6 @@
 # scheduler/data_extractors.py
 from collections import defaultdict
-from scheduling.models import Section, Room, GenEdSchedule
+from scheduling.models import Section, Room, GenEdSchedule, InstructorSchedulingConfiguration
 from core.models import Instructor
 from aimatching.models import InstructorSubjectMatch
 
@@ -12,7 +12,9 @@ def get_solver_data(semester):
             employmentType__in=['permanent', 'part-time', 'overload']
         ).exclude(
             employmentType='on-leave/retired'
-        ).select_related('rank', 'designation')
+        ).select_related('rank', 'designation'
+        ).order_by('instructorId')
+        
     )
     
     instructors = [i.instructorId for i in instructors_qs]
@@ -20,8 +22,9 @@ def get_solver_data(semester):
 
     # -------------------- Sections --------------------
     sections_qs = list(
-        Section.objects.filter(semester=semester)
+        Section.objects.filter(semester=semester, status='active')
         .select_related("subject")
+        .order_by('sectionId')
     )
     sections = [s.sectionId for s in sections_qs]
 
@@ -39,20 +42,21 @@ def get_solver_data(semester):
     }
 
     # -------------------- Instructor Load Caps (DYNAMIC) --------------------
-    instructor_caps = {}
+    conf = InstructorSchedulingConfiguration.objects.filter(is_active=True).first()
 
     # Configuration for Permanent types
-    overload_has_designation = 9
-    overload_has_no_designation = 12
+    overload_has_designation = conf.overload_limit_with_designation if conf else 9.0
+    overload_has_no_designation = conf.overload_limit_no_designation if conf else 12.0
     
     # Configuration for Non-Permanent types
-    PART_TIME_NORMAL_HRS = 15
-    PART_TIME_OVERLOAD_HRS = 0
+    PART_TIME_NORMAL_HRS = conf.part_time_normal_limit if conf else 15.0
+    PART_TIME_OVERLOAD_HRS = conf.part_time_overload_limit if conf else 0.0
     
     # "Part-Time (Overload)" employees cannot teach Normal hours
-    PURE_OVERLOAD_NORMAL_HRS = 0 
-    PURE_OVERLOAD_LIMIT_HRS = 12
+    PURE_OVERLOAD_NORMAL_HRS = conf.pure_overload_normal_limit if conf else 0.0
+    PURE_OVERLOAD_LIMIT_HRS = conf.pure_overload_max_limit if conf else 12.0
 
+    instructor_caps = {}
     for i in instructors_qs:
         emp_type = (i.employmentType or "").lower().strip()
         
@@ -106,9 +110,10 @@ def get_solver_data(semester):
     # -------------------- Matches --------------------
     subject_ids = {s.subject_id for s in sections_qs}
 
+    # UPDATED: Added "latestHistory" to select_related
     match_qs = InstructorSubjectMatch.objects.filter(
         subject_id__in=subject_ids
-    ).select_related("instructor", "subject")
+    ).select_related("instructor", "subject", "latestHistory")
 
     subj_to_section_ids = defaultdict(list)
     for s in sections_qs:
@@ -118,9 +123,13 @@ def get_solver_data(semester):
     for m in match_qs:
         instr_id = m.instructor.instructorId
         subj_id = m.subject.subjectId
-        score = getattr(m, "confidenceScore", None)
-        if score is None:
-            score = 1.0 if getattr(m, "isRecommended", False) else 0.0
+        
+        score = 0.0
+        if m.latestHistory:
+            score = m.latestHistory.confidenceScore
+        elif m.isRecommended:
+            score = 1.0
+
         for sec_id in subj_to_section_ids.get(subj_id, []):
             matches[sec_id].append((instr_id, float(score)))
 
@@ -139,14 +148,23 @@ def get_solver_data(semester):
                     lecture_lab_pairs.append((lec, lab))
 
     # -------------------- Rooms --------------------
-    raw_rooms = list(Room.objects.filter(isActive=True))
+    raw_rooms = list(Room.objects.filter(isActive=True).order_by('roomId'))
     
     room_types = {} 
     room_capacities = {}
     
     rooms_list = [r.roomId for r in raw_rooms]
     for idx, r in enumerate(raw_rooms):
-        room_types[idx] = r.type.lower() if r.type else 'lecture'
+        r_type_str = (r.type or "").lower()
+        
+        if "lab" in r_type_str:
+            room_types[idx] = "laboratory"
+        elif "lec" in r_type_str:
+            room_types[idx] = "lecture"
+        else:
+            # Fallback for weird typos
+            room_types[idx] = "lecture" 
+
         room_capacities[idx] = r.capacity or 0
 
     # Add TBA Room
@@ -170,7 +188,8 @@ def get_solver_data(semester):
         gday = day_map.get(g.dayOfWeek, 0)
         gstart = g.startTime.hour * 60 + g.startTime.minute
         gend = g.endTime.hour * 60 + g.endTime.minute
-        gened_blocks.append((gday, gstart, gend))
+        
+        gened_blocks.append((gday, gstart, gend, g.student_group))
 
      # -------------------- Employment Separation --------------------
     permanent_instructors = [
@@ -187,6 +206,8 @@ def get_solver_data(semester):
     return {
         "instructors": tuple(instructors),
         "sections": tuple(sections),
+        "gened_blocks": tuple(gened_blocks),
+        "section_to_group": {s.sectionId: s.student_group for s in sections_qs},
         "rooms": tuple(rooms_list),
         "room_types": room_types,
         "room_capacities": room_capacities,
@@ -202,5 +223,5 @@ def get_solver_data(semester):
         "non_permanent_instructors": tuple(non_permanent_ids),
 
         "TBA_ROOM_IDX": TBA_ROOM_IDX,
-        "gened_blocks": tuple(gened_blocks),
+        
     }
