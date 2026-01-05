@@ -1,0 +1,303 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 p-6 flex flex-col gap-6 font-sans">
+
+    <div class="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+        <div>
+            <h1 class="text-xl font-bold text-gray-800">Section Block Scheduler</h1>
+            <p class="text-sm text-gray-500">Polishing schedule for Block <span class="text-emerald-600 font-bold">{{ selectedBlockLabel }}</span></p>
+        </div>
+        
+        <form method="get" class="flex items-center gap-3">
+            <label class="text-sm font-semibold text-gray-600">Select Block:</label>
+            <select name="block" class="border-gray-300 border rounded-md px-3 py-2 bg-gray-50 text-gray-700 font-medium focus:ring-2 focus:ring-emerald-500 outline-none" onchange="this.form.submit()">
+                {% for b in blocks %}
+                    <option value="{{ b.value }}" {% if selectedBlock == b.value %}selected{% endif %}>
+                        Block {{ b.label }}
+                    </option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+
+    <div class="flex-1 bg-white border rounded-lg shadow overflow-hidden flex flex-col relative h-[85vh]">
+        <div class="grid grid-cols-7 border-b bg-gray-100 z-20">
+            <div class="py-3 text-center text-xs font-bold text-gray-400 border-r uppercase tracking-wide">Time</div>
+            {% for day in days %}
+                <div class="py-3 text-center text-sm font-bold text-gray-700 border-r">{{ day }}</div>
+            {% endfor %}
+        </div>
+
+        <div class="grid grid-cols-7 flex-1 overflow-y-auto relative" id="scheduleGrid">
+            
+            <div class="border-r bg-gray-50 relative z-10">
+                {% for t in times %}
+                    <div class="h-12 border-b text-[10px] text-gray-400 flex items-start justify-center pt-1 font-mono">
+                        {{ t|time:"g:i A" }}
+                    </div>
+                {% endfor %}
+            </div>
+
+            {% for day in days %}
+            <div class="relative border-r day-column" data-day="{{ day }}">
+                
+                {% for t in times %}
+                    {% if t.hour == 12 %}
+                        <div class="h-12 border-b bg-gray-200/50 flex items-center justify-center">
+                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest select-none">Lunch Break</span>
+                        </div>
+                    {% else %}
+                        <div class="h-12 border-b border-gray-100 hover:bg-emerald-50 transition-colors cursor-pointer slot-trigger" 
+                             data-time="{{ t|time:'H:i' }}"></div>
+                    {% endif %}
+                {% endfor %}
+
+                <div class="conflict-layer absolute inset-0 pointer-events-none z-0"></div>
+
+                {% for ge in gen_eds %}
+                    {% if ge.dayOfWeek == day %}
+                    <div class="absolute w-[94%] left-[3%] rounded bg-gray-100 border-l-4 border-gray-400 text-xs p-2 shadow z-10 opacity-90 select-none cursor-not-allowed flex flex-col gap-1"
+                         data-start="{{ ge.startTime|time:'H:i' }}"
+                         data-end="{{ ge.endTime|time:'H:i' }}">
+                        
+                        <div class="font-bold text-gray-600 truncate">{{ ge.code }} 🔒</div>
+                        <div class="text-[9px] text-gray-500 uppercase font-semibold">General Education</div>
+                        <div class="text-[10px] text-gray-500">{{ ge.startTime|time:"g:i A" }} - {{ ge.endTime|time:"g:i A" }}</div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+
+                {% for sched in schedules %}
+                    {% if sched.dayOfWeek == day %}
+                    <div class="schedule-card absolute w-[94%] left-[3%] rounded bg-emerald-50 border-l-4 border-emerald-500 text-xs p-1.5 shadow-sm hover:shadow-md cursor-pointer transition-all z-20 hover:scale-[1.02] group flex flex-col justify-between"
+                         data-id="{{ sched.scheduleId }}"
+                         data-start="{{ sched.startTime|time:'H:i' }}"
+                         data-duration="{{ sched.duration_minutes }}"
+                         data-instructor="{{ sched.instructor.instructorId }}"
+                         data-subject="{{ sched.subject.code }}"
+                         onclick="activateEditMode(this)">
+                         
+                        <div>
+                            <div class="font-bold text-emerald-900 leading-tight mb-0.5">
+                                {{ sched.subject.code }} - {{ sched.subject.name|truncatechars:20 }}
+                            </div>
+                            
+                            <div class="text-emerald-700 truncate font-medium text-[11px] mb-1">
+                                {{ sched.instructor.full_name }}
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-end border-t border-emerald-200 pt-1 mt-1">
+                            <div class="text-[9px] text-emerald-800 font-mono tracking-tight">
+                                {{ sched.startTime|time:"g:i A" }} - {{ sched.endTime|time:"g:i A" }}
+                            </div>
+                            <div class="text-[9px] font-bold text-emerald-600 uppercase text-right">
+                                {{ sched.scheduleType }} <br>
+                                <span class="bg-emerald-200 px-1 rounded text-emerald-800">
+                                    {{ sched.room.roomCode|default:"TBA" }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div id="editModal" class="hidden fixed bottom-6 right-6 z-50 animate-bounce-in">
+    <div class="bg-white p-4 rounded-lg shadow-xl border border-emerald-200 w-80">
+        <div class="flex justify-between items-start mb-2">
+            <h3 class="font-bold text-gray-800">Move Class</h3>
+            <button onclick="cancelEdit()" class="text-gray-400 hover:text-red-500">&times;</button>
+        </div>
+        <p class="text-sm text-gray-600 mb-3">Selected: <span id="modalSubject" class="font-bold text-emerald-600"></span></p>
+        
+        <div id="conflictLoading" class="hidden text-xs text-emerald-500 mb-2">Checking instructor schedule...</div>
+
+        <div class="text-xs bg-red-50 text-red-700 p-2 rounded border border-red-100 mb-3">
+            <strong>Conflict Check:</strong><br>
+            Red boxes = Instructor is busy.<br>
+            <span class="italic">Press ESC to cancel.</span>
+        </div>
+        
+        <button onclick="cancelEdit()" class="mt-3 w-full py-1.5 text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded">Cancel (Esc)</button>
+    </div>
+</div>
+
+<script>
+    const START_HOUR = 7; 
+    const PIXELS_PER_HOUR = 48; 
+    let activeScheduleId = null;
+    let activeDuration = 0;
+
+    const API_URL_CONFLICTS = "{% url 'getInstructorConflicts' %}";
+    const API_URL_UPDATE = "{% url 'updateScheduleSlot' %}";
+
+    function renderPositions() {
+        const cards = document.querySelectorAll('.schedule-card, .absolute.bg-gray-100');
+        cards.forEach(card => {
+            const start = card.dataset.start; 
+            const end = card.dataset.end; 
+            let duration = card.dataset.duration;
+
+            if(!duration && end) {
+                const [sh, sm] = start.split(':').map(Number);
+                const [eh, em] = end.split(':').map(Number);
+                duration = ((eh*60 + em) - (sh*60 + sm));
+            }
+
+            const [h, m] = start.split(':').map(Number);
+            const startDecimal = h + (m/60);
+            const top = (startDecimal - START_HOUR) * PIXELS_PER_HOUR;
+            const height = (duration / 60) * PIXELS_PER_HOUR;
+            
+            card.style.top = `${top}px`;
+            card.style.height = `${height}px`;
+        });
+    }
+
+    function activateEditMode(element) {
+        if(activeScheduleId === element.dataset.id) return;
+        cancelEdit(false); 
+
+        activeScheduleId = element.dataset.id;
+        activeDuration = parseInt(element.dataset.duration);
+        
+        element.classList.add('ring-2', 'ring-emerald-500', 'z-50', 'bg-white', 'shadow-xl'); 
+        document.getElementById('modalSubject').innerText = element.dataset.subject;
+        document.getElementById('editModal').classList.remove('hidden');
+
+        fetchConflicts(element.dataset.instructor, activeScheduleId);
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if(e.key === "Escape" && activeScheduleId) {
+            cancelEdit();
+        }
+    });
+
+    async function fetchConflicts(instructorId, currentId) {
+        const loader = document.getElementById('conflictLoading');
+        loader.classList.remove('hidden');
+
+        try {
+            const url = `${API_URL_CONFLICTS}?instructorId=${instructorId}&scheduleId=${currentId}`;
+            const res = await fetch(url);
+            if(!res.ok) throw new Error("API Error");
+            const data = await res.json();
+            
+            loader.classList.add('hidden');
+
+            data.busySlots.forEach(slot => {
+                const dayCol = document.querySelector(`.day-column[data-day="${slot.day}"] .conflict-layer`);
+                if(dayCol) {
+                    const [sh, sm] = slot.startTime.split(':').map(Number);
+                    const [eh, em] = slot.endTime.split(':').map(Number);
+                    
+                    const startDec = sh + (sm/60);
+                    const endDec = eh + (em/60);
+                    
+                    const top = (startDec - START_HOUR) * PIXELS_PER_HOUR;
+                    const height = (endDec - startDec) * PIXELS_PER_HOUR;
+
+                    const div = document.createElement('div');
+                    div.className = "conflict-box absolute w-full bg-red-100/90 border-y border-red-400 flex flex-col items-center justify-center z-10 pointer-events-none p-1 text-center leading-tight";
+                    div.style.top = `${top}px`;
+                    div.style.height = `${height}px`;
+                    div.innerHTML = `<span class="text-[10px] font-bold text-red-600 uppercase">BUSY</span><span class="text-[9px] text-red-800">${slot.reason}</span>`;
+                    dayCol.appendChild(div);
+                }
+            });
+        } catch(e) { 
+            console.error(e);
+            loader.innerText = "Error checking conflicts.";
+        }
+    }
+
+    document.querySelectorAll('.slot-trigger').forEach(slot => {
+        slot.addEventListener('click', function(e) {
+            if(!activeScheduleId) return;
+
+            const dayColumn = this.closest('.day-column');
+            const day = dayColumn.dataset.day;
+            const slotTime = this.dataset.time; 
+            const [baseH, baseM] = slotTime.split(':').map(Number);
+            
+            const slotRect = this.getBoundingClientRect();
+            const clickInSlot = e.clientY - slotRect.top;
+            
+            let finalM = 0;
+            if (clickInSlot > 24) finalM = 30; 
+            
+            const newStartStr = `${baseH.toString().padStart(2,'0')}:${finalM===0?'00':'30'}`;
+            
+            // Calculate Decimals for Logic Check
+            const startDec = baseH + (finalM/60);
+            const endDec = startDec + (activeDuration / 60);
+
+            // FIX #2: LUNCH BREAK CHECK (12:00 PM - 1:00 PM)
+            // If the class starts before 1 PM AND ends after 12 PM, it overlaps.
+            if (startDec < 13 && endDec > 12) {
+                alert("Cannot schedule during Lunch Break (12:00 PM - 1:00 PM).");
+                return; // Stop the function here
+            }
+
+            const eh = Math.floor(endDec);
+            const em = (endDec % 1) * 60;
+            const newEndStr = `${eh.toString().padStart(2,'0')}:${Math.round(em)===0?'00':'30'}`;
+
+            updateSchedule(activeScheduleId, day, newStartStr, newEndStr);
+        });
+    });
+
+    async function updateSchedule(id, day, start, end) {
+        const csrftoken = getCookie('csrftoken');
+        const res = await fetch(API_URL_UPDATE, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrftoken},
+            body: JSON.stringify({scheduleId: id, day: day, startTime: start, endTime: end})
+        });
+
+        if(res.ok) {
+            const data = await res.json();
+            if(data.success) {
+                window.location.reload();
+            } else {
+                alert(data.message);
+            }
+        } else {
+            alert("Error connecting to server.");
+        }
+    }
+
+    function cancelEdit(hideModal = true) {
+        activeScheduleId = null;
+        if(hideModal) document.getElementById('editModal').classList.add('hidden');
+        document.querySelectorAll('.conflict-box').forEach(el => el.remove());
+        document.querySelectorAll('.schedule-card').forEach(el => {
+            el.classList.remove('ring-2', 'ring-emerald-500', 'z-50', 'bg-white', 'shadow-xl');
+        });
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    window.onload = renderPositions;
+</script>
+{% endblock %}

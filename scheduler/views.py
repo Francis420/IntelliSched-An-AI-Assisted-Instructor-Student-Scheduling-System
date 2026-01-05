@@ -2,7 +2,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.db import transaction
-from scheduling.models import Schedule, Semester, Section, Room, Curriculum
+from scheduling.models import Schedule, Semester, Section, Room, Curriculum, GenEdSchedule
 from core.models import Instructor, UserLogin, User
 from django.contrib.auth.decorators import login_required
 from collections import defaultdict
@@ -17,7 +17,7 @@ from datetime import datetime, time, timedelta
 from django.utils import timezone
 from authapi.views import has_role  
 import re
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.template.loader import get_template
 from xhtml2pdf import pisa
 from django.db.models import Sum
@@ -33,6 +33,8 @@ from openpyxl.cell.cell import MergedCell
 from copy import copy
 from openpyxl.utils import get_column_letter
 from openpyxl import load_workbook
+import json
+from django.db.models import Q
 
 
 @login_required
@@ -1350,107 +1352,144 @@ def exportWorkloadExcel(request):
 
 
 @login_required
-def sectionSchedules(request):
-    semester_id = request.GET.get("semester")
-    if not semester_id:
-        latest = Semester.objects.order_by("-createdAt").first()
-        semester_id = latest.semesterId if latest else None
-
-    # 1. Fetch ALL finalized schedules for this semester
-    # We use select_related to get the Subject and Section details (for the student_group property)
-    schedules_qs = Schedule.objects.filter(
-        semester_id=semester_id, 
-        status='finalized'
-    ).select_related('section', 'section__subject', 'subject', 'room')
-
-    # 2. Group these schedules by the "Block" (e.g., "1-A")
-    # This is where IT 113-A and IT 133-A get merged into one bucket
-    blocks_map = defaultdict(list)
-    for s in schedules_qs:
-        block_id = s.section.student_group  # Accesses the property f"{yearLevel}-{sectionCode}"
-        blocks_map[block_id].append(s)
-
-    # 3. Handle Filtering
-    selected_block = request.GET.get("group", "All")
-    all_block_names = sorted(blocks_map.keys())
-
-    # 4. Define Table Time Range (07:00 AM - 09:00 PM)
-    start_hour, end_hour = 7, 21
-    time_slots = []
-    curr = datetime.combine(datetime.today(), time(start_hour, 0))
-    end_limit = datetime.combine(datetime.today(), time(end_hour, 0))
-    while curr < end_limit:
-        time_slots.append(curr.strftime('%I:%M %p'))
-        curr += timedelta(minutes=30)
-
-    DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-
-    # 5. Build the Matrix for each Block
-    final_group_data = []
+@has_role('deptHead')
+def sectionBlockScheduler(request):
+    # 1. Fetch Finalized Schedules
+    finalized = Schedule.objects.filter(status='finalized').select_related('section', 'section__subject')
     
-    # Decide which blocks to show
-    target_blocks = all_block_names if selected_block == "All" else ([selected_block] if selected_block in blocks_map else [])
+    unique_blocks = set()
 
-    for b_name in target_blocks:
-        block_schedules = blocks_map[b_name]
-        
-        # Grid: [TimeSlot][Day]
-        grid = defaultdict(lambda: defaultdict(list))
-        
-        # Color palette for subjects
-        subject_colors = {}
-        color_list = ['bg-blue-600', 'bg-emerald-600', 'bg-purple-600', 'bg-orange-600', 'bg-rose-600', 'bg-cyan-600']
-        
-        for s in block_schedules:
-            if s.subject.code not in subject_colors:
-                subject_colors[s.subject.code] = color_list[len(subject_colors) % len(color_list)]
-            
-            # Use your Schedule model's duration_minutes property
-            rowspan = int(s.duration_minutes / 30)
-            
-            # Map start/end to datetime for slot checking
-            s_start = datetime.combine(datetime.today(), s.startTime)
-            s_end = datetime.combine(datetime.today(), s.endTime)
+    for sched in finalized:
+        raw_year = str(sched.section.subject.yearLevel)
+        raw_code = str(sched.section.sectionCode).strip()
 
-            # Fill the grid slots
-            curr_slot_dt = datetime.combine(datetime.today(), time(start_hour, 0))
-            while curr_slot_dt < end_limit:
-                slot_str = curr_slot_dt.strftime('%I:%M %p')
-                slot_end = curr_slot_dt + timedelta(minutes=30)
-                
-                if s_start < slot_end and s_end > curr_slot_dt:
-                    grid[slot_str][s.dayOfWeek].append({
-                        'subject': s.subject.code,
-                        'room': s.room.roomCode if s.room else "TBA",
-                        'time_range': f"{s.startTime.strftime('%I:%M %p')} - {s.endTime.strftime('%I:%M %p')}",
-                        'is_start': (s_start >= curr_slot_dt and s_start < slot_end),
-                        'height': rowspan * 40,
-                        'color': subject_colors[s.subject.code]
-                    })
-                curr_slot_dt = slot_end
+        # Logic to extract "A" from "IT 123-A"
+        if '-' in raw_code:
+            block_letter = raw_code.split('-')[-1].strip()
+        else:
+            block_letter = raw_code
 
-        # Build final matrix rows
-        matrix = []
-        for slot in time_slots:
-            matrix.append({
-                'time': slot,
-                'days': [grid[slot][day] for day in DAYS]
-            })
+        unique_blocks.add((raw_year, block_letter))
 
-        # Pretty display name (convert "1-A" to "Year 1 - Section A")
-        parts = b_name.split('-', 1)
-        display = f"Year {parts[0]} - Section {parts[1]}" if len(parts) > 1 else b_name
-
-        final_group_data.append({
-            'display_name': display,
-            'matrix': matrix
+    blocks = []
+    for year, letter in sorted(list(unique_blocks)):
+        blocks.append({
+            'label': f"{year}-{letter}", 
+            'value': f"{year}__{letter}"
         })
 
-    return render(request, "scheduler/sectionSchedules.html", {
-        'group_data': final_group_data,
-        'all_groups': all_block_names,
-        'selected_group': selected_block,
-        'days_of_week': DAYS,
-        'semesters': Semester.objects.all().order_by("-createdAt"),
-        'current_semester_id': semester_id,
-    })
+    selected_val = request.GET.get('block')
+    if not selected_val and blocks:
+        selected_val = blocks[0]['value']
+
+    schedules = []
+    gen_eds = []
+    selected_label = ""
+
+    if selected_val:
+        try:
+            year, letter = selected_val.split('__', 1)
+            selected_label = f"{year}-{letter}"
+
+            # Fetch Normal IT/Major Schedules (Editable)
+            # This includes "GEN EL" if they are in the Schedule table
+            schedules = Schedule.objects.filter(
+                status='finalized',
+                section__subject__yearLevel=year
+            ).filter(
+                Q(section__sectionCode=letter) |                 
+                Q(section__sectionCode__endswith=f"-{letter}")   
+            ).select_related('subject', 'instructor', 'room', 'section')
+
+            # Fetch GenEd Schedules (Locked)
+            # These are explicitly from the GenEdSchedule table
+            gen_eds = GenEdSchedule.objects.filter(
+                status='active',
+                yearLevel=year,
+                sectionCode=letter 
+            )
+
+        except ValueError:
+            pass
+
+    # Generate Time Objects for easier formatting in template
+    # 7 AM to 8 PM (20:00)
+    time_slots = [time(h, 0) for h in range(7, 21)]
+
+    context = {
+        'blocks': blocks,
+        'selectedBlock': selected_val,
+        'selectedBlockLabel': selected_label,
+        'schedules': schedules,
+        'gen_eds': gen_eds,
+        'days': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+        'times': time_slots # Passed as objects now
+    }
+    
+    return render(request, 'scheduler/sectionBlockScheduler.html', context)
+
+
+def getInstructorConflicts(request):
+    instructorId = request.GET.get('instructorId')
+    currentScheduleId = request.GET.get('scheduleId')
+    
+    if not instructorId:
+        return JsonResponse({'busySlots': []})
+
+    conflicts = Schedule.objects.filter(
+        instructor_id=instructorId,
+        status='finalized'
+    ).exclude(scheduleId=currentScheduleId)
+    
+    busySlots = []
+    for c in conflicts:
+        busySlots.append({
+            'day': c.dayOfWeek,
+            'startTime': c.startTime.strftime("%H:%M"),
+            'endTime': c.endTime.strftime("%H:%M"),
+            'reason': f"Teaching {c.section.yearLevel}-{c.section.sectionCode}" 
+        })
+        
+    return JsonResponse({'busySlots': busySlots})
+
+
+@login_required
+@has_role('deptHead')
+def updateScheduleSlot(request):
+    try:
+        data = json.loads(request.body)
+        scheduleId = data.get('scheduleId')
+        newDay = data.get('day')
+        newStartTime = data.get('startTime')
+        newEndTime = data.get('endTime')
+        
+        sched = Schedule.objects.get(scheduleId=scheduleId)
+        instructor = sched.instructor
+        
+        # Conflict Check
+        isConflict = Schedule.objects.filter(
+            instructor=instructor,
+            dayOfWeek=newDay,
+            status='finalized'
+        ).exclude(scheduleId=scheduleId).filter(
+            startTime__lt=newEndTime,
+            endTime__gt=newStartTime
+        ).exists()
+
+        if isConflict:
+            return JsonResponse({
+                'success': False, 
+                'message': f"Conflict! {instructor.full_name} is already teaching at this time."
+            })
+
+        sched.dayOfWeek = newDay
+        sched.startTime = newStartTime
+        sched.endTime = newEndTime
+        sched.save()
+        
+        return JsonResponse({'success': True})
+
+    except Schedule.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Schedule not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})

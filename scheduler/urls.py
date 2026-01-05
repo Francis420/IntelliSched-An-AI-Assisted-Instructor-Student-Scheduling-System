@@ -15,5 +15,7 @@ urlpatterns = [
     path("roomUtilization/", views.roomUtilization, name="roomUtilization"),
     path('instructor/workload/preview/', views.previewWorkload, name='previewWorkload'),
     path('instructor/workload/exportInstructorWorkload/', views.exportWorkloadExcel, name='exportWorkloadExcel'),
-    path('schedules/sections/', views.sectionSchedules, name='sectionSchedules'),
+    path('sectionBlockScheduler/', views.sectionBlockScheduler, name='sectionBlockScheduler'),
+    path('api/getInstructorConflicts/', views.getInstructorConflicts, name='getInstructorConflicts'),
+    path('api/updateScheduleSlot/', views.updateScheduleSlot, name='updateScheduleSlot'),
 ]
