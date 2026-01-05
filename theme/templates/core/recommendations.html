@@ -1,127 +1,123 @@
-{% extends "base.html" %}
-{% load static %}
+{% extends 'base.html' %}
 
 {% block content %}
-
-<div class="min-h-screen bg-gray-50 p-6 md:p-10">
-    <div class="max-w-7xl mx-auto">
-        
-        <div class="mb-8">
-            <h1 class="text-3xl font-bold text-gray-800 flex items-center gap-3">
-                <span>🎯 Instructor Recommendations</span>
-            </h1>
+<div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Faculty Development Plan</h1>
+            <p class="text-gray-600 text-sm mt-1">
+                Strategic growth recommendations based on credentials, tenure, and industry history.
+            </p>
         </div>
 
-        <div class="bg-white shadow-md rounded-xl p-6 mb-8 border border-gray-100">
-            <form method="GET" action="{% url 'recommendations' %}" class="flex flex-col md:flex-row items-center gap-4">
-                <div class="w-full md:w-1/2">
-                    <label for="subject_id" class="block text-sm font-medium text-gray-700 mb-1">Target Subject</label>
-                    <select name="subject_id" id="subject_id" onchange="this.form.submit()" 
-                            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2.5 px-3">
-                        <option value="">-- Select a Subject --</option>
-                        {% for sub in subjects %}
-                            <option value="{{ sub.subjectId }}" {% if target_subject and target_subject.subjectId == sub.subjectId %}selected{% endif %}>
-                                {{ sub.code }} - {{ sub.name }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </form>
-        </div>
-
-        {% if target_subject %}
-            <div class="bg-white shadow-lg rounded-xl overflow-hidden border border-gray-200">
-                <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                    <h2 class="text-xl font-bold text-gray-800">
-                        Top Candidates for <span class="text-blue-600">{{ target_subject.code }}</span>
-                    </h2>
-                    <span class="text-sm text-gray-500">{{ recommendations|length }} candidates found</span>
-                </div>
-
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-gray-50 text-gray-600 text-sm uppercase tracking-wider">
-                                <th class="p-4 font-semibold border-b">Rank</th>
-                                <th class="p-4 font-semibold border-b">Instructor</th>
-                                <th class="p-4 font-semibold border-b text-center">Total Score</th>
-                                <th class="p-4 font-semibold border-b">Match Breakdown</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-100">
-                            {% for rec in recommendations %}
-                            <tr class="hover:bg-blue-50 transition-colors duration-150 group">
-                                <td class="p-4 align-top">
-                                    <div class="flex flex-col items-start gap-1">
-                                        <span class="font-bold text-gray-400">#{{ forloop.counter }}</span>
-                                        {% if rec.rank == 'Professor' %}
-                                            <span class="px-2 py-1 text-xs font-bold text-purple-700 bg-purple-100 rounded-full">Professor</span>
-                                        {% elif rec.rank == 'Associate Professor' %}
-                                            <span class="px-2 py-1 text-xs font-bold text-indigo-700 bg-indigo-100 rounded-full">Assoc. Prof</span>
-                                        {% elif rec.rank == 'Assistant Professor' %}
-                                            <span class="px-2 py-1 text-xs font-bold text-blue-700 bg-blue-100 rounded-full">Asst. Prof</span>
-                                        {% else %}
-                                            <span class="px-2 py-1 text-xs font-bold text-gray-700 bg-gray-100 rounded-full">{{ rec.rank }}</span>
-                                        {% endif %}
-                                    </div>
-                                </td>
-
-                                <td class="p-4 align-top">
-                                    <div class="font-bold text-gray-800 text-lg">{{ rec.instructor.full_name }}</div>
-                                    
-                                    {% if rec.past_teaching_count > 0 %}
-                                    <div class="mt-2 text-xs text-green-600 font-medium flex items-center gap-1">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                        Taught {{ rec.past_teaching_count }} times previously
-                                    </div>
-                                    {% endif %}
-                                </td>
-
-                                <td class="p-4 align-top text-center">
-                                    <div class="inline-block bg-blue-600 text-white font-bold text-2xl rounded-lg px-4 py-2 shadow-sm">
-                                        {{ rec.score }}
-                                    </div>
-                                </td>
-
-                                <td class="p-4 align-top">
-                                    <ul class="space-y-1 text-sm text-gray-600">
-                                        {% for detail in rec.match_details %}
-                                            <li class="flex items-start gap-2">
-                                                <span class="text-green-500 mt-1">✓</span>
-                                                <span>{{ detail }}</span>
-                                            </li>
-                                        {% empty %}
-                                            <li class="text-gray-400 italic">No specific match factors found.</li>
-                                        {% endfor %}
-                                    </ul>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="4" class="p-12 text-center text-gray-500">
-                                    <div class="flex flex-col items-center">
-                                        <svg class="w-12 h-12 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                        <p class="text-lg font-medium">No instructors found.</p>
-                                        <p class="text-sm">Try checking if credentials and experiences are properly logged.</p>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+        <form method="GET" class="flex flex-col sm:flex-row gap-3 bg-white p-2 rounded-xl border border-gray-200 shadow-sm">
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </span>
+                <input type="text" name="q" value="{{ search_query }}" placeholder="Search faculty or subject..." 
+                       class="pl-9 pr-4 py-2 text-sm border-none ring-0 focus:ring-0 text-gray-700 bg-transparent w-full sm:w-48 placeholder-gray-400 outline-none">
             </div>
-        
-        {% else %}
-            <div class="flex flex-col items-center justify-center p-12 bg-white border-2 border-dashed border-gray-300 rounded-xl text-center">
-                <svg class="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                </svg>
-                <h3 class="text-xl font-medium text-gray-900">Select a Subject to Begin</h3>
-                <p class="text-gray-500 mt-1">Choose a subject above to see AI-ranked instructor recommendations.</p>
-            </div>
-        {% endif %}
 
+            <div class="border-l border-gray-200 pl-3">
+                <select name="type" onchange="this.form.submit()" class="py-2 pl-2 pr-8 text-sm border-none bg-transparent focus:ring-0 text-gray-700 font-medium cursor-pointer outline-none">
+                    <option value="">All Types</option>
+                    {% for type in unique_types %}
+                        <option value="{{ type }}" {% if current_type == type %}selected{% endif %}>{{ type }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            {% if search_query or current_type %}
+                <a href="{% url 'recommendations' %}" class="flex items-center justify-center px-3 text-red-500 hover:bg-red-50 rounded-lg transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </a>
+            {% endif %}
+        </form>
     </div>
+
+    {% if recommendations %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for rec in recommendations %}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow flex flex-col h-full">
+                <div class="h-1.5 w-full bg-{{ rec.color }}-500"></div>
+                
+                <div class="p-5 flex-1 flex flex-col">
+                    <div class="flex justify-between items-start mb-4">
+                        <span class="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-{{ rec.color }}-700 bg-{{ rec.color }}-50 rounded-md border border-{{ rec.color }}-100">
+                            {{ rec.type }}
+                        </span>
+                        {% if rec.priority == 'High' %}
+                            <span class="text-[10px] font-bold text-red-600 flex items-center gap-1">
+                                <span class="relative flex h-2 w-2">
+                                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                  <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                                </span>
+                                Priority
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <div class="flex items-center gap-3 mb-4 border-b border-gray-50 pb-4">
+                        <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold text-sm shrink-0">
+                            {{ rec.instructor.userlogin_set.first.user.firstName|first }}{{ rec.instructor.userlogin_set.first.user.lastName|first }}
+                        </div>
+                        <div class="overflow-hidden">
+                            <h3 class="text-sm font-bold text-gray-900 truncate">{{ rec.instructor.full_name }}</h3>
+                            <p class="text-xs text-gray-500 truncate">{{ rec.subject.code }} • {{ rec.subject.name|truncatechars:20 }}</p>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 mb-4">
+                        <h4 class="text-sm font-bold text-gray-800 mb-2">{{ rec.title }}</h4>
+                        <p class="text-xs text-gray-600 leading-relaxed bg-gray-50 p-3 rounded-lg border border-gray-100">
+                            {{ rec.reason }}
+                        </p>
+                        
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                                <svg class="w-3 h-3 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>
+                                {{ rec.metrics.degree }}
+                            </span>
+                            
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                                <svg class="w-3 h-3 mr-1 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                {{ rec.metrics.years }} yrs exp
+                            </span>
+
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-green-50 text-green-700 border border-green-100">
+                                <svg class="w-3 h-3 mr-1 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                {{ rec.metrics.industry }} jobs
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
+                        <span class="text-sm font-medium text-gray-500">
+                            Recommended Action:
+                        </span>
+                        <span class="px-3 py-1 rounded-full text-xs font-bold bg-{{ rec.color }}-100 text-{{ rec.color }}-800 cursor-default border border-{{ rec.color }}-200">
+                            {{ rec.action }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-dashed border-gray-300">
+            <div class="p-4 bg-gray-50 rounded-full mb-3">
+                <svg class="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                </svg>
+            </div>
+            <h3 class="text-sm font-medium text-gray-900">No Recommendations Found</h3>
+            <p class="mt-1 text-sm text-gray-500">Your faculty are well-aligned! Or try changing filters.</p>
+            {% if search_query or current_type %}
+                <a href="{% url 'recommendations' %}" class="mt-4 text-xs font-bold text-primary hover:underline">Clear Filters</a>
+            {% endif %}
+        </div>
+    {% endif %}
 </div>
 {% endblock %}

@@ -20,6 +20,10 @@ from instructors.models import (
     InstructorCredentials,
     InstructorLegacyExperience,
 )
+from aimatching.models import (
+    InstructorSubjectMatch,
+    InstructorSubjectMatchHistory,
+)
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import make_password
@@ -694,169 +698,204 @@ def studentAccountUpdate(request, userId):
 @has_role('deptHead')
 def recommendInstructors(request):
     """
-    Advanced recommendation system for assigning instructors to subjects.
-    Scores candidates based on:
-    1. Credentials (related to subject)
-    2. Combined Teaching History (Legacy + System Automation)
-    3. Professional Experience (Weighted by Type & Employment Status)
-    4. Recency & Rank
+    Generates professional development recommendations using:
+    1. REAL Profile Data (Academic Attainment, Rank, Max Years)
+    2. Accurate Experience Calculation (Max of Legacy + System Years)
     """
-    subject_id = request.GET.get("subject_id")
     
-    # OPTIMIZATION: Prefetch all related data to avoid hitting the DB inside the loop
-    instructors = Instructor.objects.filter(
-        userlogin__user__isActive=True
-    ).select_related('rank').prefetch_related(
-        'credentials',
-        'credentials__relatedSubjects',
-        'experiences',
-        'experiences__relatedSubjects',
-        'legacy_experiences',    # For manual history
-        'system_assignments'     # For automated history
-    ).distinct()
+    # --- GET FILTER PARAMETERS ---
+    search_query = request.GET.get('q', '')
+    filter_type = request.GET.get('type', '')
 
-    if not subject_id:
-        return render(request, "core/recommendations.html", {
-            "instructors": [], 
-            "subjects": Subject.objects.all()
-        })
+    # --- 1. DB QUERY ---
+    matches_query = InstructorSubjectMatch.objects.filter(
+        isLatest=True,
+        isRecommended=True
+    ).select_related(
+        'instructor', 
+        'subject',
+        'instructor__rank',               # e.g., "Instructor I"
+        'instructor__academicAttainment'  # e.g., "Doctorate Degree"
+    ).prefetch_related(
+        'instructor__userlogin_set__user',
+        'instructor__credentials',        # Secondary check
+        'instructor__experiences',        # Industry jobs
+        'instructor__legacy_experiences', # Manual History
+        'instructor__system_assignments__semester' # For accurate system counting
+    )
 
-    target_subject = get_object_or_404(Subject, subjectId=subject_id)
-    recommendations = []
+    if search_query:
+        matches_query = matches_query.filter(
+            Q(instructor__userlogin__user__firstName__icontains=search_query) |
+            Q(instructor__userlogin__user__lastName__icontains=search_query) |
+            Q(subject__code__icontains=search_query) |
+            Q(subject__description__icontains=search_query)
+        )
 
-    # --- WEIGHTS CONFIGURATION ---
-    WEIGHT_CREDENTIAL_MATCH = 20  
-    WEIGHT_PAST_TEACHING = 15     
-    WEIGHT_EXP_TEACHING = 3.0     # Per year for Academic roles
-    WEIGHT_EXP_INDUSTRY = 2.0     # Per year for Industry/Research
-    WEIGHT_EXP_GENERIC = 0.5      
-    BONUS_RECENCY = 5             
+    training_programs = []
     
-    # Employment Status Multipliers (FTE)
-    FTE_MULTIPLIER = {
-        'FT': 1.0,  # Full Time
-        'PT': 0.5,  # Part Time
-        'CT': 0.75, # Contractual
-    }
+    # --- HELPER: SUBJECT CATEGORY ---
+    def get_category(subject):
+        name = (subject.description or subject.name or "").lower()
+        if any(x in name for x in ['security', 'cyber', 'forensic']): return 'Security'
+        if any(x in name for x in ['blockchain', 'ai', 'intelligence', 'robotics']): return 'Emerging'
+        if any(x in name for x in ['programming', 'web', 'dev', 'software']): return 'Dev'
+        if any(x in name for x in ['history', 'ethics', 'society', 'gen ed']): return 'GenEd'
+        return 'Core_IT'
 
-    BONUS_RANK = {                
-        'Professor': 10,
-        'Associate Professor': 8,
-        'Assistant Professor': 6,
-        'Instructor': 2,
-    }
-
-    current_year = date.today().year
-
-    for inst in instructors:
-        score = 0
-        breakdown = [] 
-
-        # ---------------------------------------------------------
-        # 1. Credentials Score (Direct Subject Match)
-        # ---------------------------------------------------------
-        # Check if credential tags this subject in 'relatedSubjects'
-        relevant_creds = [c for c in inst.credentials.all() if target_subject in c.relatedSubjects.all()]
-        count_creds = len(relevant_creds)
+    for match in matches_query:
+        instructor = match.instructor
+        subject = match.subject
+        category = get_category(subject)
         
-        if count_creds > 0:
-            points = count_creds * WEIGHT_CREDENTIAL_MATCH
-            score += points
-            breakdown.append(f"+{points} pts: {count_creds} relevant credential(s)")
+        # --- A. ACCURATE DEGREE CHECK ---
+        # 1. Primary Source: Academic Attainment (The main dropdown in profile)
+        attainment_name = (instructor.academicAttainment.name if instructor.academicAttainment else "").lower()
+        
+        has_phd = 'doctor' in attainment_name or 'phd' in attainment_name
+        has_masters = 'master' in attainment_name
+        
+        # 2. Secondary Source: Credentials List (Backup if Attainment is N/A)
+        if not has_phd and not has_masters:
+            cred_types = [c.credentialType for c in instructor.credentials.all()]
+            has_phd = 'PhD' in cred_types
+            has_masters = 'Masters' in cred_types
 
-        # ---------------------------------------------------------
-        # 2. Combined Teaching History (Legacy + System)
-        # ---------------------------------------------------------
-        # A. Legacy Data (Manual Entry)
-        legacy_entry = next((l for l in inst.legacy_experiences.all() if l.subject_id == target_subject.subjectId), None)
-        legacy_count = legacy_entry.priorTimesTaught if legacy_entry else 0
+        # --- B. ACCURATE EXPERIENCE CALCULATION ---
         
-        # B. System Data (Automated via TeachingAssignment)
-        # Count how many times this instructor appears in the system history for this subject
-        system_count = len([a for a in inst.system_assignments.all() if a.subject_id == target_subject.subjectId])
+        # 1. Legacy Years: Use MAX, not Sum. 
+        # (If I taught 3 subjects for 1 year in 2024, my experience is 1 year, not 3).
+        legacy_years_list = [l.priorYearsExperience for l in instructor.legacy_experiences.all()]
+        legacy_years = max(legacy_years_list) if legacy_years_list else 0
         
-        total_taught = legacy_count + system_count
+        # 2. System Years: Count Unique Semesters / 2
+        unique_semesters = set(
+            a.semester.semesterId for a in instructor.system_assignments.all()
+        )
+        system_years = len(unique_semesters) / 2.0 
         
-        if total_taught > 0:
-            points = total_taught * WEIGHT_PAST_TEACHING
-            score += points
-            breakdown.append(f"+{points} pts: Taught {total_taught} times (Legacy: {legacy_count}, System: {system_count})")
+        # Total
+        total_teaching_years = float(legacy_years) + system_years
+        
+        # 3. Industry Experience
+        industry_jobs = [e for e in instructor.experiences.all() if e.experienceType == 'Industry']
+        industry_count = len(industry_jobs)
+        
+        # 4. Rank
+        rank_name = (instructor.rank.name if instructor.rank else "").lower()
+        is_senior = 'associate' in rank_name or 'professor' in rank_name
+        is_instructor_rank = 'instructor' in rank_name
 
-        # ---------------------------------------------------------
-        # 3. Weighted Professional Experience
-        # ---------------------------------------------------------
-        for exp in inst.experiences.all():
-            # A. Calculate Duration
-            start = exp.startDate.year
-            # Use 'isCurrent' flag for end date
-            if exp.isCurrent:
-                end = current_year
+        rec = None 
+
+        # --- C. DETERMINE RECOMMENDATION ---
+
+        # SCENARIO 1: PRACTITIONER (Needs Master's)
+        if industry_count >= 2 and not has_masters and not has_phd:
+            rec = {
+                'type': 'Formal Education',
+                'title': "Master's Degree Track",
+                'reason': f"Instructor has industry exp ({industry_count} roles) but needs a Master's (Current: {attainment_name or 'Bachelors'}) for tenure.",
+                'action': 'Faculty Scholarship',
+                'priority': 'High',
+                'color': 'red'
+            }
+
+        # SCENARIO 2: ACADEMIC (Has Degree, Needs Tech Skills)
+        elif (has_masters or has_phd) and industry_count == 0 and category in ['Dev', 'Security']:
+             rec = {
+                'type': 'Technical Workshop',
+                'title': 'Industry Immersion',
+                'reason': 'Instructor has advanced degrees but needs practical industry exposure.',
+                'action': 'Bootcamp',
+                'priority': 'Medium',
+                'color': 'orange'
+            }
+
+        # SCENARIO 3: VETERAN (Senior or >10 Years)
+        elif is_senior or total_teaching_years > 10:
+            if category == 'Emerging':
+                rec = {
+                    'type': 'Global Summit',
+                    'title': f'Tech Summit: {subject.code}',
+                    'reason': 'Senior faculty should attend global conferences to keep curriculum updated.',
+                    'action': 'Conference Funding',
+                    'priority': 'High',
+                    'color': 'indigo'
+                }
+            elif category == 'GenEd' and not has_phd:
+                 rec = {
+                    'type': 'Formal Education',
+                    'title': 'PhD Completion',
+                    'reason': 'Senior GenEd faculty required to complete Doctorate for accreditation.',
+                    'action': 'Dissertation Grant',
+                    'priority': 'High',
+                    'color': 'red'
+                }
             else:
-                end = exp.endDate.year if exp.endDate else current_year
-                
-            duration = max(0, (end - start) + 1) # Min 1 year if same year
+                 rec = {
+                    'type': 'Research & Publication',
+                    'title': 'Research Output',
+                    'reason': 'Senior faculty are expected to produce research outputs.',
+                    'action': 'Load Release',
+                    'priority': 'Low',
+                    'color': 'emerald'
+                }
 
-            # B. Determine Relevance
-            # Check if subject is linked M2M OR if title/desc contains subject name
-            is_relevant = False
-            if target_subject in exp.relatedSubjects.all():
-                is_relevant = True
-            elif target_subject.name.lower() in exp.title.lower() or target_subject.name.lower() in exp.description.lower():
-                is_relevant = True
+        # SCENARIO 4: STAGNANT (Long Service, Low Rank)
+        elif total_teaching_years > 5 and is_instructor_rank and has_masters:
+             rec = {
+                'type': 'Career Development',
+                'title': 'Promotion Review',
+                'reason': f'Instructor has served {total_teaching_years:.1f} years with a Master\'s but remains at Instructor rank.',
+                'action': 'HR Evaluation',
+                'priority': 'Medium',
+                'color': 'blue'
+            }
 
-            # C. Determine Weight based on New Categories
-            weight = WEIGHT_EXP_GENERIC
+        # SCENARIO 5: GENERAL UPGRADING
+        elif category in ['Dev', 'Core_IT']:
+            rec = {
+                'type': 'Skill Upgrading',
+                'title': f'Refresher: {subject.description}',
+                'reason': 'Recommended refresher seminar to stay updated with modern tools.',
+                'action': 'Attend Seminar',
+                'priority': 'Low',
+                'color': 'teal'
+            }
+
+        # --- APPEND ---
+        if rec:
+            rec['instructor'] = instructor
+            rec['subject'] = subject
             
-            # 'Academic Position' is high value (Pedagogy)
-            if exp.experienceType == 'Academic Position':
-                # We give full points for relevant academic exp, slightly less for generic
-                weight = WEIGHT_EXP_TEACHING if is_relevant else (WEIGHT_EXP_TEACHING * 0.5)
-            
-            # 'Industry', 'Research', 'Consultancy' only counts if relevant
-            elif exp.experienceType in ['Industry', 'Research Role', 'Consultancy'] and is_relevant:
-                weight = WEIGHT_EXP_INDUSTRY
-            
-            # 'Administrative' gets generic score
-            elif exp.experienceType == 'Administrative Role':
-                weight = WEIGHT_EXP_GENERIC
+            # Display Logic
+            if has_phd: degree_display = "PhD"
+            elif has_masters: degree_display = "Masters"
+            else: degree_display = "Bachelors"
 
-            # D. Apply FTE Multiplier (Full Time vs Part Time)
-            fte = FTE_MULTIPLIER.get(exp.employmentType, 1.0)
+            rec['metrics'] = {
+                'years': f"{total_teaching_years:.1f}",
+                'industry': industry_count,
+                'degree': degree_display,
+                'rank': instructor.rank.name if instructor.rank else "N/A"
+            }
+            training_programs.append(rec)
 
-            # Calculate
-            exp_points = duration * weight * fte
-            
-            if exp_points > 0:
-                score += exp_points
-                # Only add Recency Bonus if the experience is relevant/academic and recent (last 3 years)
-                if end >= (current_year - 3) and (is_relevant or exp.experienceType == 'Academic Position'):
-                    score += BONUS_RECENCY
+    # --- FILTERING ---
+    if filter_type:
+        training_programs = [t for t in training_programs if t['type'] == filter_type]
 
-        # ---------------------------------------------------------
-        # 4. Rank Bonus
-        # ---------------------------------------------------------
-        rank_name = inst.rank.name if inst.rank else "N/A"
-        rank_points = BONUS_RANK.get(rank_name, 0)
-        if rank_points > 0:
-            score += rank_points
+    unique_types = sorted(list(set(t['type'] for t in training_programs)))
 
-        # Final Object
-        recommendations.append({
-            "instructor": inst,
-            "score": round(score, 1),
-            "rank": rank_name,
-            "match_details": breakdown,
-            "past_teaching_count": total_taught
-        })
-
-    # Sort by Score Descending
-    recommendations.sort(key=lambda x: x['score'], reverse=True)
-
-    return render(request, "core/recommendations.html", {
-        "target_subject": target_subject,
-        "recommendations": recommendations,
-        "subjects": Subject.objects.all()
-    })
+    context = {
+        'recommendations': training_programs,
+        'unique_types': unique_types,
+        'current_type': filter_type,
+        'search_query': search_query,
+    }
+    
+    return render(request, 'core/recommendations.html', context)
 
 
 @login_required
