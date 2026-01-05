@@ -8,7 +8,9 @@
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        
         <div class="space-y-6">
+            
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 text-center">
                 <div class="mb-4">
                     {% if user.profilePic %}
@@ -20,6 +22,7 @@
                     {% endif %}
                 </div>
                 <h2 class="text-lg font-bold text-gray-800">{{ user.firstName }} {{ user.lastName }}</h2>
+                
                 <div class="mt-4 pt-4 border-t border-gray-100 text-left space-y-3">
                     <div class="flex justify-between text-sm">
                         <span class="text-gray-500">Instructor ID:</span>
@@ -42,9 +45,49 @@
                     </div>
                 </div>
             </div>
+
+            {% if user.is_superuser or isDeptHead %}
+            <div class="bg-emerald-50 p-6 rounded-2xl shadow-sm border border-emerald-200 text-center transition hover:shadow-md">
+                <div class="mb-3 inline-flex p-3 bg-white rounded-full text-emerald-600 shadow-sm border border-emerald-100">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                    </svg>
+                </div>
+                <h3 class="text-md font-bold text-gray-800 mb-1">Department Leadership</h3>
+                <p class="text-xs text-gray-600 mb-4">
+                    {% if user.is_superuser %}
+                        Manage assignment of the Department Head role.
+                    {% else %}
+                        Transfer your Department Head role to another instructor.
+                    {% endif %}
+                </p>
+                <a href="{% url 'manageDeptHead' %}" class="block w-full bg-emerald-600 text-white py-2 rounded-xl font-bold hover:bg-emerald-700 transition text-sm shadow-sm flex items-center justify-center gap-2">
+                    {% if user.is_superuser %}Manage Role{% else %}Transfer Role{% endif %}
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                </a>
+            </div>
+
+            <div class="bg-indigo-50 p-6 rounded-2xl shadow-sm border border-indigo-100 text-center transition hover:shadow-md">
+                <div class="mb-3 inline-flex p-3 bg-white rounded-full text-indigo-600 shadow-sm border border-indigo-100">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                    </svg>
+                </div>
+                <h3 class="text-md font-bold text-gray-800 mb-1">System Audit Log</h3>
+                <p class="text-xs text-gray-600 mb-4">
+                    Review history of data changes, user logins, and system activities.
+                </p>
+                <a href="{% url 'auditlogView' %}" class="block w-full bg-indigo-600 text-white py-2 rounded-xl font-bold hover:bg-indigo-700 transition text-sm shadow-sm flex items-center justify-center gap-2">
+                    View Activity
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                </a>
+            </div>
+            {% endif %}
+
         </div>
 
         <div class="md:col-span-2 space-y-6">
+            
             <form method="POST" enctype="multipart/form-data" class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                 {% csrf_token %}
                 <h3 class="text-lg font-semibold text-gray-800 mb-4">Personal Information</h3>
@@ -85,9 +128,12 @@
                     {% for field in password_form %}
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}</label>
-                            <input type="password" name="{{ field.name }}" class="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-red-500 outline-none">
+                            <input type="{{ field.field.widget.input_type }}" name="{{ field.name }}" id="{{ field.id_for_label }}" class="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-red-500 outline-none">
                             {% if field.errors %}
                                 <p class="text-red-500 text-xs mt-1">{{ field.errors.0 }}</p>
+                            {% endif %}
+                            {% if field.help_text %}
+                                <p class="text-gray-400 text-[10px] mt-1">{{ field.help_text|safe }}</p>
                             {% endif %}
                         </div>
                     {% endfor %}
@@ -133,34 +179,6 @@
                 }
             });
         });
-
-        const pass1 = $('#id_new_password1');
-        const pass2 = $('#id_new_password2');
-        
-        // Create a status element for password matching
-        pass2.after('<div id="pass-status" class="text-xs mt-1"></div>');
-        const passStatus = $('#pass-status');
-
-        function checkPasswords() {
-            const p1 = pass1.val();
-            const p2 = pass2.val();
-
-            if (p2.length === 0) {
-                passStatus.text('');
-                return;
-            }
-
-            if (p1 === p2) {
-                passStatus.text('✅ Passwords match').addClass('text-green-500').removeClass('text-red-500');
-                pass2.addClass('border-green-500').removeClass('border-red-500');
-            } else {
-                passStatus.text('❌ Passwords do not match').addClass('text-red-500').removeClass('text-green-500');
-                pass2.addClass('border-red-500').removeClass('border-green-500');
-            }
-        }
-
-        pass1.on('keyup', checkPasswords);
-        pass2.on('keyup', checkPasswords);
     });
 </script>
 {% endblock %}

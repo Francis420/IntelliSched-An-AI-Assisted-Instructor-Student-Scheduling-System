@@ -24,6 +24,9 @@ def has_role(required_role):
             user = request.user
             if not user.is_authenticated:
                 raise PermissionDenied()
+            
+            if user.is_superuser:
+                return view_func(request, *args, **kwargs)
 
             if user.roles.filter(name=required_role).exists():
                 return view_func(request, *args, **kwargs)

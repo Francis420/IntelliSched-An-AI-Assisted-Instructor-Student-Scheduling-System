@@ -1,5 +1,5 @@
 from django import forms
-from .models import User
+from .models import User, Instructor
 
 class InstructorProfileForm(forms.ModelForm):
     class Meta:
@@ -19,3 +19,30 @@ class InstructorProfileForm(forms.ModelForm):
         if User.objects.filter(username=username).exclude(pk=self.instance.pk).exists():
             raise forms.ValidationError("This username is already taken. Please choose another one.")
         return username
+    
+class InstructorChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        # This uses the 'full_name' property from your Instructor model
+        return f"{obj.full_name} ({obj.instructorId})" 
+
+class DepartmentHeadAssignmentForm(forms.Form):
+    # 2. Use the custom field here instead of forms.ModelChoiceField
+    newHead = InstructorChoiceField(
+        queryset=Instructor.objects.filter(
+            userlogin__user__isActive=True
+        ).select_related().order_by('instructorId'), # Added select_related for performance
+        label="Select New Department Head",
+        widget=forms.Select(attrs={
+            'class': 'w-full p-2 border border-emerald-300 rounded focus:ring-2 focus:ring-emerald-500 outline-none bg-white text-sm'
+        }),
+        empty_label="-- Choose an Instructor --"
+    )
+    
+    confirmPassword = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'class': 'w-full p-2 border border-emerald-300 rounded focus:ring-2 focus:ring-emerald-500 outline-none bg-white text-sm',
+            'placeholder': 'Enter your password to confirm transfer'
+        }),
+        label="Confirm Password",
+        required=False
+    )

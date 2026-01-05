@@ -2,8 +2,9 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.db import transaction
-from scheduling.models import Schedule, Semester, Section, Room, Curriculum, GenEdSchedule
+from scheduling.models import Schedule, Semester, Section, Room, Curriculum, GenEdSchedule, InstructorSchedulingConfiguration
 from core.models import Instructor, UserLogin, User
+from aimatching.models import InstructorSubjectMatch
 from django.contrib.auth.decorators import login_required
 from collections import defaultdict
 from django.http import JsonResponse
@@ -606,186 +607,6 @@ def scheduler_status(request):
     })
 
 
-@login_required
-@has_role('deptHead')
-def roomUtilization(request):
-    # 1. Retrieve or Default Semester ID
-    semester_id = request.GET.get("semester")
-    if not semester_id:
-        latest_semester = Semester.objects.order_by("-createdAt").first()
-        if latest_semester:
-            semester_id = str(latest_semester.semesterId)
-        else:
-            return render(request, "scheduler/roomUtilization.html", {"error": "No semesters found."})
-
-    # 2. Get Filter Parameters (Room)
-    selected_room_code = request.GET.get("room_code", "All")
-
-    # 3. Fetch Data for Selectors
-    all_rooms = Room.objects.all().order_by('roomCode')
-    
-    # 4. Fetch Schedules (Strictly FINALIZED)
-    schedules = Schedule.objects.filter(
-        semester__semesterId=semester_id,
-        status='finalized'
-    ).select_related(
-        'room', 'subject', 'section'
-    ).exclude(
-        room__isnull=True 
-    )
-
-    if selected_room_code != "All":
-        schedules = schedules.filter(room__roomCode=selected_room_code)
-
-    # 5. Prepare Timetable Structure
-    schedule_list = list(schedules) 
-    
-    if not schedule_list:
-        min_time = time(7, 0)
-        max_time = time(19, 0)
-    else:
-        min_hour = min(s.startTime.hour for s in schedule_list)
-        max_hour = max(s.endTime.hour for s in schedule_list)
-        min_time = time(max(0, min_hour - 1), 0)
-        max_time = time(min(23, max_hour + 1), 0)
-
-    start_dt = datetime.combine(datetime.today(), min_time)
-    if start_dt.minute >= 30:
-        start_dt = start_dt.replace(minute=30, second=0, microsecond=0)
-    else:
-        start_dt = start_dt.replace(minute=0, second=0, microsecond=0)
-
-    end_dt = datetime.combine(datetime.today(), max_time)
-    if end_dt.minute > 30:
-        end_dt = end_dt + timedelta(hours=1).replace(minute=0, second=0, microsecond=0)
-    elif end_dt.minute > 0:
-        end_dt = end_dt.replace(minute=30, second=0, microsecond=0)
-    
-    time_slots_display = []
-    current_dt = start_dt
-    while current_dt < end_dt:
-        time_slots_display.append(current_dt.strftime('%I:%M %p'))
-        current_dt += timedelta(minutes=30)
-    
-    DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-
-    raw_room_data = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
-
-    # --- COLOR PALETTE SETUP ---
-    color_palette = [
-        'bg-blue-600', 'bg-red-600', 'bg-emerald-600', 'bg-purple-600', 
-        'bg-orange-600', 'bg-teal-600', 'bg-pink-600', 'bg-indigo-600', 
-        'bg-cyan-600', 'bg-rose-600', 'bg-amber-600', 'bg-lime-600'
-    ]
-    section_color_map = {}
-    color_index = 0
-
-    for s in schedule_list:
-        if s.dayOfWeek not in DAYS_OF_WEEK:
-            continue
-        
-        sched_start_dt = datetime.combine(datetime.today(), s.startTime)
-        sched_end_dt = datetime.combine(datetime.today(), s.endTime)
-        if sched_end_dt < sched_start_dt:
-             sched_end_dt += timedelta(days=1)
-        
-        # --- SECTION LABEL LOGIC ---
-        subject_code = s.subject.code
-        year_level = ""
-        match_year = re.search(r'\d', subject_code)
-        if match_year:
-            year_level = match_year.group()
-        
-        raw_section = s.section.sectionCode
-        if '-' in raw_section:
-            section_letter = raw_section.split('-')[-1].strip()
-        else:
-            section_letter = raw_section.strip()
-            
-        section_label = f"{year_level}{section_letter}" 
-        # ---------------------------
-
-        # ### --- COLOR ASSIGNMENT LOGIC --- ###
-        # Create unique key based on Subject Code + Section (e.g., "IT101_1B")
-        unique_key = f"{subject_code} - {section_label}"
-
-        if unique_key not in section_color_map:
-            section_color_map[unique_key] = color_palette[color_index % len(color_palette)]
-            color_index += 1
-        
-        assigned_color_class = section_color_map[unique_key]
-        assigned_hover_class = assigned_color_class.replace('600', '700')
-        # ----------------------------------------
-        
-        current_slot_dt = start_dt
-        slot_index = 0
-        
-        while current_slot_dt < end_dt:
-            slot_end_dt = current_slot_dt + timedelta(minutes=30)
-            slot_time_str = time_slots_display[slot_index]
-
-            if sched_start_dt < slot_end_dt and sched_end_dt > current_slot_dt:
-                rowspan = int(s.duration_minutes / 30)
-                
-                raw_room_data[s.room.roomCode][s.dayOfWeek][slot_time_str].append({
-                    'subject_code': s.subject.code,
-                    'section_label': section_label,
-                    'start_time': s.startTime.strftime('%I:%M %p'),
-                    'end_time': s.endTime.strftime('%I:%M %p'),
-                    'rowspan': rowspan,
-                    'height_px': rowspan * 40, 
-                    'is_start_slot': (sched_start_dt >= current_slot_dt and sched_start_dt < slot_end_dt) or (current_slot_dt == start_dt and sched_start_dt < start_dt),
-                    
-                    # Pass colors to template
-                    'color_class': assigned_color_class,
-                    'hover_class': assigned_hover_class
-                })
-            
-            current_slot_dt = slot_end_dt
-            slot_index += 1
-
-    # 6. Finalize Data Structure
-    final_room_data = []
-    
-    if selected_room_code != "All":
-        rooms_to_process = [r for r in all_rooms if r.roomCode == selected_room_code]
-    else:
-        active_room_codes = sorted(raw_room_data.keys())
-        rooms_to_process = [r for r in all_rooms if r.roomCode in active_room_codes]
-
-    for room_obj in rooms_to_process:
-        room_code = room_obj.roomCode
-        
-        matrix = []
-        for time_slot in time_slots_display:
-            row_data = {'time': time_slot, 'days': []}
-            for day in DAYS_OF_WEEK:
-                schedules_in_cell = raw_room_data[room_code][day][time_slot]
-                row_data['days'].append(schedules_in_cell)
-            matrix.append(row_data)
-            
-        final_room_data.append({
-            'code': room_code,
-            'name': room_obj.roomCode, 
-            'capacity': room_obj.capacity,
-            'type': room_obj.get_type_display(), 
-            'matrix': matrix,
-        })
-    
-    semesters = Semester.objects.all().order_by("-createdAt")
-
-    context = {
-        'current_semester_id': semester_id,
-        'selected_room_code': selected_room_code,
-        'all_rooms': all_rooms,
-        'room_data': final_room_data,
-        'days_of_week': DAYS_OF_WEEK,
-        'semesters': semesters, 
-    }
-
-    return render(request, "scheduler/roomUtilization.html", context)
-
-
 # PDF export
 # Helper to merge multiple schedule blocks for the same subject/section
 def format_number(num):
@@ -1151,7 +972,13 @@ def previewWorkload(request):
 
     curriculum = Curriculum.objects.filter(isActive=True).order_by('-createdAt').first()
     
-    dept_head_obj = Instructor.objects.filter(designation__designationId=5).first()
+    candidates = Instructor.objects.filter(
+        userlogin__user__roles__name='deptHead',
+        userlogin__user__isActive=True
+    )
+
+
+    dept_head_obj = candidates.order_by('userlogin__user__is_superuser').first()
     dept_head_name = dept_head_obj.full_name.upper() if dept_head_obj else "TBA"
 
     # --- INVOLVEMENT LOGIC (Use Helper) ---
@@ -1429,28 +1256,151 @@ def sectionBlockScheduler(request):
     return render(request, 'scheduler/sectionBlockScheduler.html', context)
 
 
+
+@login_required
+@has_role('deptHead')
+def roomScheduler(request):
+    rooms = Room.objects.filter(isActive=True).order_by('building', 'roomCode')
+    
+    selected_room_id = request.GET.get('room')
+    selected_room_label = ""
+    schedules = []
+
+    # A. Fetch Selected Room Data
+    if selected_room_id:
+        try:
+            current_room = rooms.get(roomId=selected_room_id)
+            selected_room_label = f"{current_room.roomCode} - {current_room.building}"
+
+            schedules_qs = Schedule.objects.filter(
+                status='finalized',
+                room=current_room
+            ).select_related('subject', 'instructor', 'section')
+
+            for sched in schedules_qs:
+                # 1. Format Section Name: "IT 101 - 2B"
+                raw = str(sched.section.sectionCode).strip()
+                letter = raw.split('-')[-1].strip() if '-' in raw else raw
+                sched.formatted_section = f"{sched.subject.yearLevel}{letter}" 
+                
+                # 2. FIX: Map 'scheduleType' to 'type' for the Template
+                if sched.scheduleType == 'lab':
+                    sched.type = "Laboratory"
+                else:
+                    sched.type = "Lecture"
+
+                schedules.append(sched)
+
+        except Room.DoesNotExist:
+            pass
+
+    # B. POPULATE SIDEBAR (TBA or NULL rooms)
+    tba_qs = Schedule.objects.filter(
+        status='finalized'
+    ).filter(
+        Q(room__roomCode='TBA') | Q(room__isnull=True)
+    ).select_related('subject', 'instructor', 'section').order_by('subject__code')
+
+    tba_schedules = []
+    for sched in tba_qs:
+        # 1. Format Section
+        raw = str(sched.section.sectionCode).strip()
+        letter = raw.split('-')[-1].strip() if '-' in raw else raw
+        sched.formatted_section = f"{sched.subject.yearLevel}{letter}"
+        
+        # 2. FIX: Map 'scheduleType' to 'type' for Sidebar items too
+        if sched.scheduleType == 'lab':
+            sched.type = "Laboratory"
+        else:
+            sched.type = "Lecture"
+
+        tba_schedules.append(sched)
+
+    # Standard Times (7am - 9pm)
+    time_slots = [time(h, 0) for h in range(7, 21)]
+
+    context = {
+        'rooms': rooms,
+        'selectedRoomId': int(selected_room_id) if selected_room_id else None,
+        'selectedRoomLabel': selected_room_label,
+        'schedules': schedules,
+        'tba_schedules': tba_schedules,
+        'days': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+        'times': time_slots
+    }
+    
+    return render(request, 'scheduler/roomScheduler.html', context)
+
+
+
+@login_required
+@has_role('deptHead')
 def getInstructorConflicts(request):
+    """
+    Returns 'busySlots' for BOTH the Instructor AND the Section (Students).
+    Used to draw the red 'BUSY' boxes on the grid.
+    """
     instructorId = request.GET.get('instructorId')
     currentScheduleId = request.GET.get('scheduleId')
     
-    if not instructorId:
-        return JsonResponse({'busySlots': []})
-
-    conflicts = Schedule.objects.filter(
-        instructor_id=instructorId,
-        status='finalized'
-    ).exclude(scheduleId=currentScheduleId)
-    
     busySlots = []
-    for c in conflicts:
-        busySlots.append({
-            'day': c.dayOfWeek,
-            'startTime': c.startTime.strftime("%H:%M"),
-            'endTime': c.endTime.strftime("%H:%M"),
-            'reason': f"Teaching {c.section.yearLevel}-{c.section.sectionCode}" 
-        })
+    
+    try:
+        # Get the schedule we are currently moving
+        current_sched = Schedule.objects.get(scheduleId=currentScheduleId)
         
+        # --- A. INSTRUCTOR CONFLICTS ---
+        if instructorId:
+            inst_conflicts = Schedule.objects.filter(
+                instructor_id=instructorId,
+                status='finalized'
+            ).exclude(scheduleId=currentScheduleId).select_related('subject', 'section')
+
+            for c in inst_conflicts:
+                # Parse section name again for the error message
+                raw = str(c.section.sectionCode).strip()
+                letter = raw.split('-')[-1].strip() if '-' in raw else raw
+                short_sec = f"{c.subject.yearLevel}{letter}"
+                
+                busySlots.append({
+                    'day': c.dayOfWeek,
+                    'startTime': c.startTime.strftime("%H:%M"),
+                    'endTime': c.endTime.strftime("%H:%M"),
+                    'reason': f"Instructor teaching {c.subject.code} - {short_sec}"
+                })
+
+        # --- B. SECTION (STUDENT) CONFLICTS ---
+        # Find where else this specific Block (e.g., 2B) is right now
+        current_year = current_sched.section.subject.yearLevel
+        raw_code = str(current_sched.section.sectionCode).strip()
+        block_letter = raw_code.split('-')[-1].strip() if '-' in raw_code else raw_code
+
+        section_conflicts = Schedule.objects.filter(
+            status='finalized',
+            section__subject__yearLevel=current_year, # Same Year
+            dayOfWeek__in=['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] # Safety check
+        ).filter(
+            # Match Block Letter (handles "B" or "Subject-B")
+            Q(section__sectionCode=block_letter) |
+            Q(section__sectionCode__endswith=f"-{block_letter}")
+        ).exclude(scheduleId=currentScheduleId).select_related('subject', 'room')
+
+        for s in section_conflicts:
+            room_name = s.room.roomCode if s.room else "TBA"
+            reason = f"Section {current_year}{block_letter} is taking {s.subject.code} in {room_name}"
+
+            busySlots.append({
+                'day': s.dayOfWeek,
+                'startTime': s.startTime.strftime("%H:%M"),
+                'endTime': s.endTime.strftime("%H:%M"),
+                'reason': reason
+            })
+
+    except Exception as e:
+        print(f"Error checking conflicts: {e}")
+
     return JsonResponse({'busySlots': busySlots})
+
 
 
 @login_required
@@ -1462,26 +1412,133 @@ def updateScheduleSlot(request):
         newDay = data.get('day')
         newStartTime = data.get('startTime')
         newEndTime = data.get('endTime')
-        
+        newRoomId = data.get('roomId') 
+        newInstructorId = data.get('instructorId')
+        forceSwap = data.get('forceSwap', False)
+
         sched = Schedule.objects.get(scheduleId=scheduleId)
-        instructor = sched.instructor
         
-        # Conflict Check
-        isConflict = Schedule.objects.filter(
-            instructor=instructor,
+        # --- 1. DETERMINE TARGETS ---
+        
+        # A. INSTRUCTOR
+        if newInstructorId == 'UNASSIGN':
+            target_instructor = None
+        elif newInstructorId:
+            target_instructor = Instructor.objects.get(instructorId=newInstructorId)
+        else:
+            target_instructor = sched.instructor 
+
+        # B. ROOM (Modified Logic)
+        if newRoomId == 'TBA':
+             try: target_room = Room.objects.get(roomCode='TBA')
+             except: target_room = None
+        elif newRoomId:
+             # Room explicitly provided (e.g., dragging in Room Scheduler)
+             target_room = Room.objects.get(roomId=newRoomId)
+        else:
+             # Room NOT provided (e.g., dragging in Instructor Load View)
+             
+             # CHECK: Are we moving the time?
+             is_time_change = (newDay is not None) or (newStartTime is not None)
+             
+             if is_time_change:
+                 # USER REQUEST: If moving to a new time in Instructor View, 
+                 # auto-drop to TBA to avoid conflicts in the old room.
+                 try: target_room = Room.objects.get(roomCode='TBA')
+                 except: target_room = None
+             else:
+                 # Just changing instructor (unassign/assign) without moving time
+                 target_room = sched.room
+
+        # --- 2. TBA BYPASS ---
+        # If target is TBA, we skip conflict checks for the room
+        is_tba = (target_room is None) or (target_room.roomCode == 'TBA')
+
+        if is_tba:
+             sched.room = target_room
+             if newInstructorId is not None: sched.instructor = target_instructor
+             if newDay: sched.dayOfWeek = newDay
+             if newStartTime: sched.startTime = newStartTime
+             if newEndTime: sched.endTime = newEndTime
+             sched.save()
+             return JsonResponse({'success': True})
+
+        # --- 3. CONFLICT CHECKS (Only runs if Room is NOT TBA) ---
+        
+        # Check A: Instructor Conflict
+        if target_instructor:
+            instructor_conflict = Schedule.objects.filter(
+                instructor=target_instructor,
+                dayOfWeek=newDay,
+                status='finalized'
+            ).exclude(scheduleId=scheduleId).filter(
+                startTime__lt=newEndTime,
+                endTime__gt=newStartTime
+            ).select_related('subject', 'section').first()
+
+            if instructor_conflict:
+                c_raw = str(instructor_conflict.section.sectionCode).strip()
+                c_letter = c_raw.split('-')[-1].strip() if '-' in c_raw else c_raw
+                return JsonResponse({
+                    'success': False, 
+                    'message': f"Instructor Conflict! {target_instructor.full_name} is already teaching {instructor_conflict.subject.code} ({instructor_conflict.subject.yearLevel}{c_letter})."
+                })
+
+        # Check B: Section Conflict
+        current_year = sched.section.subject.yearLevel
+        raw_code = str(sched.section.sectionCode).strip()
+        block_letter = raw_code.split('-')[-1].strip() if '-' in raw_code else raw_code
+        formatted_block = f"{current_year}{block_letter}"
+
+        section_conflict = Schedule.objects.filter(
+            status='finalized',
             dayOfWeek=newDay,
-            status='finalized'
+            section__subject__yearLevel=current_year
+        ).filter(
+            Q(section__sectionCode=block_letter) |
+            Q(section__sectionCode__endswith=f"-{block_letter}")
         ).exclude(scheduleId=scheduleId).filter(
             startTime__lt=newEndTime,
             endTime__gt=newStartTime
-        ).exists()
+        ).select_related('subject', 'room').first()
 
-        if isConflict:
+        if section_conflict:
+            conflict_room = section_conflict.room.roomCode if section_conflict.room else "TBA"
             return JsonResponse({
-                'success': False, 
-                'message': f"Conflict! {instructor.full_name} is already teaching at this time."
+                'success': False,
+                'message': f"Student Conflict! Block {formatted_block} is already taking '{section_conflict.subject.code}' in {conflict_room}."
             })
 
+        # Check C: Room Conflict (Standard Check)
+        if target_room: 
+            room_conflict = Schedule.objects.filter(
+                room=target_room,
+                dayOfWeek=newDay,
+                status='finalized'
+            ).exclude(scheduleId=scheduleId).filter(
+                startTime__lt=newEndTime,
+                endTime__gt=newStartTime
+            ).select_related('subject', 'section').first()
+
+            if room_conflict:
+                if forceSwap:
+                    # Swap Logic: Move occupant to TBA
+                    try: tba = Room.objects.get(roomCode="TBA")
+                    except: tba = None
+                    room_conflict.room = tba
+                    room_conflict.save()
+                else:
+                    c_raw = str(room_conflict.section.sectionCode).strip()
+                    c_letter = c_raw.split('-')[-1].strip() if '-' in c_raw else c_raw
+                    return JsonResponse({
+                        'success': False,
+                        'needSwapConfirmation': True,
+                        'message': f"Slot occupied by {room_conflict.subject.code} - {room_conflict.subject.yearLevel}{c_letter}. Swap and move them to TBA?"
+                    })
+
+        # --- 4. SAVE ---
+        if newInstructorId is not None: sched.instructor = target_instructor
+        sched.room = target_room
         sched.dayOfWeek = newDay
         sched.startTime = newStartTime
         sched.endTime = newEndTime
@@ -1489,7 +1546,201 @@ def updateScheduleSlot(request):
         
         return JsonResponse({'success': True})
 
-    except Schedule.DoesNotExist:
-        return JsonResponse({'success': False, 'message': 'Schedule not found'})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)})
+    
+
+def instructorLoad(request):
+    # Fetch active instructors
+    instructors = Instructor.objects.filter(
+        userlogin__user__isActive=True
+    ).distinct().order_by('instructorId')
+    
+    def get_instructor_name(inst):
+        login = inst.userlogin_set.select_related('user').first()
+        if login and login.user:
+            return login.user.get_full_name() 
+        return inst.instructorId
+
+    instructor_list = []
+    for inst in instructors:
+        instructor_list.append({
+            'instructorId': inst.instructorId,
+            'full_name': get_instructor_name(inst)
+        })
+    instructor_list.sort(key=lambda x: x['full_name'])
+
+    selected_instructor_id = request.GET.get('instructor')
+    selected_instructor_label = ""
+    schedules = []
+    
+    # Defaults
+    current_load = 0.0
+    reg_limit = 15.0      
+    overload_cap = 0.0    
+    max_total_limit = 0.0 
+    load_status_color = "bg-emerald-500"
+
+    match_scores = {}
+    processed_load_keys = set()
+    top_matches = [] 
+
+    # 1. FETCH ACTIVE CONFIGURATION
+    # We defaults to safe values if no active config exists
+    config = InstructorSchedulingConfiguration.objects.filter(is_active=True).first()
+
+    if selected_instructor_id:
+        try:
+            current_instructor = instructors.get(instructorId=selected_instructor_id)
+            selected_instructor_label = get_instructor_name(current_instructor)
+            
+            # 2. FETCH MATCH SCORES
+            raw_matches = InstructorSubjectMatch.objects.filter(
+                instructor=current_instructor
+            ).select_related('subject', 'latestHistory').order_by('-generatedAt')
+
+            seen_subjects = set()
+            for m in raw_matches:
+                if m.subject.subjectId in seen_subjects:
+                    continue
+                seen_subjects.add(m.subject.subjectId)
+
+                final_score = 0
+                if m.latestHistory:
+                    c_score = m.latestHistory.confidenceScore
+                    # Handle 0.0-1.0 vs 0-100 scale
+                    if c_score <= 1.0: 
+                        final_score = round(c_score * 100, 1)
+                    else:
+                        final_score = round(c_score, 1)
+                
+                match_scores[m.subject.subjectId] = final_score
+                if final_score > 0: 
+                    top_matches.append({
+                        'code': m.subject.code,
+                        'score': final_score,
+                        'badge_color': 'green' if final_score >= 85 else 'yellow' if final_score >= 60 else 'gray'
+                    })
+            top_matches.sort(key=lambda x: x['score'], reverse=True)
+
+            # -------------------------------------------------------------
+            # 3. CALCULATE LOAD LIMITS (STRICT LOGIC APPLIED)
+            # -------------------------------------------------------------
+            emp_type = current_instructor.employmentType  # 'permanent', 'part-time', 'overload'
+
+            if emp_type == 'permanent':
+                # --- PERMANENT FACULTY ---
+                if current_instructor.designation:
+                    # Case 1: Has Designation
+                    # Normal Load -> Designation Instruction Hours
+                    reg_limit = float(current_instructor.designation.instructionHours)
+                    # Overload -> Config (With Designation)
+                    overload_cap = config.overload_limit_with_designation if config else 9.0
+                else:
+                    # Case 2: No Designation (Use Rank)
+                    # Normal Load -> Rank Instruction Hours
+                    if current_instructor.rank:
+                        reg_limit = float(current_instructor.rank.instructionHours)
+                    else:
+                        reg_limit = 18.0 # Fallback if rank is missing
+                    # Overload -> Config (No Designation)
+                    overload_cap = config.overload_limit_no_designation if config else 12.0
+
+            elif emp_type == 'part-time':
+                # --- PART-TIME FACULTY ---
+                reg_limit = config.part_time_normal_limit if config else 15.0
+                overload_cap = config.part_time_overload_limit if config else 0.0
+
+            elif emp_type == 'overload':
+                # --- PURE OVERLOAD / CONTRACTUAL ---
+                reg_limit = config.pure_overload_normal_limit if config else 0.0
+                overload_cap = config.pure_overload_max_limit if config else 12.0
+            
+            else:
+                # --- ON LEAVE / RETIRED ---
+                reg_limit = 0.0
+                overload_cap = 0.0
+
+            # Total Max Limit
+            max_total_limit = reg_limit + overload_cap
+
+            # 4. FETCH ASSIGNED SCHEDULES
+            schedules_qs = Schedule.objects.filter(
+                status='finalized',
+                instructor=current_instructor
+            ).select_related('subject', 'section', 'room')
+
+            for sched in schedules_qs:
+                raw = str(sched.section.sectionCode).strip()
+                letter = raw.split('-')[-1].strip() if '-' in raw else raw
+                sched.formatted_section = f"{sched.subject.yearLevel}{letter}" 
+                
+                if sched.scheduleType == 'lab':
+                    sched.type = "Laboratory"
+                    units_to_add = float(sched.subject.labHours) 
+                else:
+                    sched.type = "Lecture"
+                    units_to_add = float(sched.subject.lectureHours)
+                
+                load_key = (sched.section.sectionId, sched.scheduleType)
+                if load_key not in processed_load_keys:
+                    current_load += units_to_add
+                    processed_load_keys.add(load_key)
+
+                sched.match_score = match_scores.get(sched.subject.subjectId, 0)
+                schedules.append(sched)
+            
+            # 5. STATUS COLOR
+            if current_load > max_total_limit:
+                load_status_color = "bg-red-500"
+            elif current_load > reg_limit:
+                load_status_color = "bg-amber-500"
+            else:
+                load_status_color = "bg-emerald-500"
+
+        except Instructor.DoesNotExist:
+            pass
+
+    # Unassigned Sections
+    unassigned_qs = Schedule.objects.filter(
+        status='finalized',
+        instructor__isnull=True
+    ).select_related('subject', 'section', 'room').order_by('subject__code')
+
+    unassigned_schedules = []
+    for sched in unassigned_qs:
+        raw = str(sched.section.sectionCode).strip()
+        letter = raw.split('-')[-1].strip() if '-' in raw else raw
+        sched.formatted_section = f"{sched.subject.yearLevel}{letter}"
+        
+        if sched.scheduleType == 'lab':
+            sched.type = "Laboratory"
+        else:
+            sched.type = "Lecture"
+
+        if selected_instructor_id:
+            sched.match_score = match_scores.get(sched.subject.subjectId, 0)
+        else:
+            sched.match_score = 0
+
+        unassigned_schedules.append(sched)
+
+    time_slots = [time(h, 0) for h in range(7, 21)]
+
+    context = {
+        'instructors': instructor_list,
+        'selectedInstructorId': selected_instructor_id,
+        'selectedInstructorLabel': selected_instructor_label,
+        'schedules': schedules,
+        'unassigned_schedules': unassigned_schedules,
+        'top_matches': top_matches,
+        'days': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+        'times': time_slots,
+        'current_load': round(current_load, 2),
+        'reg_limit': round(reg_limit, 2),
+        'overload_cap': round(overload_cap, 2),
+        'max_limit': round(max_total_limit, 2),
+        'load_color': load_status_color
+    }
+    
+    return render(request, 'scheduler/instructorLoad.html', context)

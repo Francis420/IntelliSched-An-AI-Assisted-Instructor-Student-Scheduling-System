@@ -1,0 +1,564 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="w-full p-2">
+
+    <div class="flex flex-row h-[85vh] bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden relative">
+
+        <div class="flex-1 flex flex-col h-full min-w-0 relative z-0">
+            
+            <div class="bg-white border-b border-gray-200 z-30 shadow-sm px-4 py-3">
+                <div class="flex justify-between items-center mb-2">
+                    <div>
+                        <h1 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                            Per Instructor Load
+                        </h1>
+                        <p class="text-xs text-gray-500">
+                            Viewing: <span class="font-bold text-emerald-600">{{ selectedInstructorLabel|default:"Select an Instructor" }}</span>
+                        </p>
+                    </div>
+                    
+                    <form method="get" class="flex items-center gap-2">
+                        <select name="instructor" class="border-gray-300 border rounded text-xs px-2 py-1.5 bg-gray-50 text-gray-700 font-medium focus:ring-2 focus:ring-emerald-500 outline-none shadow-sm" onchange="this.form.submit()">
+                            <option value="" disabled {% if not selectedInstructorId %}selected{% endif %}>-- Select Instructor --</option>
+                            {% for inst in instructors %}
+                                <option value="{{ inst.instructorId }}" {% if selectedInstructorId == inst.instructorId %}selected{% endif %}>
+                                    {{ inst.full_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                </div>
+
+                {% if selectedInstructorId %}
+                <div class="flex flex-col gap-1 mt-1">
+                    <div class="w-full h-4 rounded-full relative overflow-hidden flex bg-white border border-gray-300" title="Normal: {{ reg_limit }} + Overload: {{ overload_cap }}">
+                        
+                        <div class="absolute top-0 left-0 h-full bg-gray-200 border-r border-gray-300 z-0" 
+                             style="width: {% widthratio reg_limit max_limit 100 %}%;">
+                        </div>
+
+                        <div class="absolute top-0 bottom-0 right-0 z-0 bg-amber-50" 
+                             style="left: {% widthratio reg_limit max_limit 100 %}%; 
+                                    background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, #fcd34d 5px, #fcd34d 10px); 
+                                    opacity: 0.2;">
+                        </div>
+
+                        <div class="{{ load_color }} h-full transition-all duration-500 relative z-10 shadow-sm" 
+                             style="width: {% widthratio current_load max_limit 100 %}%;">
+                             
+                             {% if current_load > 2 %}
+                             <span class="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-white drop-shadow-md">
+                                {{ current_load }} hrs
+                             </span>
+                             {% endif %}
+                        </div>
+
+                        <div class="absolute top-0 bottom-0 border-r-2 border-dashed border-gray-600 opacity-60 z-20" 
+                             style="left: {% widthratio reg_limit max_limit 100 %}%;">
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between text-[10px] font-mono text-gray-500 px-1">
+                        <span class="flex items-center gap-1">
+                            Current: <strong class="text-gray-800 text-xs">{{ current_load }}</strong>
+                        </span>
+                        
+                        <span class="flex items-center gap-1">
+                            Normal: <strong class="text-gray-800">{{ reg_limit }}</strong>
+                        </span>
+
+                        <span class="flex items-center gap-1">
+                            Max: <strong class="{{ load_color|cut:'bg-' }} text-xs">{{ max_limit }}</strong>
+                            {% if overload_cap > 0 %}
+                            <span class="text-amber-600 font-bold bg-amber-50 px-1 rounded border border-amber-200" title="Overload Allowance">
+                                +{{ overload_cap }}
+                            </span>
+                            {% else %}
+                            <span class="text-gray-300">(+0)</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="grid grid-cols-7 border-b border-gray-200 bg-gray-50 flex-none">
+                <div class="py-2 text-center text-[10px] font-bold text-gray-400 uppercase tracking-wider border-r">Time</div>
+                {% for day in days %}
+                    <div class="py-2 text-center text-xs font-bold text-gray-600 border-r uppercase">{{ day|slice:":3" }}</div>
+                {% endfor %}
+            </div>
+
+            <div class="flex-1 overflow-y-auto relative bg-white custom-scrollbar" id="scheduleGrid" 
+                 ondragover="allowDrop(event)" 
+                 ondrop="handleGridDrop(event)">
+                
+                <div class="grid grid-cols-7 min-h-[800px] relative">
+                    <div class="border-r border-gray-100 bg-gray-50/50 z-10 sticky left-0">
+                        {% for t in times %}
+                            <div class="h-12 border-b border-gray-100 text-[10px] text-gray-400 flex items-start justify-center pt-1 font-mono">
+                                {{ t|time:"g A" }}
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    {% for day in days %}
+                    <div class="relative border-r border-gray-100 day-column group" data-day="{{ day }}">
+                        {% for t in times %}
+                            {% if t.hour == 12 %}
+                                <div class="h-12 border-b border-gray-100 bg-gray-100 flex items-center justify-center pointer-events-none select-none">
+                                    <span class="text-[10px] font-bold text-gray-400 tracking-widest uppercase opacity-70">Lunch Break</span>
+                                </div>
+                            {% else %}
+                                <div class="h-12 border-b border-gray-100 hover:bg-emerald-50/50 transition-colors cursor-pointer slot-trigger" 
+                                     data-time="{{ t|time:'H:i' }}"></div>
+                            {% endif %}
+                        {% endfor %}
+
+                        <div class="conflict-layer absolute inset-0 pointer-events-none z-0"></div>
+
+                        {% for sched in schedules %}
+                            {% if sched.dayOfWeek == day %}
+                            <div class="schedule-card absolute w-[94%] left-[3%] rounded bg-emerald-50 border-l-4 border-emerald-500 p-1 shadow-sm hover:shadow-md cursor-grab active:cursor-grabbing transition-all z-20 hover:scale-[1.02] group overflow-hidden"
+                                 draggable="true"
+                                 data-id="{{ sched.scheduleId }}"
+                                 data-start="{{ sched.startTime|time:'H:i' }}"
+                                 data-duration="{{ sched.duration_minutes }}"
+                                 data-room="{{ sched.room.roomCode|default:'TBA' }}"
+                                 data-subject="{{ sched.subject.code }}"
+                                 data-section="{{ sched.formatted_section }}"
+                                 data-type="{{ sched.type|default:'Lecture' }}"
+                                 data-score="{{ sched.match_score }}"
+                                 ondragstart="handleDragStart(event)"
+                                 ondragend="handleDragEnd(event)" 
+                                 onclick="onCardClick(this)">
+                                 
+                                <div class="flex flex-col justify-between h-full w-full pointer-events-none">
+                                    <div>
+                                        <div class="flex justify-between items-start">
+                                            <div class="font-bold text-emerald-900 text-[10px] leading-tight truncate w-3/4">
+                                                {{ sched.subject.code }} - {{ sched.formatted_section }}
+                                            </div>
+                                            <div class="text-[8px] px-1 rounded font-bold 
+                                                {% if sched.match_score >= 85 %}bg-green-100 text-green-700
+                                                {% elif sched.match_score >= 50 %}bg-yellow-100 text-yellow-700
+                                                {% else %}bg-gray-100 text-gray-500{% endif %}">
+                                                {{ sched.match_score|default:"0" }}%
+                                            </div>
+                                        </div>
+                                        <div class="text-[9px] text-emerald-700 font-medium truncate">
+                                            {{ sched.type|default:"Lecture" }}
+                                        </div>
+                                        <div class="text-[9px] text-emerald-600 uppercase truncate mt-0.5 font-bold">
+                                            {{ sched.room.roomCode|default:"TBA" }}
+                                        </div>
+                                    </div>
+                                    <div class="text-[8px] text-emerald-800 font-mono leading-none mt-1 border-t border-emerald-200 pt-0.5">
+                                        {{ sched.startTime|time:"g:iA" }} - {{ sched.endTime|time:"g:iA" }}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="w-72 bg-gray-50 flex flex-col border-l border-gray-200 transition-all duration-300 relative z-20 flex-none">
+            
+            <div class="flex border-b border-gray-200 bg-white">
+                <button onclick="switchTab('unassigned')" id="tab-unassigned" class="flex-1 py-3 text-xs font-bold text-emerald-600 border-b-2 border-emerald-600 uppercase tracking-wide">
+                    Sections
+                </button>
+                <button onclick="switchTab('recommended')" id="tab-recommended" class="flex-1 py-3 text-xs font-bold text-gray-500 hover:text-gray-700 uppercase tracking-wide">
+                    Matches
+                </button>
+            </div>
+
+            <div id="view-unassigned" class="flex-1 flex flex-col min-h-0">
+                <div class="p-3 bg-white border-b border-gray-200">
+                    <div class="relative">
+                        <input type="text" id="sidebarSearch" onkeyup="filterSidebar()" placeholder="Search sections..."
+                               class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 pl-7 focus:ring-2 focus:ring-emerald-500 outline-none">
+                        <svg class="w-3 h-3 text-gray-400 absolute left-2 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        <button id="clearFilterBtn" onclick="clearSubjectFilter()" class="hidden absolute right-2 top-1.5 text-[10px] text-emerald-600 font-bold hover:underline">Clear</button>
+                    </div>
+                </div>
+                
+                <div id="unassign-drop-zone" class="mx-3 mt-2 p-3 border-2 border-dashed border-gray-300 rounded-lg text-center bg-gray-100 hover:bg-red-50 transition-all" ondragover="allowDrop(event)" ondrop="handleRemoveDrop(event)">
+                     <div class="pointer-events-none text-[10px] font-bold uppercase text-gray-400">Drop here to Unassign</div>
+                </div>
+
+                <div class="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar" id="tbaList">
+                    {% for sched in unassigned_schedules %}
+                    <div class="tba-card schedule-card bg-white border border-gray-200 border-l-4 border-l-amber-400 p-2 rounded shadow-sm hover:shadow-md cursor-grab active:cursor-grabbing transition-all group relative mb-2"
+                         draggable="true"
+                         data-id="{{ sched.scheduleId }}"
+                         data-start="00:00" 
+                         data-duration="{{ sched.duration_minutes }}"
+                         data-room="{{ sched.room.roomCode|default:'TBA' }}"
+                         data-subject="{{ sched.subject.code }}"
+                         data-section="{{ sched.formatted_section }}"
+                         data-type="{{ sched.type|default:'Lecture' }}"
+                         data-score="{{ sched.match_score }}"
+                         data-search="{{ sched.subject.code }} {{ sched.formatted_section }}"
+                         ondragstart="handleDragStart(event)"
+                         ondragend="handleDragEnd(event)" 
+                         onclick="onCardClick(this)">
+                         
+                         <div class="flex justify-between items-start pointer-events-none">
+                             <div class="font-bold text-gray-800 text-[10px]">
+                                 {{ sched.subject.code }} <span class="text-amber-600 ml-1">{{ sched.formatted_section }}</span>
+                             </div>
+                             <div class="text-[8px] px-1.5 py-0.5 rounded font-bold border
+                                {% if sched.match_score >= 85 %}bg-green-50 text-green-700 border-green-200
+                                {% elif sched.match_score >= 50 %}bg-yellow-50 text-yellow-700 border-yellow-200
+                                {% else %}bg-gray-50 text-gray-400 border-gray-200{% endif %}">
+                                {{ sched.match_score|default:"0" }}%
+                             </div>
+                         </div>
+                         <div class="text-[9px] text-gray-500 truncate pointer-events-none">
+                            {{ sched.type|default:"Lecture" }}
+                         </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-gray-400 text-[10px] py-4 italic">No unassigned sections</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div id="view-recommended" class="hidden flex-1 flex flex-col min-h-0 bg-gray-50">
+                <div class="p-3 bg-white border-b border-gray-200 text-[10px] text-gray-500">
+                    Subjects this instructor is most compatible with (AI Matched). Click to filter sections.
+                </div>
+                <div class="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
+                    {% for item in top_matches %}
+                    <div onclick="filterBySubject('{{ item.code }}')" class="bg-white border border-gray-200 rounded p-2 flex justify-between items-center hover:border-emerald-500 cursor-pointer transition-colors shadow-sm">
+                        <div class="text-xs font-bold text-gray-700">{{ item.code }}</div>
+                        <div class="text-[10px] font-bold px-2 py-0.5 rounded-full 
+                            {% if item.badge_color == 'green' %}bg-green-100 text-green-700
+                            {% elif item.badge_color == 'yellow' %}bg-yellow-100 text-yellow-700
+                            {% else %}bg-gray-100 text-gray-500{% endif %}">
+                            {{ item.score }}%
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-gray-400 text-[10px] py-4 italic">No matching data found</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div id="infoModal" class="hidden fixed bottom-6 right-80 z-50 animate-bounce-in">
+    <div class="bg-white p-4 rounded-lg shadow-2xl border border-emerald-200 w-72">
+        <div class="flex justify-between items-center mb-2">
+            <h3 class="font-bold text-gray-800 text-sm">Class Details</h3>
+            <button onclick="clearSelection()" class="text-gray-400 hover:text-gray-600">&times;</button>
+        </div>
+        <div id="modalContent" class="text-xs text-gray-600 space-y-1"></div>
+    </div>
+</div>
+
+<script>
+    const CURRENT_INSTRUCTOR_ID = "{{ selectedInstructorId }}"; 
+    const START_HOUR = 7; 
+    const PIXELS_PER_HOUR = 48; 
+    const API_URL_CONFLICTS = "{% url 'getInstructorConflicts' %}"; 
+    
+    let dragCardOffsetY = 0;
+
+    // --- NEW: TAB LOGIC ---
+    function switchTab(tabName) {
+        document.getElementById('view-unassigned').classList.add('hidden');
+        document.getElementById('view-recommended').classList.add('hidden');
+        
+        document.getElementById('tab-unassigned').classList.remove('text-emerald-600', 'border-b-2', 'border-emerald-600');
+        document.getElementById('tab-unassigned').classList.add('text-gray-500');
+        
+        document.getElementById('tab-recommended').classList.remove('text-emerald-600', 'border-b-2', 'border-emerald-600');
+        document.getElementById('tab-recommended').classList.add('text-gray-500');
+
+        if(tabName === 'unassigned') {
+            document.getElementById('view-unassigned').classList.remove('hidden');
+            document.getElementById('tab-unassigned').classList.add('text-emerald-600', 'border-b-2', 'border-emerald-600');
+            document.getElementById('tab-unassigned').classList.remove('text-gray-500');
+        } else {
+            document.getElementById('view-recommended').classList.remove('hidden');
+            document.getElementById('tab-recommended').classList.add('text-emerald-600', 'border-b-2', 'border-emerald-600');
+            document.getElementById('tab-recommended').classList.remove('text-gray-500');
+        }
+    }
+
+    // --- NEW: FILTER LOGIC ---
+    function filterBySubject(subjectCode) {
+        switchTab('unassigned');
+        const searchInput = document.getElementById('sidebarSearch');
+        searchInput.value = subjectCode;
+        filterSidebar();
+        document.getElementById('clearFilterBtn').classList.remove('hidden');
+    }
+
+    function clearSubjectFilter() {
+        const searchInput = document.getElementById('sidebarSearch');
+        searchInput.value = '';
+        filterSidebar();
+        document.getElementById('clearFilterBtn').classList.add('hidden');
+    }
+
+    // --- UTILS ---
+    function getCookie(name) {
+        let v = null;
+        if (document.cookie && document.cookie !== '') {
+            document.cookie.split(';').forEach(c => {
+                const cookie = c.trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    v = decodeURIComponent(cookie.substring(name.length + 1));
+                }
+            });
+        }
+        return v;
+    }
+
+    function formatTime12(timeStr) {
+        const [h, m] = timeStr.split(':').map(Number);
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const h12 = h % 12 || 12;
+        return `${h12}:${m.toString().padStart(2,'0')}${ampm}`;
+    }
+
+    // --- SEARCH ---
+    function filterSidebar() {
+        const input = document.getElementById('sidebarSearch').value.toLowerCase();
+        document.querySelectorAll('.tba-card').forEach(card => {
+            const txt = card.dataset.search.toLowerCase();
+            card.style.display = txt.includes(input) ? "block" : "none";
+        });
+        
+        if(input.length > 0) document.getElementById('clearFilterBtn').classList.remove('hidden');
+        else document.getElementById('clearFilterBtn').classList.add('hidden');
+    }
+
+    // --- SELECTION & CLEANUP ---
+    function clearSelection() {
+        document.querySelectorAll('.schedule-card').forEach(el => {
+            el.classList.remove('ring-2', 'ring-emerald-500', 'z-50');
+        });
+        document.getElementById('infoModal').classList.add('hidden');
+        document.querySelectorAll('.conflict-box').forEach(el => el.remove());
+    }
+
+    // --- CONFLICTS ---
+    async function fetchConflicts(instructorId, currentId) {
+        document.querySelectorAll('.conflict-box').forEach(el => el.remove());
+        if(!instructorId || instructorId === "null") return; 
+
+        try {
+            const url = `${API_URL_CONFLICTS}?instructorId=${instructorId}&scheduleId=${currentId}`;
+            const res = await fetch(url);
+            if(!res.ok) throw new Error("API Error");
+            const data = await res.json();
+            
+            data.busySlots.forEach(slot => {
+                const dayCol = document.querySelector(`.day-column[data-day="${slot.day}"] .conflict-layer`);
+                if(dayCol) {
+                    const [sh, sm] = slot.startTime.split(':').map(Number);
+                    const [eh, em] = slot.endTime.split(':').map(Number);
+                    const top = (sh + sm/60 - START_HOUR) * PIXELS_PER_HOUR;
+                    const height = (eh + em/60 - (sh + sm/60)) * PIXELS_PER_HOUR;
+                    
+                    const div = document.createElement('div');
+                    div.className = "conflict-box absolute w-full left-0 bg-red-200/80 border-y border-red-500 flex flex-col items-center justify-center z-10 pointer-events-none p-1 text-center leading-tight animate-pulse";
+                    div.style.top = `${top}px`;
+                    div.style.height = `${height}px`;
+                    div.innerHTML = `<span class="text-[9px] font-bold text-red-900 uppercase">BUSY</span><span class="text-[8px] text-red-900 line-clamp-2">${slot.reason}</span>`;
+                    dayCol.appendChild(div);
+                }
+            });
+        } catch(e) { console.error(e); }
+    }
+
+    // --- INTERACTIONS ---
+    function onCardClick(element) {
+        clearSelection();
+        element.classList.add('ring-2', 'ring-emerald-500', 'z-50');
+
+        const score = element.dataset.score || 0;
+        let matchText = "Low Compatibility";
+        let matchColor = "text-gray-500";
+        if(score >= 85) { matchText = "High Compatibility"; matchColor = "text-green-600"; }
+        else if(score >= 50) { matchText = "Medium Compatibility"; matchColor = "text-yellow-600"; }
+
+        const modal = document.getElementById('infoModal');
+        const content = document.getElementById('modalContent');
+        content.innerHTML = `
+            <p><strong>Subj:</strong> ${element.dataset.subject}</p>
+            <p><strong>Type:</strong> ${element.dataset.type}</p>
+            <p><strong>Room:</strong> ${element.dataset.room}</p>
+            <p><strong>Time:</strong> ${element.dataset.start} (${element.dataset.duration}m)</p>
+            <div class="mt-2 pt-2 border-t border-gray-100">
+                <p class="text-[10px] font-bold text-gray-500">Instructor Fit:</p>
+                <div class="flex items-center gap-2">
+                    <span class="text-sm font-bold ${matchColor}">${score}%</span>
+                    <span class="text-[9px] text-gray-400">(${matchText})</span>
+                </div>
+            </div>
+        `;
+        modal.classList.remove('hidden');
+
+        if(CURRENT_INSTRUCTOR_ID) fetchConflicts(CURRENT_INSTRUCTOR_ID, element.dataset.id);
+    }
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === "Escape") clearSelection();
+    });
+
+    // --- DRAG HANDLERS ---
+    function handleDragStart(e) {
+        const rect = e.target.getBoundingClientRect();
+        dragCardOffsetY = e.clientY - rect.top;
+
+        e.dataTransfer.setData("text/plain", e.target.dataset.id);
+        e.dataTransfer.setData("duration", e.target.dataset.duration);
+        e.dataTransfer.setData("room", e.target.dataset.room);
+        e.dataTransfer.setData("subject", e.target.dataset.subject);
+        e.dataTransfer.setData("section", e.target.dataset.section);
+        e.dataTransfer.setData("type", e.target.dataset.type);
+        e.dataTransfer.setData("score", e.target.dataset.score);
+
+        e.target.style.opacity = '0.5';
+        
+        if(CURRENT_INSTRUCTOR_ID) fetchConflicts(CURRENT_INSTRUCTOR_ID, e.target.dataset.id);
+        document.getElementById('infoModal').classList.add('hidden');
+    }
+
+    function handleDragEnd(e) {
+        if(e.target) e.target.style.opacity = '1';
+        clearSelection();
+    }
+
+    function allowDrop(e) { e.preventDefault(); }
+
+    // Drop on GRID: Assign to Current Instructor
+    function handleGridDrop(e) {
+        e.preventDefault();
+        const scheduleId = e.dataTransfer.getData("text/plain");
+        
+        if (!CURRENT_INSTRUCTOR_ID) {
+            alert("Please select an instructor first.");
+            return;
+        }
+
+        let target = e.target;
+        while (!target.classList.contains('slot-trigger') && !target.classList.contains('day-column')) {
+            target = target.parentElement;
+            if(!target) return; 
+        }
+
+        if (target.classList.contains('slot-trigger')) {
+            const dayColumn = target.closest('.day-column');
+            const day = dayColumn.dataset.day;
+            const slotTime = target.dataset.time; 
+            const [h, m] = slotTime.split(':').map(Number);
+            
+            const rect = target.getBoundingClientRect();
+            const mouseInSlotY = e.clientY - rect.top;
+            const cardTopInSlotY = Math.max(0, mouseInSlotY - dragCardOffsetY);
+            const finalM = cardTopInSlotY > 24 ? 30 : 0; 
+
+            const duration = parseInt(e.dataTransfer.getData("duration"));
+            const startDec = h + (finalM/60);
+            const endDec = startDec + (duration/60);
+
+            if (startDec < 13 && endDec > 12) {
+                alert("Cannot schedule across Lunch Break (12-1 PM).");
+                handleDragEnd({target: document.querySelector(`.schedule-card[data-id="${scheduleId}"]`)});
+                return;
+            }
+
+            const startTimeStr = `${h.toString().padStart(2,'0')}:${finalM===0?'00':'30'}`;
+            const eh = Math.floor(endDec);
+            const em = (endDec % 1) * 60;
+            const endTimeStr = `${eh.toString().padStart(2,'0')}:${Math.round(em)===0?'00':'30'}`;
+
+            updateSchedule(scheduleId, day, startTimeStr, endTimeStr, null, CURRENT_INSTRUCTOR_ID, false);
+        }
+    }
+
+    // Drop on SIDEBAR: Unassign
+    function handleRemoveDrop(e) {
+        e.preventDefault();
+        const scheduleId = e.dataTransfer.getData("text/plain");
+
+        if(confirm("Unassign this section from the current instructor?")) {
+            updateSchedule(scheduleId, null, null, null, null, 'UNASSIGN', false);
+        } else {
+            handleDragEnd({target: document.querySelector(`.schedule-card[data-id="${scheduleId}"]`)});
+        }
+    }
+
+    function updateSchedule(id, day, start, end, roomId, instructorId, forceSwap) {
+        const payload = {
+            scheduleId: id,
+            instructorId: instructorId,
+            forceSwap: forceSwap
+        };
+        
+        if (day) payload.day = day;
+        if (start) payload.startTime = start;
+        if (end) payload.endTime = end;
+        if (roomId) payload.roomId = roomId;
+
+        fetch('{% url "updateScheduleSlot" %}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload(); 
+            } else if (data.needSwapConfirmation) {
+                if (confirm(data.message)) {
+                    updateSchedule(id, day, start, end, roomId, instructorId, true); 
+                } else {
+                    handleDragEnd({target: document.querySelector(`.schedule-card[data-id="${id}"]`)});
+                }
+            } else {
+                alert(data.message);
+                handleDragEnd({target: document.querySelector(`.schedule-card[data-id="${id}"]`)});
+            }
+        });
+    }
+
+    function renderPositions() {
+        document.querySelectorAll('#scheduleGrid .schedule-card').forEach(card => {
+            if (card.classList.contains('tba-card')) {
+                card.setAttribute('ondragend', 'handleDragEnd(event)');
+                return;
+            }
+
+            const start = card.dataset.start; 
+            const duration = card.dataset.duration;
+            const [h, m] = start.split(':').map(Number);
+            
+            const top = (h + m/60 - START_HOUR) * PIXELS_PER_HOUR;
+            const height = (duration / 60) * PIXELS_PER_HOUR;
+            
+            card.style.top = `${top}px`;
+            card.style.height = `${height}px`;
+            
+            card.setAttribute('ondragend', 'handleDragEnd(event)');
+        });
+    }
+
+    window.onload = renderPositions;
+</script>
+{% endblock %}

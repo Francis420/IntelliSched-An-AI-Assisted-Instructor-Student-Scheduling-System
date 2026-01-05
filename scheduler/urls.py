@@ -12,10 +12,15 @@ urlpatterns = [
     path("start/", views.start_scheduler, name="startScheduler"),
     path("stop/", views.stop_scheduler, name="stopScheduler"),
     path("status/", views.scheduler_status, name="schedulerStatus"),
-    path("roomUtilization/", views.roomUtilization, name="roomUtilization"),
+
+    # Instructor Workload Export(excel and preview)
     path('instructor/workload/preview/', views.previewWorkload, name='previewWorkload'),
     path('instructor/workload/exportInstructorWorkload/', views.exportWorkloadExcel, name='exportWorkloadExcel'),
+
+    #For Minor Revisions on Finalized Schedules
     path('sectionBlockScheduler/', views.sectionBlockScheduler, name='sectionBlockScheduler'),
     path('api/getInstructorConflicts/', views.getInstructorConflicts, name='getInstructorConflicts'),
     path('api/updateScheduleSlot/', views.updateScheduleSlot, name='updateScheduleSlot'),
+    path('roomScheduler/', views.roomScheduler, name='roomScheduler'),
+    path('instructorLoad/', views.instructorLoad, name='instructorLoad'),
 ]

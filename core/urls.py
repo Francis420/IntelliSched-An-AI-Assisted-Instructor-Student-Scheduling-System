@@ -33,6 +33,9 @@ urlpatterns = [
     path('recommendations/', views.recommendInstructors, name='recommendations'),
 
     # Instructor Profile
-    path('profile/', views.instructorProfile, name='instructorProfile')
+    path('profile/', views.instructorProfile, name='instructorProfile'),
+
+    # Department Head Management
+    path('manageDeptHead/', views.manageDeptHead, name='manageDeptHead'),
 ]
 

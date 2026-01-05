@@ -34,7 +34,8 @@ from django.db.models import Q, Count, F, Value, Case, When, IntegerField
 from django.utils import timezone
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
-from .forms import InstructorProfileForm
+from .forms import InstructorProfileForm, DepartmentHeadAssignmentForm
+from django.core.exceptions import PermissionDenied
 
 
 
@@ -69,6 +70,86 @@ def checkStudentIdAvailability(request):
         'isAvailable': not exists,
         'message': 'Student ID available.' if not exists else 'Student ID already taken.'
     })
+
+@login_required
+def manageDeptHead(request):
+    user = request.user
+    isAdmin = user.is_superuser
+    isCurrentHead = user.roles.filter(name='deptHead').exists()
+
+    # SECURITY: Only Admin or the Current Dept Head can enter
+    if not (isAdmin or isCurrentHead):
+        raise PermissionDenied("You are not authorized to manage Department Leadership.")
+
+    try:
+        deptHeadRole = Role.objects.get(name='deptHead')
+    except Role.DoesNotExist:
+        messages.error(request, "Critical: 'deptHead' role missing.")
+        return redirect('admin:index')
+
+    # Find the current leader (exclude admin from display logic)
+    currentHeadInstructor = Instructor.objects.filter(
+        userlogin__user__roles__name='deptHead',
+        userlogin__user__isActive=True
+    ).exclude(userlogin__user__is_superuser=True).first()
+
+    if request.method == 'POST':
+        form = DepartmentHeadAssignmentForm(request.POST)
+        if form.is_valid():
+            newInstructor = form.cleaned_data['newHead']
+            password = form.cleaned_data['confirmPassword']
+
+            # --- VERIFICATION LOGIC ---
+            isAuthorized = False
+            
+            if isAdmin:
+                isAuthorized = True
+            elif isCurrentHead:
+                if not password:
+                    messages.error(request, "You must enter your password to authorize this transfer.")
+                elif not user.check_password(password):
+                    messages.error(request, "Incorrect password. Transfer denied.")
+                else:
+                    isAuthorized = True
+            
+            # --- TRANSFER LOGIC ---
+            if isAuthorized:
+                try:
+                    with transaction.atomic():
+                        # 1. REMOVE role from ALL old heads
+                        oldLeads = UserLogin.objects.filter(
+                            user__roles__name='deptHead'
+                        ).select_related('user')
+
+                        for login in oldLeads:
+                            if not login.user.is_superuser: 
+                                login.user.roles.remove(deptHeadRole)
+                                login.user.save()
+
+                        # 2. ADD role to New Head
+                        newLogin = UserLogin.objects.filter(instructor=newInstructor).first()
+                        if newLogin and newLogin.user:
+                            newLogin.user.roles.add(deptHeadRole)
+                            newLogin.user.save()
+
+                            actionMsg = "overridden" if isAdmin else "transferred"
+                            messages.success(request, f"Leadership successfully {actionMsg} to {newInstructor.full_name}.")
+                            return redirect('manageDeptHead')
+                        else:
+                            messages.error(request, "Selected instructor has no User account linked.")
+
+                except Exception as e:
+                    messages.error(request, f"Database error: {str(e)}")
+
+    else:
+        form = DepartmentHeadAssignmentForm()
+
+    context = {
+        'form': form,
+        'currentHead': currentHeadInstructor,
+        'isAdmin': isAdmin, 
+    }
+    return render(request, 'core/manageDeptHead.html', context)
 
 
 @login_required
@@ -781,9 +862,11 @@ def recommendInstructors(request):
 @login_required
 def instructorProfile(request):
     user = request.user
-    # Fetch instructor details if needed for display (not for editing)
-    user_login = user.userlogin_set.first()
-    instructor = user_login.instructor if user_login else None
+    
+    userLogin = user.userlogin_set.select_related('instructor').first()
+    instructor = userLogin.instructor if userLogin else None
+
+    isDeptHead = user.roles.filter(name='deptHead').exists()
 
     profile_form = InstructorProfileForm(instance=user)
     password_form = PasswordChangeForm(user=user)
@@ -800,12 +883,15 @@ def instructorProfile(request):
             password_form = PasswordChangeForm(user, request.POST)
             if password_form.is_valid():
                 user = password_form.save()
-                update_session_auth_hash(request, user)  # Keeps the user logged in
+                update_session_auth_hash(request, user)  
                 messages.success(request, "Your password was successfully updated!")
                 return redirect('instructorProfile')
 
-    return render(request, 'core/profile.html', {
+    context = {
         'profile_form': profile_form,
         'password_form': password_form,
-        'instructor': instructor
-    })
+        'instructor': instructor,
+        'isDeptHead': isDeptHead, 
+    }
+    
+    return render(request, 'core/profile.html', context)

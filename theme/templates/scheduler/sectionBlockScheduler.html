@@ -70,33 +70,37 @@
 
                 {% for sched in schedules %}
                     {% if sched.dayOfWeek == day %}
-                    <div class="schedule-card absolute w-[94%] left-[3%] rounded bg-emerald-50 border-l-4 border-emerald-500 text-xs p-1.5 shadow-sm hover:shadow-md cursor-pointer transition-all z-20 hover:scale-[1.02] group flex flex-col justify-between"
-                         data-id="{{ sched.scheduleId }}"
-                         data-start="{{ sched.startTime|time:'H:i' }}"
-                         data-duration="{{ sched.duration_minutes }}"
-                         data-instructor="{{ sched.instructor.instructorId }}"
-                         data-subject="{{ sched.subject.code }}"
-                         onclick="activateEditMode(this)">
-                         
-                        <div>
-                            <div class="font-bold text-emerald-900 leading-tight mb-0.5">
-                                {{ sched.subject.code }} - {{ sched.subject.name|truncatechars:20 }}
-                            </div>
+                    <div class="schedule-card absolute w-[94%] left-[3%] rounded bg-emerald-50 border-l-4 border-emerald-500 p-1.5 shadow-sm hover:shadow-md cursor-pointer transition-all z-20 hover:scale-[1.02] group overflow-hidden"
+                            data-id="{{ sched.scheduleId }}"
+                            data-start="{{ sched.startTime|time:'H:i' }}"
+                            data-duration="{{ sched.duration_minutes }}"
+                            data-instructor="{{ sched.instructor.instructorId }}"
+                            data-subject="{{ sched.subject.code }}"
+                            title="{{ sched.subject.code }} - {{ sched.subject.name }} | {{ sched.instructor.full_name }} | {{ sched.startTime|time:'g:i A' }} - {{ sched.endTime|time:'g:i A' }}"
+                            onclick="activateEditMode(this)">
                             
-                            <div class="text-emerald-700 truncate font-medium text-[11px] mb-1">
-                                {{ sched.instructor.full_name }}
+                        <div class="flex flex-col justify-between h-full w-full">
+                            
+                            <div>
+                                <div class="font-bold text-emerald-900 text-xs leading-tight truncate">
+                                    {{ sched.subject.code }} - {{ sched.subject.name }}
+                                </div>
+                                
+                                <div class="text-emerald-700 font-medium text-[11px] leading-tight mt-0.5 truncate">
+                                    {{ sched.instructor.full_name }}
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="flex justify-between items-end border-t border-emerald-200 pt-1 mt-1">
-                            <div class="text-[9px] text-emerald-800 font-mono tracking-tight">
-                                {{ sched.startTime|time:"g:i A" }} - {{ sched.endTime|time:"g:i A" }}
-                            </div>
-                            <div class="text-[9px] font-bold text-emerald-600 uppercase text-right">
-                                {{ sched.scheduleType }} <br>
-                                <span class="bg-emerald-200 px-1 rounded text-emerald-800">
-                                    {{ sched.room.roomCode|default:"TBA" }}
-                                </span>
+                            <div class="flex justify-between items-end border-t border-emerald-200 pt-1 mt-1">
+                                <div class="text-[10px] text-emerald-800 font-mono font-semibold">
+                                    {{ sched.startTime|time:"g:iA"|lower }} - {{ sched.endTime|time:"g:iA"|lower }}
+                                </div>
+                                
+                                <div class="text-[10px] font-bold text-emerald-600 uppercase text-right">
+                                    <span class="bg-emerald-200 px-1.5 py-0.5 rounded text-emerald-900">
+                                        {{ sched.room.roomCode|default:"TBA" }}
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -137,6 +141,7 @@
     const API_URL_CONFLICTS = "{% url 'getInstructorConflicts' %}";
     const API_URL_UPDATE = "{% url 'updateScheduleSlot' %}";
 
+    // --- 1. RENDER POSITIONS (Visuals) ---
     function renderPositions() {
         const cards = document.querySelectorAll('.schedule-card, .absolute.bg-gray-100');
         cards.forEach(card => {
@@ -144,6 +149,7 @@
             const end = card.dataset.end; 
             let duration = card.dataset.duration;
 
+            // Calculate duration if missing
             if(!duration && end) {
                 const [sh, sm] = start.split(':').map(Number);
                 const [eh, em] = end.split(':').map(Number);
@@ -152,6 +158,8 @@
 
             const [h, m] = start.split(':').map(Number);
             const startDecimal = h + (m/60);
+            
+            // Calculate Top (Position) and Height
             const top = (startDecimal - START_HOUR) * PIXELS_PER_HOUR;
             const height = (duration / 60) * PIXELS_PER_HOUR;
             
@@ -160,6 +168,7 @@
         });
     }
 
+    // --- 2. ACTIVATE EDIT MODE (Click Card) ---
     function activateEditMode(element) {
         if(activeScheduleId === element.dataset.id) return;
         cancelEdit(false); 
@@ -174,104 +183,108 @@
         fetchConflicts(element.dataset.instructor, activeScheduleId);
     }
 
-    document.addEventListener('keydown', function(e) {
-        if(e.key === "Escape" && activeScheduleId) {
-            cancelEdit();
-        }
-    });
-
-    async function fetchConflicts(instructorId, currentId) {
-        const loader = document.getElementById('conflictLoading');
-        loader.classList.remove('hidden');
-
-        try {
-            const url = `${API_URL_CONFLICTS}?instructorId=${instructorId}&scheduleId=${currentId}`;
-            const res = await fetch(url);
-            if(!res.ok) throw new Error("API Error");
-            const data = await res.json();
-            
-            loader.classList.add('hidden');
-
-            data.busySlots.forEach(slot => {
-                const dayCol = document.querySelector(`.day-column[data-day="${slot.day}"] .conflict-layer`);
-                if(dayCol) {
-                    const [sh, sm] = slot.startTime.split(':').map(Number);
-                    const [eh, em] = slot.endTime.split(':').map(Number);
-                    
-                    const startDec = sh + (sm/60);
-                    const endDec = eh + (em/60);
-                    
-                    const top = (startDec - START_HOUR) * PIXELS_PER_HOUR;
-                    const height = (endDec - startDec) * PIXELS_PER_HOUR;
-
-                    const div = document.createElement('div');
-                    div.className = "conflict-box absolute w-full bg-red-100/90 border-y border-red-400 flex flex-col items-center justify-center z-10 pointer-events-none p-1 text-center leading-tight";
-                    div.style.top = `${top}px`;
-                    div.style.height = `${height}px`;
-                    div.innerHTML = `<span class="text-[10px] font-bold text-red-600 uppercase">BUSY</span><span class="text-[9px] text-red-800">${slot.reason}</span>`;
-                    dayCol.appendChild(div);
-                }
-            });
-        } catch(e) { 
-            console.error(e);
-            loader.innerText = "Error checking conflicts.";
-        }
-    }
-
+    // --- 3. CLICK SLOT TO MOVE ---
     document.querySelectorAll('.slot-trigger').forEach(slot => {
         slot.addEventListener('click', function(e) {
             if(!activeScheduleId) return;
 
             const dayColumn = this.closest('.day-column');
-            const day = dayColumn.dataset.day;
+            const newDay = dayColumn.dataset.day;
             const slotTime = this.dataset.time; 
             const [baseH, baseM] = slotTime.split(':').map(Number);
             
+            // Determine if click was top half (:00) or bottom half (:30)
             const slotRect = this.getBoundingClientRect();
             const clickInSlot = e.clientY - slotRect.top;
-            
             let finalM = 0;
             if (clickInSlot > 24) finalM = 30; 
             
-            const newStartStr = `${baseH.toString().padStart(2,'0')}:${finalM===0?'00':'30'}`;
-            
-            // Calculate Decimals for Logic Check
+            // Calculate New Start/End Times
             const startDec = baseH + (finalM/60);
             const endDec = startDec + (activeDuration / 60);
 
-            // FIX #2: LUNCH BREAK CHECK (12:00 PM - 1:00 PM)
-            // If the class starts before 1 PM AND ends after 12 PM, it overlaps.
+            // LUNCH BREAK CHECK
             if (startDec < 13 && endDec > 12) {
                 alert("Cannot schedule during Lunch Break (12:00 PM - 1:00 PM).");
-                return; // Stop the function here
+                return; 
             }
 
+            // Format times for API (HH:MM)
+            const newStartStr = `${baseH.toString().padStart(2,'0')}:${finalM===0?'00':'30'}`;
             const eh = Math.floor(endDec);
             const em = (endDec % 1) * 60;
             const newEndStr = `${eh.toString().padStart(2,'0')}:${Math.round(em)===0?'00':'30'}`;
 
-            updateSchedule(activeScheduleId, day, newStartStr, newEndStr);
+            // Call API
+            updateSchedule(activeScheduleId, newDay, newStartStr, newEndStr);
         });
     });
 
+    // --- 4. UPDATE SCHEDULE (The Seamless Fix) ---
     async function updateSchedule(id, day, start, end) {
         const csrftoken = getCookie('csrftoken');
-        const res = await fetch(API_URL_UPDATE, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrftoken},
-            body: JSON.stringify({scheduleId: id, day: day, startTime: start, endTime: end})
-        });
+        
+        try {
+            const res = await fetch(API_URL_UPDATE, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrftoken},
+                body: JSON.stringify({scheduleId: id, day: day, startTime: start, endTime: end})
+            });
 
-        if(res.ok) {
-            const data = await res.json();
-            if(data.success) {
-                window.location.reload();
+            if(res.ok) {
+                const data = await res.json();
+                
+                if(data.success) {
+                    // SUCCESS: Move the card visually immediately (No Reload!)
+                    moveCardVisuals(id, day, start, end);
+                    cancelEdit(); // Close the modal and green ring
+                } else {
+                    // CONFLICT: Show alert only. Card stays in old spot.
+                    alert(data.message);
+                }
             } else {
-                alert(data.message);
+                alert("Server error.");
             }
-        } else {
-            alert("Error connecting to server.");
+        } catch(e) {
+            console.error(e);
+            alert("Connection failed.");
         }
+    }
+
+    // --- 5. HELPER: Move Card DOM Element ---
+    function moveCardVisuals(id, newDay, newStart, newEnd) {
+        const card = document.querySelector(`.schedule-card[data-id="${id}"]`);
+        const targetColumn = document.querySelector(`.day-column[data-day="${newDay}"]`);
+
+        if (card && targetColumn) {
+            // 1. Update Data Attributes
+            card.dataset.start = newStart;
+            card.dataset.end = newEnd;
+            
+            // 2. Move to new column (if day changed)
+            if (card.parentElement !== targetColumn) {
+                targetColumn.appendChild(card);
+            }
+
+            // 3. Update the Time Label Text inside the card
+            // We look for the div containing the time and update it
+            const timeDiv = card.querySelector('.font-mono');
+            if(timeDiv) {
+                timeDiv.innerText = `${formatTime(newStart)} - ${formatTime(newEnd)}`;
+            }
+
+            // 4. Recalculate CSS top/height
+            renderPositions();
+        }
+    }
+
+    // --- 6. UTILS ---
+    function formatTime(timeStr) {
+        // Converts "13:30" to "1:30 pm"
+        const [h, m] = timeStr.split(':').map(Number);
+        const ampm = h >= 12 ? 'pm' : 'am';
+        const h12 = h % 12 || 12;
+        return `${h12}:${m.toString().padStart(2,'0')}${ampm}`;
     }
 
     function cancelEdit(hideModal = true) {
@@ -281,6 +294,42 @@
         document.querySelectorAll('.schedule-card').forEach(el => {
             el.classList.remove('ring-2', 'ring-emerald-500', 'z-50', 'bg-white', 'shadow-xl');
         });
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if(e.key === "Escape" && activeScheduleId) cancelEdit();
+    });
+
+    // (Include your existing fetchConflicts and getCookie functions here...)
+    // Keep fetchConflicts exactly as it was before.
+
+    async function fetchConflicts(instructorId, currentId) {
+        const loader = document.getElementById('conflictLoading');
+        loader.classList.remove('hidden');
+        try {
+            const url = `${API_URL_CONFLICTS}?instructorId=${instructorId}&scheduleId=${currentId}`;
+            const res = await fetch(url);
+            if(!res.ok) throw new Error("API Error");
+            const data = await res.json();
+            loader.classList.add('hidden');
+            data.busySlots.forEach(slot => {
+                const dayCol = document.querySelector(`.day-column[data-day="${slot.day}"] .conflict-layer`);
+                if(dayCol) {
+                    const [sh, sm] = slot.startTime.split(':').map(Number);
+                    const [eh, em] = slot.endTime.split(':').map(Number);
+                    const startDec = sh + (sm/60);
+                    const endDec = eh + (em/60);
+                    const top = (startDec - START_HOUR) * PIXELS_PER_HOUR;
+                    const height = (endDec - startDec) * PIXELS_PER_HOUR;
+                    const div = document.createElement('div');
+                    div.className = "conflict-box absolute w-full bg-red-100/90 border-y border-red-400 flex flex-col items-center justify-center z-10 pointer-events-none p-1 text-center leading-tight";
+                    div.style.top = `${top}px`;
+                    div.style.height = `${height}px`;
+                    div.innerHTML = `<span class="text-[10px] font-bold text-red-600 uppercase">BUSY</span><span class="text-[9px] text-red-800">${slot.reason}</span>`;
+                    dayCol.appendChild(div);
+                }
+            });
+        } catch(e) { console.error(e); }
     }
 
     function getCookie(name) {
