@@ -37,5 +37,8 @@ urlpatterns = [
 
     # Department Head Management
     path('manageDeptHead/', views.manageDeptHead, name='manageDeptHead'),
+
+    # User Manual
+    path('userManual/', views.userManual, name='userManual'),
 ]
 

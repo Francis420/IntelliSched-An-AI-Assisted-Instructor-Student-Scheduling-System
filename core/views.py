@@ -934,3 +934,7 @@ def instructorProfile(request):
     }
     
     return render(request, 'core/profile.html', context)
+
+@login_required
+def userManual(request):
+    return render(request, 'core/userManual.html')
