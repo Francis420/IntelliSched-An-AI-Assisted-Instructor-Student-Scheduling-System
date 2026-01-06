@@ -18,9 +18,9 @@ urlpatterns = [
     path('instructor/workload/exportInstructorWorkload/', views.exportWorkloadExcel, name='exportWorkloadExcel'),
 
     #For Minor Revisions on Finalized Schedules
-    path('sectionBlockScheduler/', views.sectionBlockScheduler, name='sectionBlockScheduler'),
+    path('sectionBlockManager/', views.sectionBlockScheduler, name='sectionBlockScheduler'),
     path('api/getInstructorConflicts/', views.getInstructorConflicts, name='getInstructorConflicts'),
     path('api/updateScheduleSlot/', views.updateScheduleSlot, name='updateScheduleSlot'),
-    path('roomScheduler/', views.roomScheduler, name='roomScheduler'),
-    path('instructorLoad/', views.instructorLoad, name='instructorLoad'),
+    path('roomManager/', views.roomScheduler, name='roomScheduler'),
+    path('instructorLoadManager/', views.instructorLoad, name='instructorLoad'),
 ]

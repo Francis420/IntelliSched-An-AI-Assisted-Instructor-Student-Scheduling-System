@@ -5,11 +5,13 @@ to run just pick a script and file accordingly
 py .\manage.py [script.py] [file.csv]
 
 example:
-py .\manage.py importInstructorExperience C:\Users\user\Desktop\IntelliSched-An-AI-Assisted-Instructor-Student-Scheduling-System\imports\InstructorExperience.csv
+py .\manage.py importInstructorLogin C:\Users\user\Desktop\IntelliSched-An-AI-Assisted-Instructor-Student-Scheduling-System\imports\InstructorLogin.csv
 
 currently there are:
-importSubjects
-importInstructorLogin - done
+1. create curriculum
+2. importSubjects -done
+3. importInstructorLogin - done
+4. importLegacyExperience - done
 importInstructorAvailability
 importInstructorCredential
 importInstructorExperience
