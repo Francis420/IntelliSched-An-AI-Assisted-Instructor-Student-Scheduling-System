@@ -78,7 +78,7 @@
                     {% if finalized_exists %}
                         <a href="{% url 'scheduleOutput' %}?semester={{ current_semester_id }}&batch_key=finalized" 
                            class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 shadow-sm">
-                           View Finalized
+                            View Finalized
                         </a>
                     {% else %}
                         <button type="button" onclick="document.getElementById('revert-form').submit()" 
@@ -211,6 +211,12 @@
                                     </td>
                                 {% endfor %}
                             </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="12" class="px-6 py-12 text-center text-gray-500 italic">
+                                    No instructor data found for this schedule version.
+                                </td>
+                            </tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -272,6 +278,12 @@
                                         {% endif %}
                                     </td>
                                 {% endfor %}
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="10" class="px-6 py-12 text-center text-gray-500 italic">
+                                    No room usage data found.
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>

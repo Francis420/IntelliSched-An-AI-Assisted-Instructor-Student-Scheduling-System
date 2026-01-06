@@ -1,62 +1,107 @@
 {% extends 'base.html' %}
+{% block header %} Add GenEd Schedule{% endblock %}
+{% block title %} Add GenEd Schedule {% endblock %}
+
 {% block content %}
-<div class="max-w-2xl mx-auto mt-8 p-6 bg-white rounded-2xl shadow">
-  <h2 class="text-2xl font-semibold mb-6">Create GenEd Schedule</h2>
-
-  <form method="post" class="space-y-4">
-    {% csrf_token %}
-
-    <div>
-      <label for="semester" class="block text-sm font-medium text-gray-700 mb-1">Semester</label>
-      <select name="semester" id="semester" class="w-full border rounded-lg px-4 py-2">
-        <option value="">—</option>
-        {% for semester in semesters %}
-          <option value="{{ semester.semesterId }}">{{ semester.name }}</option>
-        {% endfor %}
-      </select>
+<div class="max-w-3xl mx-auto mt-10 px-4 pb-20">
+    <div class="mb-8">
+        <h2 class="text-3xl font-bold text-gray-800">Add GenEd Schedule</h2>
+        <p class="text-gray-500 mt-1">Manually lock in timeslots for General Education subjects.</p>
     </div>
 
-    <div>
-      <label for="code" class="block text-sm font-medium text-gray-700 mb-1">Subject Code</label>
-      <input type="text" name="code" id="code" class="w-full border rounded-lg px-4 py-2" required>
-    </div>
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
 
-    <div>
-      <label for="subjectName" class="block text-sm font-medium text-gray-700 mb-1">Subject Name</label>
-      <input type="text" name="subjectName" id="subjectName" class="w-full border rounded-lg px-4 py-2" required>
-    </div>
+        <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="px-8 py-4 bg-emerald-50 border-b border-emerald-100">
+                <h3 class="text-xs font-bold text-emerald-700 uppercase tracking-widest flex items-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                    Subject Information
+                </h3>
+            </div>
+            
+            <div class="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="md:col-span-2">
+                    <label for="semester" class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Assigned Semester</label>
+                    <select name="semester" id="semester" class="w-full border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm">
+                        <option value="">Select Semester</option>
+                        {% for semester in semesters %}
+                        <option value="{{ semester.semesterId }}">{{ semester.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
 
-    <div>
-      <label for="sectionCode" class="block text-sm font-medium text-gray-700 mb-1">Section Code</label>
-      <input type="text" name="sectionCode" id="sectionCode" class="w-full border rounded-lg px-4 py-2" required>
-    </div>
+                <div>
+                    <label for="code" class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Subject Code</label>
+                    <input type="text" name="code" id="code" placeholder="e.g., GEN ED 101" 
+                           class="w-full border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm" required>
+                </div>
 
-    <div>
-      <label for="instructorName" class="block text-sm font-medium text-gray-700 mb-1">Instructor Name</label>
-      <input type="text" name="instructorName" id="instructorName" class="w-full border rounded-lg px-4 py-2">
-    </div>
+                <div>
+                    <label for="sectionCode" class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Section Code</label>
+                    <input type="text" name="sectionCode" id="sectionCode" placeholder="e.g., A" 
+                           class="w-full border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm" required>
+                </div>
 
-    <div>
-      <label for="dayOfWeek" class="block text-sm font-medium text-gray-700 mb-1">Day of Week</label>
-      <input type="text" name="dayOfWeek" id="dayOfWeek" class="w-full border rounded-lg px-4 py-2" required>
-    </div>
+                <div class="md:col-span-2">
+                    <label for="subjectName" class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Full Subject Name</label>
+                    <input type="text" name="subjectName" id="subjectName" placeholder="e.g., Ethics" 
+                           class="w-full border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm" required>
+                </div>
+            </div>
+        </div>
 
-    <div class="grid grid-cols-2 gap-4">
-      <div>
-        <label for="startTime" class="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
-        <input type="time" name="startTime" id="startTime" class="w-full border rounded-lg px-4 py-2" required>
-      </div>
+        <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="px-8 py-4 bg-gray-50 border-b border-gray-100">
+                <h3 class="text-xs font-bold text-gray-700 uppercase tracking-widest flex items-center">
+                    <svg class="w-4 h-4 mr-2 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Time & Faculty
+                </h3>
+            </div>
 
-      <div>
-        <label for="endTime" class="block text-sm font-medium text-gray-700 mb-1">End Time</label>
-        <input type="time" name="endTime" id="endTime" class="w-full border rounded-lg px-4 py-2" required>
-      </div>
-    </div>
+            <div class="p-8 space-y-6">
+                <div>
+                    <label for="instructorName" class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Instructor Name</label>
+                    <input type="text" name="instructorName" id="instructorName" placeholder="Leave blank if TBA" 
+                           class="w-full border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm">
+                </div>
 
-    <div class="flex justify-end gap-4 pt-4">
-      <button type="submit" class="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm">Create</button>
-      <a href="javascript:history.back()" class="px-4 py-2 rounded-lg bg-gray-300 hover:bg-gray-400 text-sm">Cancel</a>
-    </div>
-  </form>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label for="dayOfWeek" class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Day of Week</label>
+                        <select name="dayOfWeek" id="dayOfWeek" required
+                                class="w-full border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm appearance-none">
+                            <option value="Monday">Monday</option>
+                            <option value="Tuesday">Tuesday</option>
+                            <option value="Wednesday">Wednesday</option>
+                            <option value="Thursday">Thursday</option>
+                            <option value="Friday">Friday</option>
+                            <option value="Saturday">Saturday</option>
+                            <option value="Sunday">Sunday</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="startTime" class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Start Time</label>
+                        <input type="time" name="startTime" id="startTime" 
+                               class="w-full border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm" required>
+                    </div>
+
+                    <div>
+                        <label for="endTime" class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">End Time</label>
+                        <input type="time" name="endTime" id="endTime" 
+                               class="w-full border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm" required>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-4">
+            <a href="javascript:history.back()" class="text-sm font-semibold text-gray-400 hover:text-gray-600 transition-colors">Discard</a>
+            <button type="submit" class="px-10 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg shadow-emerald-100 transition-all active:scale-95">
+                Create Schedule
+            </button>
+        </div>
+    </form>
 </div>
 {% endblock %}

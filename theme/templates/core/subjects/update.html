@@ -1,135 +1,168 @@
 {% extends 'base.html' %}
-{% block title %}Update Subject{% endblock %}
+{% block title %}Update Subject: {{ subject.code }}{% endblock %}
+{% block header %}Update Subject: {{ subject.code }}{% endblock %}
+
 {% block content %}
-<div class="max-w-3xl mx-auto mt-8 p-6 bg-white rounded-2xl shadow">
-  <h2 class="text-2xl font-bold mb-4">Update Subject: {{ subject.code }}</h2>
-
-  <form method="POST">
-    {% csrf_token %}
-
-    <div class="grid grid-cols-2 gap-4">
-      <!-- Subject Code -->
-      <div>
-        <label class="block font-medium mb-1">Subject Code</label>
-        <input type="text" name="code" value="{{ subject.code }}" required class="w-full p-2 border rounded" />
-      </div>
-
-      <!-- Subject Name -->
-      <div>
-        <label class="block font-medium mb-1">Subject Name</label>
-        <input type="text" name="name" value="{{ subject.name }}" required class="w-full p-2 border rounded" />
-      </div>
-
-      <!-- Curriculum -->
-      <div>
-        <label class="block font-medium mb-1">Curriculum</label>
-        <select name="curriculumId" required class="w-full p-2 border rounded">
-          {% for curriculum in curriculums %}
-            <option value="{{ curriculum.curriculumId }}" {% if curriculum.curriculumId == subject.curriculum.curriculumId %}selected{% endif %}>
-              {{ curriculum.name }}
-            </option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <!-- Units -->
-      <div>
-        <label class="block font-medium mb-1">Units</label>
-        <input type="number" name="units" min="0" value="{{ subject.units }}" required class="w-full p-2 border rounded" />
-      </div>
-
-      <!-- Year Level -->
-      <div>
-        <label class="block font-medium mb-1">Year Level</label>
-        <select name="yearLevel" required class="w-full p-2 border rounded">
-          <option value="1" {% if subject.yearLevel == 1 %}selected{% endif %}>1st</option>
-          <option value="2" {% if subject.yearLevel == 2 %}selected{% endif %}>2nd</option>
-          <option value="3" {% if subject.yearLevel == 3 %}selected{% endif %}>3rd</option>
-          <option value="4" {% if subject.yearLevel == 4 %}selected{% endif %}>4th</option>
-        </select>
-      </div>
-
-      <!-- Default Term -->
-      <div>
-        <label class="block font-medium mb-1">Semester</label>
-        <select name="defaultTerm" required class="w-full p-2 border rounded">
-          <option value="0" {% if subject.defaultTerm == 0 %}selected{% endif %}>1st</option>
-          <option value="1" {% if subject.defaultTerm == 1 %}selected{% endif %}>2nd</option>
-          <option value="2" {% if subject.defaultTerm == 2 %}selected{% endif %}>Midyear</option>
-        </select>
-      </div>
-
-      <!-- Lecture Duration -->
-      <div>
-        <label class="block font-medium mb-1">Lecture Duration (minutes)</label>
-        <input type="number" name="durationMinutes" min="0" value="{{ subject.durationMinutes }}" required class="w-full p-2 border rounded" />
-      </div>
-
-      <!-- Has Lab Checkbox -->
-      <div class="flex items-center mt-6 col-span-2">
-        <input type="checkbox" name="hasLab" id="hasLabToggle" class="h-5 w-5 mr-2" {% if subject.hasLab %}checked{% endif %}>
-        <label for="hasLabToggle" class="font-medium">Has Lab Component</label>
-      </div>
-
-      <!-- Lab Duration -->
-      <div id="labFields" class="col-span-2" style="display: {% if subject.hasLab %}block{% else %}none{% endif %};">
-        <label class="block font-medium mb-1 mt-2">Lab Duration (minutes)</label>
-        <input type="number" id="labDurationInput" name="labDurationMinutes" min="0"
-               value="{{ subject.labDurationMinutes|default_if_none:'' }}" class="w-full p-2 border rounded" />
-      </div>
-
-      <!-- Is Priority for Room Assignment -->
-      <div class="flex items-center mt-6 col-span-2">
-        <input type="checkbox" name="isPriorityForRooms" id="priorityToggle" class="h-5 w-5 mr-2" {% if subject.isPriorityForRooms %}checked{% endif %}>
-        <label for="priorityToggle" class="font-medium">Priority for Room Assignment</label>
-      </div>
+<div class="max-w-4xl mx-auto mt-10 px-4 pb-20">
+    <div class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-800">Update Subject</h2>
+            <p class="text-gray-500">Modify properties for <span class="font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">{{ subject.code }}</span></p>
+        </div>
+        <div class="flex items-center space-x-2">
+            <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Current Term:</span>
+            <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-bold uppercase border border-gray-200">
+                {% if subject.defaultTerm == 0 %}1st Sem{% elif subject.defaultTerm == 1 %}2nd Sem{% else %}Midyear{% endif %}
+            </span>
+        </div>
     </div>
 
-    <!-- 🆕 Description -->
-    <div class="mt-4">
-      <label class="block font-medium mb-1">Description</label>
-      <textarea name="description" rows="3" class="w-full p-2 border rounded" placeholder="Enter subject description...">{{ subject.description }}</textarea>
-    </div>
+    <form method="POST" class="space-y-8">
+        {% csrf_token %}
+        
+        <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden transition-all hover:shadow-md">
+            <div class="px-8 py-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100 flex items-center">
+                <div class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center mr-3 text-indigo-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                </div>
+                <h3 class="font-bold text-gray-700 uppercase text-xs tracking-widest">Subject Information</h3>
+            </div>
+            
+            <div class="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-1">
+                    <label class="block text-xs font-bold text-gray-500 uppercase ml-1">Subject Code</label>
+                    <input type="text" name="code" value="{{ subject.code }}" required 
+                           class="w-full px-4 py-3 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm">
+                </div>
+                <div class="space-y-1">
+                    <label class="block text-xs font-bold text-gray-500 uppercase ml-1">Subject Name</label>
+                    <input type="text" name="name" value="{{ subject.name }}" required 
+                           class="w-full px-4 py-3 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm">
+                </div>
+                <div class="space-y-1">
+                    <label class="block text-xs font-bold text-gray-500 uppercase ml-1">Linked Curriculum</label>
+                    <select name="curriculumId" required class="w-full px-4 py-3 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm">
+                        {% for curriculum in curriculums %}
+                        <option value="{{ curriculum.curriculumId }}" {% if curriculum.curriculumId == subject.curriculum.curriculumId %}selected{% endif %}>
+                            {{ curriculum.name }} ({{ curriculum.effectiveSy }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="space-y-1 col-span-1">
+                        <label class="block text-xs font-bold text-gray-500 uppercase ml-1">Units</label>
+                        <input type="number" name="units" min="0" value="{{ subject.units }}" required 
+                               class="w-full px-4 py-3 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm">
+                    </div>
+                    <div class="space-y-1 col-span-1">
+                        <label class="block text-xs font-bold text-gray-500 uppercase ml-1">Year</label>
+                        <select name="yearLevel" required class="w-full px-4 py-3 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm">
+                            <option value="1" {% if subject.yearLevel == 1 %}selected{% endif %}>1st</option>
+                            <option value="2" {% if subject.yearLevel == 2 %}selected{% endif %}>2nd</option>
+                            <option value="3" {% if subject.yearLevel == 3 %}selected{% endif %}>3rd</option>
+                            <option value="4" {% if subject.yearLevel == 4 %}selected{% endif %}>4th</option>
+                        </select>
+                    </div>
+                    <div class="space-y-1 col-span-1">
+                        <label class="block text-xs font-bold text-gray-500 uppercase ml-1">Term</label>
+                        <select name="defaultTerm" required class="w-full px-4 py-3 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm">
+                            <option value="0" {% if subject.defaultTerm == 0 %}selected{% endif %}>1st</option>
+                            <option value="1" {% if subject.defaultTerm == 1 %}selected{% endif %}>2nd</option>
+                            <option value="2" {% if subject.defaultTerm == 2 %}selected{% endif %}>Midyear</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    <!-- Subject Topics -->
-    <div class="mt-4">
-      <label class="block font-medium mb-1">Subject Topics</label>
-      <textarea name="subjectTopics" rows="3" class="w-full p-2 border rounded">{{ subject.subjectTopics }}</textarea>
-    </div>
+        <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden transition-all hover:shadow-md">
+            <div class="px-8 py-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
+                <h3 class="font-bold text-gray-700 uppercase text-xs tracking-widest flex items-center">
+                    <svg class="w-4 h-4 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Scheduling Parameters
+                </h3>
+            </div>
+            <div class="p-8 space-y-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="space-y-4">
+                        <label class="block text-xs font-bold text-gray-500 uppercase ml-1">Lecture Duration (Mins)</label>
+                        <input type="number" name="durationMinutes" min="0" value="{{ subject.durationMinutes }}" required 
+                               class="w-full px-4 py-3 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm">
+                        
+                        <div class="flex items-center p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 group cursor-pointer">
+                            <input type="checkbox" name="isPriorityForRooms" id="priorityToggle" class="h-5 w-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500" {% if subject.isPriorityForRooms %}checked{% endif %}>
+                            <label for="priorityToggle" class="ml-3 text-sm font-bold text-indigo-900 cursor-pointer">Priority Room Assignment</label>
+                        </div>
+                    </div>
 
-    <!-- Notes -->
-    <div class="mt-4">
-      <label class="block font-medium mb-1">Notes</label>
-      <textarea name="notes" rows="3" class="w-full p-2 border rounded">{{ subject.notes }}</textarea>
-    </div>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between ml-1">
+                            <label class="block text-xs font-bold text-gray-500 uppercase">Lab Duration (Mins)</label>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-[10px] font-bold text-gray-400 uppercase">Enabled</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" name="hasLab" id="hasLabToggle" class="sr-only peer" {% if subject.hasLab %}checked{% endif %}>
+                                    <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                        <div id="labFields" class="transition-all duration-300 {% if not subject.hasLab %}opacity-40 grayscale pointer-events-none{% endif %}">
+                            <input type="number" id="labDurationInput" name="labDurationMinutes" min="0"
+                                   value="{{ subject.labDurationMinutes|default_if_none:'' }}" 
+                                   class="w-full px-4 py-3 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm"
+                                   {% if not subject.hasLab %}disabled{% endif %}>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    <!-- Submit Buttons -->
-    <div class="mt-6">
-      <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Update Subject</button>
-      <a href="javascript:history.back()" class="bg-gray-300 hover:bg-gray-400 text-black font-semibold px-4 py-2 rounded">Back</a>
-    </div>
-  </form>
+        <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 space-y-6">
+            <div class="space-y-1">
+                <label class="block text-xs font-bold text-gray-500 uppercase ml-1">Catalog Description</label>
+                <textarea name="description" rows="3" class="w-full px-4 py-3 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm">{{ subject.description }}</textarea>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-1">
+                    <label class="block text-xs font-bold text-gray-500 uppercase ml-1">Subject Topics</label>
+                    <textarea name="subjectTopics" rows="3" class="w-full px-4 py-3 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm">{{ subject.subjectTopics }}</textarea>
+                </div>
+                <div class="space-y-1">
+                    <label class="block text-xs font-bold text-gray-500 uppercase ml-1">Administrative Notes</label>
+                    <textarea name="notes" rows="3" class="w-full px-4 py-3 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm">{{ subject.notes }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-6">
+            <a href="javascript:history.back()" class="flex items-center text-sm font-semibold text-gray-400 hover:text-indigo-600 transition-colors group">
+                <svg class="w-4 h-4 mr-1 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                Cancel Changes
+            </a>
+            <button type="submit" class="px-12 py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg shadow-indigo-100 hover:bg-indigo-700 hover:translate-y-[-2px] transition-all active:scale-95 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                Update Subject
+            </button>
+        </div>
+    </form>
 </div>
 
-<!-- JavaScript: Toggle Lab Duration -->
 <script>
-  const labToggle = document.getElementById('hasLabToggle');
-  const labFields = document.getElementById('labFields');
-  const labInput = document.getElementById('labDurationInput');
+    const labToggle = document.getElementById('hasLabToggle');
+    const labFields = document.getElementById('labFields');
+    const labInput = document.getElementById('labDurationInput');
 
-  labToggle.addEventListener('change', () => {
-    if (labToggle.checked) {
-      labFields.style.display = 'block';
-      labInput.disabled = false;
-    } else {
-      labFields.style.display = 'none';
-      labInput.value = '';
-      labInput.disabled = true;
-    }
-  });
-
-  if (!labToggle.checked) {
-    labInput.disabled = true;
-  }
+    labToggle.addEventListener('change', () => {
+        if (labToggle.checked) {
+            labFields.classList.remove('opacity-40', 'grayscale', 'pointer-events-none');
+            labInput.disabled = false;
+            labInput.focus();
+        } else {
+            labFields.classList.add('opacity-40', 'grayscale', 'pointer-events-none');
+            labInput.value = '';
+            labInput.disabled = true;
+        }
+    });
 </script>
 {% endblock %}

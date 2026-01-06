@@ -1,68 +1,120 @@
 {% extends 'base.html' %}
+{% block header %}Update GenEd: {{ schedule.code }}{% endblock %}
+{% block title %} Update GenEd Schedule {% endblock %}
+
 {% block content %}
-<div class="max-w-2xl mx-auto mt-10 bg-white p-8 rounded-2xl shadow">
-  <h2 class="text-2xl font-semibold mb-6">Update GenEd Schedule</h2>
-  <form method="post" class="space-y-5">
-    {% csrf_token %}
-
-    <div>
-      <label for="semester" class="block text-sm font-medium text-gray-700">Semester</label>
-      <select name="semester" id="semester" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
-        <option value="">—</option>
-        {% for semester in semesters %}
-          <option value="{{ semester.semesterId }}" {% if semester.semesterId == schedule.semester.semesterId %}selected{% endif %}>
-            {{ semester.name }} ({{ semester.academicYear }} - {{ semester.term }})
-          </option>
-        {% endfor %}
-      </select>
+<div class="max-w-3xl mx-auto mt-10 px-4 pb-20">
+    <div class="mb-8 flex justify-between items-start">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-800">Update GenEd Schedule</h2>
+            <p class="text-gray-500 mt-1">Modifying entry for <span class="font-bold text-emerald-600">{{ schedule.subjectName }}</span> ({{ schedule.sectionCode }})</p>
+        </div>
+        <div class="text-right hidden sm:block">
+            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Entry ID</span>
+            <span class="font-mono text-sm text-gray-600">#{{ schedule.id }}</span>
+        </div>
     </div>
 
-    <div>
-      <label for="code" class="block text-sm font-medium text-gray-700">Subject Code</label>
-      <input type="text" name="code" id="code" value="{{ schedule.code }}" required
-        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
-    </div>
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
 
-    <div>
-      <label for="subjectName" class="block text-sm font-medium text-gray-700">Subject Name</label>
-      <input type="text" name="subjectName" id="subjectName" value="{{ schedule.subjectName }}" required
-        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
-    </div>
+        <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="px-8 py-4 bg-emerald-50 border-b border-emerald-100">
+                <h3 class="text-xs font-bold text-emerald-700 uppercase tracking-widest flex items-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    Schedule Information
+                </h3>
+            </div>
+            
+            <div class="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="md:col-span-2">
+                    <label for="semester" class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Semester Assignment</label>
+                    <select name="semester" id="semester" class="w-full border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm">
+                        <option value="">—</option>
+                        {% for semester in semesters %}
+                        <option value="{{ semester.semesterId }}" {% if semester.semesterId == schedule.semester.semesterId %}selected{% endif %}>
+                            {{ semester.name }} ({{ semester.academicYear }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
 
-    <div>
-      <label for="sectionCode" class="block text-sm font-medium text-gray-700">Section Code</label>
-      <input type="text" name="sectionCode" id="sectionCode" value="{{ schedule.sectionCode }}" required
-        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
-    </div>
+                <div>
+                    <label for="code" class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Subject Code</label>
+                    <input type="text" name="code" id="code" value="{{ schedule.code }}" required
+                           class="w-full border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm">
+                </div>
 
-    <div>
-      <label for="instructorName" class="block text-sm font-medium text-gray-700">Instructor Name</label>
-      <input type="text" name="instructorName" id="instructorName" value="{{ schedule.instructorName }}"
-        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
-    </div>
+                <div>
+                    <label for="sectionCode" class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Section Code</label>
+                    <input type="text" name="sectionCode" id="sectionCode" value="{{ schedule.sectionCode }}" required
+                           class="w-full border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm">
+                </div>
 
-    <div>
-      <label for="dayOfWeek" class="block text-sm font-medium text-gray-700">Day of Week</label>
-      <input type="text" name="dayOfWeek" id="dayOfWeek" value="{{ schedule.dayOfWeek }}" required
-        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
-    </div>
+                <div class="md:col-span-2">
+                    <label for="subjectName" class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Subject Name</label>
+                    <input type="text" name="subjectName" id="subjectName" value="{{ schedule.subjectName }}" required
+                           class="w-full border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm">
+                </div>
+            </div>
+        </div>
 
-    <div>
-      <label for="startTime" class="block text-sm font-medium text-gray-700">Start Time</label>
-      <input type="time" name="startTime" id="startTime" value="{{ schedule.startTime|time:'H:i' }}" required
-        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
-    </div>
+        <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="px-8 py-4 bg-gray-50 border-b border-gray-100">
+                <h3 class="text-xs font-bold text-gray-700 uppercase tracking-widest flex items-center">
+                    <svg class="w-4 h-4 mr-2 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Timing & Faculty
+                </h3>
+            </div>
 
-    <div>
-      <label for="endTime" class="block text-sm font-medium text-gray-700">End Time</label>
-      <input type="time" name="endTime" id="endTime" value="{{ schedule.endTime|time:'H:i' }}" required
-        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
-    </div>
+            <div class="p-8 space-y-6">
+                <div>
+                    <label for="instructorName" class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Instructor Name</label>
+                    <input type="text" name="instructorName" id="instructorName" value="{{ schedule.instructorName }}"
+                           class="w-full border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm">
+                </div>
 
-    <div class="flex justify-between">
-      <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Update</button>
-      <a href="javascript:history.back()" class="bg-gray-300 hover:bg-gray-400 text-black font-semibold px-4 py-2 rounded">Back</a>
-    </div>
-  </form>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label for="dayOfWeek" class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Day of Week</label>
+                        <select name="dayOfWeek" id="dayOfWeek" required
+                                class="w-full border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm appearance-none">
+                            <option value="Monday" {% if schedule.dayOfWeek == "Monday" %}selected{% endif %}>Monday</option>
+                            <option value="Tuesday" {% if schedule.dayOfWeek == "Tuesday" %}selected{% endif %}>Tuesday</option>
+                            <option value="Wednesday" {% if schedule.dayOfWeek == "Wednesday" %}selected{% endif %}>Wednesday</option>
+                            <option value="Thursday" {% if schedule.dayOfWeek == "Thursday" %}selected{% endif %}>Thursday</option>
+                            <option value="Friday" {% if schedule.dayOfWeek == "Friday" %}selected{% endif %}>Friday</option>
+                            <option value="Saturday" {% if schedule.dayOfWeek == "Saturday" %}selected{% endif %}>Saturday</option>
+                            <option value="Sunday" {% if schedule.dayOfWeek == "Sunday" %}selected{% endif %}>Sunday</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="startTime" class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Start Time</label>
+                        <input type="time" name="startTime" id="startTime" value="{{ schedule.startTime|time:'H:i' }}" required
+                               class="w-full border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm">
+                    </div>
+
+                    <div>
+                        <label for="endTime" class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">End Time</label>
+                        <input type="time" name="endTime" id="endTime" value="{{ schedule.endTime|time:'H:i' }}" required
+                               class="w-full border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-6">
+            <a href="javascript:history.back()" class="text-sm font-semibold text-gray-400 hover:text-gray-700 flex items-center group transition-colors">
+                <svg class="w-4 h-4 mr-1 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                Discard Changes
+            </a>
+            
+            <button type="submit" class="px-12 py-4 bg-emerald-600 text-white font-bold rounded-2xl shadow-lg shadow-emerald-100 hover:bg-emerald-700 hover:translate-y-[-2px] transition-all active:scale-95 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                Update Schedule
+            </button>
+        </div>
+    </form>
 </div>
 {% endblock %}
