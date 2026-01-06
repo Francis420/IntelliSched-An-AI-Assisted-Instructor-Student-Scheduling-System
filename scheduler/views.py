@@ -401,14 +401,28 @@ def instructorScheduleView(request):
     # 4. Prepare Timetable Matrix
     schedule_list = list(schedules)
     
-    if not schedule_list:
-        min_time = time(7, 0)
-        max_time = time(19, 0)
-    else:
-        min_hour = min(s.startTime.hour for s in schedule_list)
-        max_hour = max(s.endTime.hour for s in schedule_list)
-        min_time = time(max(0, min_hour - 1), 0)
-        max_time = time(min(23, max_hour + 1), 0)
+    # Defaults: Standard School Hours (e.g., 7 AM to 7 PM)
+    # This prevents the calendar from starting at 12 AM or shrinking too small
+    start_hour_floor = 7 
+    end_hour_ceiling = 19
+
+    if schedule_list:
+        # Check actual class times
+        earliest_class_hour = min(s.startTime.hour for s in schedule_list)
+        latest_class_hour = max(s.endTime.hour for s in schedule_list)
+        
+        # Only expand the range if a class is actually earlier than 7 AM
+        # Also ignores '0' (Midnight) to prevent TBA/Placeholder bugs
+        if 0 < earliest_class_hour < start_hour_floor:
+            start_hour_floor = earliest_class_hour
+        
+        # Only expand the range if a class ends later than 7 PM
+        if latest_class_hour > end_hour_ceiling:
+            end_hour_ceiling = latest_class_hour
+
+    # Add 1 hour padding before and after
+    min_time = time(max(0, start_hour_floor - 1), 0)
+    max_time = time(min(23, end_hour_ceiling + 1), 0)
 
     # Align start/end to 30 min intervals
     start_dt = datetime.combine(datetime.today(), min_time)
@@ -1576,6 +1590,8 @@ def instructorLoad(request):
     
     # Defaults
     current_load = 0.0
+    current_normal_load = 0.0  
+    current_overload_load = 0.0
     reg_limit = 15.0      
     overload_cap = 0.0    
     max_total_limit = 0.0 
@@ -1665,36 +1681,60 @@ def instructorLoad(request):
             max_total_limit = reg_limit + overload_cap
 
             # 4. FETCH ASSIGNED SCHEDULES
+            # 4. FETCH ASSIGNED SCHEDULES
             schedules_qs = Schedule.objects.filter(
                 status='finalized',
                 instructor=current_instructor
             ).select_related('subject', 'section', 'room')
 
+            # Initialize our counters
+            processed_load_keys = set()
+
             for sched in schedules_qs:
+                # Formatting section name
                 raw = str(sched.section.sectionCode).strip()
                 letter = raw.split('-')[-1].strip() if '-' in raw else raw
                 sched.formatted_section = f"{sched.subject.yearLevel}{letter}" 
                 
+                # Identify type and units
                 if sched.scheduleType == 'lab':
                     sched.type = "Laboratory"
-                    units_to_add = float(sched.subject.labHours) 
+                    units = float(sched.subject.labHours) 
                 else:
                     sched.type = "Lecture"
-                    units_to_add = float(sched.subject.lectureHours)
+                    units = float(sched.subject.lectureHours)
                 
+                # Unique check to ensure we don't double-count multi-day sessions
                 load_key = (sched.section.sectionId, sched.scheduleType)
                 if load_key not in processed_load_keys:
-                    current_load += units_to_add
+                    # RULE 1: If the slot itself is marked Overtime (After 5pm or Weekend)
+                    if sched.isOvertime:
+                        current_overload_load += units
+                    else:
+                        current_normal_load += units
+                        
                     processed_load_keys.add(load_key)
 
                 sched.match_score = match_scores.get(sched.subject.subjectId, 0)
                 schedules.append(sched)
-            
-            # 5. STATUS COLOR
+
+            # RULE 2: If Normal Load exceeds the Faculty Rank/Designation limit (Spillover)
+            if current_normal_load > reg_limit:
+                excess = current_normal_load - reg_limit
+                current_overload_load += excess
+                current_normal_load = reg_limit
+
+            # Total for UI display
+            current_load = current_normal_load + current_overload_load
+
+            # 5. STATUS COLOR (Visual warning for the Department Head)
+            # Red: Exceeds absolute max (Reg + Overload Cap)
             if current_load > max_total_limit:
                 load_status_color = "bg-red-500"
+            # Amber: Using some amount of Overload capacity
             elif current_load > reg_limit:
                 load_status_color = "bg-amber-500"
+            # Emerald: Safely within Normal Load
             else:
                 load_status_color = "bg-emerald-500"
 
@@ -1736,7 +1776,12 @@ def instructorLoad(request):
         'top_matches': top_matches,
         'days': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
         'times': time_slots,
+        
+        # Updated values for better UI clarity
         'current_load': round(current_load, 2),
+        'normal_load': round(current_normal_load, 2),    # Added this
+        'overload_load': round(current_overload_load, 2), # Added this
+        
         'reg_limit': round(reg_limit, 2),
         'overload_cap': round(overload_cap, 2),
         'max_limit': round(max_total_limit, 2),

@@ -230,7 +230,7 @@
   <div id="mainContent" class="flex-1 flex flex-col h-full overflow-hidden content-transition w-full
        {% if request.user.is_authenticated and 'deptHead' in request.user.get_roles %}md:ml-64{% endif %}">
       
-      <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0 z-20">
+      <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0 z-[60]">
         <div class="flex items-center gap-4">
           {% if request.user.is_authenticated and 'deptHead' in request.user.get_roles %}
           <button id="mobileMenuBtn" class="md:hidden text-gray-600 hover:text-primary">

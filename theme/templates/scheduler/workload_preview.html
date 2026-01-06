@@ -1,123 +1,197 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block title %}Workload Preview {% endblock %}
+{% block header %}Workload Preview for {{ instructor.full_name }}{% endblock %}
+
 {% block content %}
 <style>
-    .sheet-container {
-        width: 100%; max-width: 1200px; margin: 0 auto;
-        background: white; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        font-family: "Times New Roman", serif;
+    /* Print-like Sheet Styles */
+    .paper-sheet {
+        width: 100%;
+        max-width: 1000px; /* Standard A4ish width */
+        margin: 0 auto;
+        background: #fff;
+        padding: 40px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        font-family: "Times New Roman", Times, serif;
+        color: #000;
+        border: 1px solid #e5e7eb;
     }
-    .sheet-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 12px; }
-    .sheet-table th, .sheet-table td { border: 1px solid #000; padding: 4px; text-align: center; vertical-align: middle; }
-    .sheet-input { 
-        width: 100%; border: none; outline: none; text-align: center; 
-        background: transparent; font-family: inherit; font-size: inherit; 
+
+    /* Table Styles */
+    .sheet-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11px;
+        margin-bottom: 20px;
     }
-    .sheet-input:focus { background-color: #eef; }
+    .sheet-table th {
+        background-color: #f9fafb;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .sheet-table th, .sheet-table td {
+        border: 1px solid #374151; /* Dark gray border */
+        padding: 4px 6px;
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    /* Input Styles */
+    .sheet-input {
+        width: 100%;
+        border: none;
+        background: transparent;
+        text-align: center;
+        font-family: inherit;
+        font-size: inherit;
+        padding: 2px;
+        transition: background 0.2s;
+    }
+    .sheet-input:hover, .sheet-input:focus {
+        background-color: #eff6ff; /* Light blue on focus */
+        outline: none;
+    }
+    
+    /* Header Inputs (Underlined style) */
+    .header-input {
+        border: none;
+        border-bottom: 1px solid #000;
+        background: transparent;
+        padding: 0 4px;
+        font-weight: bold;
+        width: 100%;
+    }
+    .header-input:focus {
+        border-bottom: 2px solid #2563eb;
+        outline: none;
+    }
+
+    /* Utilities */
     .text-left { text-align: left !important; }
     .text-right { text-align: right !important; }
     .font-bold { font-weight: bold; }
     
-    /* Involvement section specific inputs */
-    .inv-input { border-bottom: 1px solid #000; width: 60px; text-align: center; }
-    .inv-text { border-bottom: 1px solid #000; width: 200px; text-align: left; padding-left: 5px; }
+    /* Involvement Section */
+    .inv-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 4px;
+        font-size: 12px;
+    }
+    .inv-input {
+        width: 60px;
+        text-align: right;
+        border: none;
+        border-bottom: 1px solid #000;
+        font-family: inherit;
+    }
 </style>
 
-<div class="p-6 bg-gray-100 min-h-screen">
-    <div class="mb-4 flex justify-between items-center max-w-[1200px] mx-auto">
-        <h2 class="text-xl font-bold text-gray-800">Instructor Workload Preview</h2>
-        <button type="submit" form="workloadForm" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 shadow transition">
-            Export to Excel
-        </button>
+<div class="min-h-screen bg-gray-100 pb-12">
+    
+    <div class="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm mb-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-lg font-bold text-gray-900">Workload Preview</h1>
+                <p class="text-sm text-gray-500">Verify data before exporting to Excel.</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <button type="submit" form="workloadForm" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    Export to Excel
+                </button>
+            </div>
+        </div>
     </div>
 
-    <form id="workloadForm" action="{% url 'exportWorkloadExcel' %}" method="POST" class="sheet-container">
+    <form id="workloadForm" action="{% url 'exportWorkloadExcel' %}" method="POST" class="paper-sheet">
         {% csrf_token %}
 
-        <div class="text-center mb-6 relative">
-            <div class="font-bold text-sm">EASTERN VISAYAS STATE UNIVERSITY</div>
+        <div class="text-center mb-8 relative">
+            <div class="text-sm font-serif">Republic of the Philippines</div>
+            <div class="font-bold text-base">EASTERN VISAYAS STATE UNIVERSITY</div>
             <div class="text-sm">Tacloban City</div>
-            <h1 class="font-bold text-lg mt-2">ACTUAL TEACHING LOAD</h1>
-            <div class="absolute top-0 right-0 text-xs text-left">
-                <div>EVSU-ACA-F-002</div>
-                <div>Rev 002</div>
-                <div>Date: February 20, 2023</div>
+            
+            <h2 class="font-bold text-xl mt-6 underline decoration-double underline-offset-4">ACTUAL TEACHING LOAD</h2>
+            
+            <div class="absolute top-0 right-0 text-[10px] text-left leading-tight border border-gray-400 p-2">
+                <div><strong>Ref No:</strong> EVSU-ACA-F-002</div>
+                <div><strong>Rev No:</strong> 002</div>
+                <div><strong>Date:</strong> February 20, 2023</div>
             </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-4 text-sm mb-4">
-            <div>
-                <div class="flex mb-1">
-                    <span class="w-32">Faculty:</span>
-                    <input type="text" name="header_faculty" value="{{ instructor.full_name|upper }}" class="sheet-input border-b border-black text-left flex-1 font-bold">
-                </div>
-                <div class="flex mb-1">
-                    <span class="w-32">Rank:</span>
-                    <input type="text" name="header_rank" value="{{ instructor.rank.name|upper }}" class="sheet-input border-b border-black text-left flex-1">
-                </div>
-                <div class="flex mb-1">
-                    <span class="w-32">College:</span>
-                    <input type="text" name="header_college" value="SCHOOL OF ENGINEERING" class="sheet-input border-b border-black text-left flex-1">
-                </div>
+        <div class="grid grid-cols-2 gap-x-12 gap-y-2 text-sm mb-6">
+            <div class="flex items-end">
+                <span class="w-24 font-bold">Faculty:</span>
+                <input type="text" name="header_faculty" value="{{ instructor.full_name|upper }}" class="header-input">
             </div>
-            <div>
-                <div class="flex mb-1">
-                    <span class="w-32">Semester:</span>
-                    <input type="text" name="header_semester" value="{{ semester_text }}" class="sheet-input border-b border-black text-left flex-1">
-                </div>
-                <div class="flex mb-1">
-                    <span class="w-32">School Year:</span>
-                    <input type="text" name="header_sy" value="{{ semester.academicYear }}" class="sheet-input border-b border-black text-left flex-1">
-                </div>
+            <div class="flex items-end">
+                <span class="w-24 font-bold">Semester:</span>
+                <input type="text" name="header_semester" value="{{ semester_text|default:'First Semester' }}" class="header-input">
+            </div>
+            <div class="flex items-end">
+                <span class="w-24 font-bold">Rank:</span>
+                <input type="text" name="header_rank" value="{{ instructor.rank.name|upper }}" class="header-input">
+            </div>
+            <div class="flex items-end">
+                <span class="w-24 font-bold">School Year:</span>
+                <input type="text" name="header_sy" value="{{ semester.academicYear }}" class="header-input">
+            </div>
+            <div class="flex items-end col-span-2">
+                <span class="w-24 font-bold">College:</span>
+                <input type="text" name="header_college" value="SCHOOL OF ENGINEERING" class="header-input">
             </div>
         </div>
 
-        <div class="mb-1 font-bold text-sm">REGULAR</div>
+        <div class="mb-2 font-bold text-sm uppercase border-b border-black inline-block">I. Regular Load</div>
         <table class="sheet-table" id="regularTable">
             <thead>
                 <tr>
-                    <th rowspan="2" width="8%">COURSE NO.</th>
-                    <th rowspan="2" width="25%">DESCRIPTIVE TITLE</th>
-                    <th rowspan="2" width="5%">UNITS</th>
-                    <th rowspan="2" width="12%">TIME</th>
-                    <th rowspan="2" width="8%">DAYS</th>
+                    <th rowspan="2" width="8%">Course No.</th>
+                    <th rowspan="2" width="25%">Descriptive Title</th>
+                    <th rowspan="2" width="5%">Units</th>
+                    <th rowspan="2" width="12%">Time</th>
+                    <th rowspan="2" width="8%">Days</th>
                     <th colspan="3">No. of Hrs./Week</th>
-                    <th rowspan="2" width="6%">No. of Students</th>
-                    <th rowspan="2" width="8%">ROOM NO.</th>
-                    <th rowspan="2" width="10%">Course, Yr., & Sec.</th>
+                    <th rowspan="2" width="6%">Students</th>
+                    <th rowspan="2" width="8%">Room</th>
+                    <th rowspan="2" width="10%">Sec.</th>
                 </tr>
                 <tr>
                     <th width="5%">Lec</th>
                     <th width="5%">Lab</th>
-                    <th width="5%">TOTAL</th>
+                    <th width="5%">Total</th>
                 </tr>
             </thead>
             <tbody>
                 {% for row in regular_rows %}
                 <tr>
-                    <td><input type="text" name="reg_code[]" value="{{ row.code }}" class="sheet-input"></td>
-                    <td><input type="text" name="reg_title[]" value="{{ row.description }}" class="sheet-input text-left"></td>
+                    <td><input type="text" name="reg_code[]" value="{{ row.code }}" class="sheet-input font-bold"></td>
+                    <td class="text-left"><input type="text" name="reg_title[]" value="{{ row.description }}" class="sheet-input text-left"></td>
                     <td><input type="text" name="reg_units[]" value="{{ row.units }}" class="sheet-input"></td>
-                    <td><input type="text" name="reg_time[]" value="{{ row.time }}" class="sheet-input" style="font-size: 11px;"></td>
+                    <td><input type="text" name="reg_time[]" value="{{ row.time }}" class="sheet-input text-[10px]"></td>
                     <td><input type="text" name="reg_days[]" value="{{ row.days }}" class="sheet-input"></td>
-                    <td><input type="text" name="reg_lec[]" value="{{ row.lec }}" class="sheet-input"></td>
-                    <td><input type="text" name="reg_lab[]" value="{{ row.lab }}" class="sheet-input"></td>
-                    <td><span class="row-total"></span></td>
+                    <td><input type="number" step="0.1" name="reg_lec[]" value="{{ row.lec }}" class="sheet-input"></td>
+                    <td><input type="number" step="0.1" name="reg_lab[]" value="{{ row.lab }}" class="sheet-input"></td>
+                    <td class="bg-gray-50 font-bold"><span class="row-total"></span></td>
                     <td><input type="text" name="reg_students[]" value="{{ row.students }}" class="sheet-input"></td>
                     <td><input type="text" name="reg_room[]" value="{{ row.room }}" class="sheet-input"></td>
                     <td><input type="text" name="reg_section[]" value="{{ row.section }}" class="sheet-input"></td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="11" class="text-gray-500 italic">No regular load assigned.</td></tr>
+                <tr><td colspan="11" class="text-gray-400 py-4">No regular load assigned.</td></tr>
                 {% endfor %}
             </tbody>
             <tfoot>
-                <tr class="font-bold bg-gray-50">
-                    <td colspan="2" class="text-right px-4">TOTAL</td>
+                <tr class="bg-gray-100 font-bold">
+                    <td colspan="2" class="text-right pr-4">SUB-TOTAL</td>
                     <td>{{ regular_totals.units }}</td>
-                    <td></td>
-                    <td></td>
+                    <td colspan="2"></td>
                     <td>{{ regular_totals.lec }}</td>
                     <td>{{ regular_totals.lab }}</td>
                     <td id="regTotalHrs"></td>
@@ -126,37 +200,41 @@
             </tfoot>
         </table>
 
-        <div class="mb-1 font-bold text-sm mt-4">OVERLOAD / PART-TIME</div>
+        <div class="flex justify-between items-end mb-2 mt-6">
+            <div class="font-bold text-sm uppercase border-b border-black inline-block">II. Overload / Part-Time</div>
+            <button type="button" onclick="addOverloadRow()" class="text-[10px] text-blue-600 hover:underline print:hidden">+ Add Row</button>
+        </div>
+        
         <table class="sheet-table" id="overloadTable">
             <thead>
                 <tr>
-                    <th rowspan="2" width="8%">COURSE NO.</th>
-                    <th rowspan="2" width="25%">DESCRIPTIVE TITLE</th>
-                    <th rowspan="2" width="5%">UNITS</th>
-                    <th rowspan="2" width="12%">TIME</th>
-                    <th rowspan="2" width="8%">DAYS</th>
+                    <th rowspan="2" width="8%">Course No.</th>
+                    <th rowspan="2" width="25%">Descriptive Title</th>
+                    <th rowspan="2" width="5%">Units</th>
+                    <th rowspan="2" width="12%">Time</th>
+                    <th rowspan="2" width="8%">Days</th>
                     <th colspan="3">No. of Hrs./Week</th>
-                    <th rowspan="2" width="6%">No. of Students</th>
-                    <th rowspan="2" width="8%">ROOM NO.</th>
-                    <th rowspan="2" width="10%">Course, Yr., & Sec.</th>
+                    <th rowspan="2" width="6%">Students</th>
+                    <th rowspan="2" width="8%">Room</th>
+                    <th rowspan="2" width="10%">Sec.</th>
                 </tr>
                 <tr>
                     <th>Lec</th>
                     <th>Lab</th>
-                    <th>TOTAL</th>
+                    <th>Total</th>
                 </tr>
             </thead>
             <tbody id="overloadBody">
                 {% for row in overload_rows %}
                 <tr>
-                    <td><input type="text" name="over_code[]" value="{{ row.code }}" class="sheet-input"></td>
-                    <td><input type="text" name="over_title[]" value="{{ row.description }}" class="sheet-input text-left"></td>
+                    <td><input type="text" name="over_code[]" value="{{ row.code }}" class="sheet-input font-bold"></td>
+                    <td class="text-left"><input type="text" name="over_title[]" value="{{ row.description }}" class="sheet-input text-left"></td>
                     <td><input type="text" name="over_units[]" value="{{ row.units }}" class="sheet-input"></td>
-                    <td><input type="text" name="over_time[]" value="{{ row.time }}" class="sheet-input" style="font-size: 11px;"></td>
+                    <td><input type="text" name="over_time[]" value="{{ row.time }}" class="sheet-input text-[10px]"></td>
                     <td><input type="text" name="over_days[]" value="{{ row.days }}" class="sheet-input"></td>
-                    <td><input type="text" name="over_lec[]" value="{{ row.lec }}" class="sheet-input"></td>
-                    <td><input type="text" name="over_lab[]" value="{{ row.lab }}" class="sheet-input"></td>
-                    <td><span class="row-total"></span></td>
+                    <td><input type="number" step="0.1" name="over_lec[]" value="{{ row.lec }}" class="sheet-input"></td>
+                    <td><input type="number" step="0.1" name="over_lab[]" value="{{ row.lab }}" class="sheet-input"></td>
+                    <td class="bg-gray-50 font-bold"><span class="row-total"></span></td>
                     <td><input type="text" name="over_students[]" value="{{ row.students }}" class="sheet-input"></td>
                     <td><input type="text" name="over_room[]" value="{{ row.room }}" class="sheet-input"></td>
                     <td><input type="text" name="over_section[]" value="{{ row.section }}" class="sheet-input"></td>
@@ -164,11 +242,10 @@
                 {% endfor %}
             </tbody>
             <tfoot>
-                <tr class="font-bold bg-gray-50">
-                    <td colspan="2" class="text-right px-4">TOTAL</td>
+                <tr class="bg-gray-100 font-bold">
+                    <td colspan="2" class="text-right pr-4">SUB-TOTAL</td>
                     <td>{{ overload_totals.units }}</td>
-                    <td></td>
-                    <td></td>
+                    <td colspan="2"></td>
                     <td>{{ overload_totals.lec }}</td>
                     <td>{{ overload_totals.lab }}</td>
                     <td id="overTotalHrs"></td>
@@ -176,119 +253,106 @@
                 </tr>
             </tfoot>
         </table>
-        
-        <div class="text-right mb-4">
-            <button type="button" onclick="addOverloadRow()" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded">
-                + Add Overload Row
-            </button>
-        </div>
 
-        <div class="grid grid-cols-2 gap-8 text-sm mt-6">
-            <div>
-                <div class="font-bold mb-2">Other In-School Involvement/Assignment Per Week</div>
-                <div class="space-y-2">
-                    <div class="flex justify-between items-center">
-                        <span>Administrative:</span>
-                        <div>
-                            <input type="number" step="0.1" name="inv_admin" value="{{ inv_admin }}" class="inv-input inv-calc"> Hours
-                        </div>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span>Research:</span>
-                        <div>
-                            <input type="number" step="0.1" name="inv_research" value="{{ inv_research }}" class="inv-input inv-calc"> Hours
-                        </div>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span>Extension Services:</span>
-                        <div>
-                            <input type="number" step="0.1" name="inv_extension" value="{{ inv_extension }}" class="inv-input inv-calc"> Hours
-                        </div>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span>Instructional Functions:</span>
-                        <div>
-                            <input type="number" step="0.1" name="inv_consultation" value="{{ inv_consultation }}" class="inv-input inv-calc"> Hours
-                        </div>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <div class="flex items-center">
-                            <span class="mr-2">Others:</span>
-                            <input type="text" name="inv_note" value="{% if inv_others > 0 %}Production{% endif %}" placeholder="(Please Specify)" class="inv-text text-xs">
-                        </div>
-                        <div>
-                            <input type="number" step="0.1" name="inv_others" value="{{ inv_others }}" class="inv-input inv-calc"> Hours
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="pl-8 border-l border-gray-300">
-                <div class="font-bold mb-2">Summary</div>
-                <div class="space-y-2">
-                    <div class="flex justify-between items-center">
-                        <span>No. of Classes:</span>
-                        <input type="text" name="inv_classes" value="{{ involvement_data.no_of_classes }}" class="inv-input">
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="mt-12 pt-8 border-t-2 border-gray-800">
-            <div class="grid grid-cols-4 gap-4 text-center text-sm">
-                <div>
-                    <div class="mb-8">Conforme:</div>
-                    <div class="px-2">
-                        <input type="text" name="sig_faculty" value="{{ instructor.full_name|upper }}" class="sheet-input font-bold border-b border-black">
-                        <div class="mt-1">Faculty Member</div>
-                    </div>
-                </div>
-                <div>
-                    <div class="mb-8">Recommending Approval:</div>
-                    <div class="px-2">
-                        <input type="text" name="sig_dept_head" value="{{ dept_head_name }}" class="sheet-input font-bold border-b border-black">
-                        <div class="mt-1">Department Head</div>
-                    </div>
-                </div>
-                <div>
-                    <div class="mb-8">&nbsp;</div>
-                    <div class="px-2">
-                        <input type="text" name="sig_dean" value="MA. SALOME C. LISONDRA" class="sheet-input font-bold border-b border-black">
-                        <div class="mt-1">Dean</div>
-                    </div>
-                </div>
-                <div>
-                    <div class="mb-8">Approved:</div>
-                    <div class="px-2">
-                        <input type="text" name="sig_vp" value="BENEDICTO T. MILITANTE JR." class="sheet-input font-bold border-b border-black">
-                        <div class="mt-1">Vice President for Academic Affairs</div>
-                    </div>
-                </div>
-            </div>
+        <div class="grid grid-cols-2 gap-12 mt-8 border-t-2 border-black pt-4">
             
-            <div class="flex justify-center mt-8">
-                <div class="text-center w-1/4">
-                    <input type="text" name="sig_president" value="{{ curriculum.universityPresident|upper|default:'DR. DENNIS C. DE PAZ' }}" class="sheet-input font-bold border-b border-black">
-                    <div class="mt-1">University President</div>
+            <div>
+                <div class="font-bold text-sm mb-3 underline">III. Other In-School Involvement (Hours/Week)</div>
+                <div class="space-y-1 pr-4">
+                    <div class="inv-row">
+                        <span>Administrative:</span>
+                        <div class="flex items-center"><input type="number" step="0.1" name="inv_admin" value="{{ inv_admin|default:0 }}" class="inv-input inv-calc"></div>
+                    </div>
+                    <div class="inv-row">
+                        <span>Research:</span>
+                        <div class="flex items-center"><input type="number" step="0.1" name="inv_research" value="{{ inv_research|default:0 }}" class="inv-input inv-calc"></div>
+                    </div>
+                    <div class="inv-row">
+                        <span>Extension Services:</span>
+                        <div class="flex items-center"><input type="number" step="0.1" name="inv_extension" value="{{ inv_extension|default:0 }}" class="inv-input inv-calc"></div>
+                    </div>
+                    <div class="inv-row">
+                        <span>Instructional Functions:</span>
+                        <div class="flex items-center"><input type="number" step="0.1" name="inv_consultation" value="{{ inv_consultation|default:0 }}" class="inv-input inv-calc"></div>
+                    </div>
+                    <div class="inv-row">
+                        <div class="flex items-center gap-2 w-full">
+                            <span>Others:</span>
+                            <input type="text" name="inv_note" value="{% if inv_others > 0 %}Production{% endif %}" placeholder="(Specify)" class="flex-1 border-b border-gray-400 text-xs focus:outline-none">
+                        </div>
+                        <div class="flex items-center"><input type="number" step="0.1" name="inv_others" value="{{ inv_others|default:0 }}" class="inv-input inv-calc"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border-l border-black pl-8">
+                <div class="font-bold text-sm mb-3 underline">IV. Summary</div>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center text-sm font-bold bg-gray-50 p-2 rounded">
+                        <span>TOTAL WORKLOAD:</span>
+                        <span class="text-lg"><span id="grandTotalDisplay">0.0</span> Hrs</span>
+                        <input type="hidden" name="grand_total" id="grandTotalInput">
+                    </div>
+                    
+                    <div class="inv-row mt-4">
+                        <span>Total No. of Classes/Preps:</span>
+                        <input type="text" name="inv_classes" value="{{ involvement_data.no_of_classes }}" class="inv-input text-center font-bold">
+                    </div>
                 </div>
             </div>
         </div>
+
+        <div class="mt-16 pt-8">
+            <div class="grid grid-cols-4 gap-8 text-center text-xs">
+                
+                <div class="flex flex-col justify-end">
+                    <div class="mb-8 font-bold italic">Conforme:</div>
+                    <input type="text" name="sig_faculty" value="{{ instructor.full_name|upper }}" class="header-input text-center">
+                    <div class="mt-1">Faculty Member</div>
+                </div>
+
+                <div class="flex flex-col justify-end">
+                    <div class="mb-8 font-bold italic">Recommending Approval:</div>
+                    <input type="text" name="sig_dept_head" value="{{ dept_head_name }}" class="header-input text-center">
+                    <div class="mt-1">Department Head</div>
+                </div>
+
+                <div class="flex flex-col justify-end">
+                    <input type="text" name="sig_dean" value="MA. SALOME C. LISONDRA" class="header-input text-center">
+                    <div class="mt-1">Dean</div>
+                </div>
+
+                <div class="flex flex-col justify-end">
+                    <div class="mb-8 font-bold italic">Approved:</div>
+                    <input type="text" name="sig_vp" value="BENEDICTO T. MILITANTE JR." class="header-input text-center">
+                    <div class="mt-1">VP for Academic Affairs</div>
+                </div>
+            </div>
+
+            <div class="flex justify-center mt-12">
+                <div class="text-center w-64">
+                    <input type="text" name="sig_president" value="{{ curriculum.universityPresident|upper|default:'DR. DENNIS C. DE PAZ' }}" class="header-input text-center">
+                    <div class="mt-1 text-xs">University President</div>
+                </div>
+            </div>
+        </div>
+
     </form>
 </div>
 
 <script>
     function calculateRowTotal(row) {
-        // Find inputs for lec and lab in this specific row
-        // Note: Using name^= selector to find inputs starting with specific names
         const lecInput = row.querySelector('input[name*="lec"]');
         const labInput = row.querySelector('input[name*="lab"]');
         const totalSpan = row.querySelector('.row-total');
         
+        if (!lecInput || !labInput) return 0;
+
         const lec = parseFloat(lecInput.value) || 0;
         const lab = parseFloat(labInput.value) || 0;
         const total = lec + lab;
         
-        totalSpan.textContent = total > 0 ? total : '';
+        totalSpan.textContent = total > 0 ? total.toFixed(1) : '';
         return total;
     }
 
@@ -296,55 +360,54 @@
         let regTotal = 0;
         let overTotal = 0;
 
+        // 1. Regular Load
         document.querySelectorAll('#regularTable tbody tr').forEach(row => {
             regTotal += calculateRowTotal(row);
         });
-        document.getElementById('regTotalHrs').textContent = regTotal > 0 ? regTotal : '';
+        document.getElementById('regTotalHrs').textContent = regTotal > 0 ? regTotal.toFixed(1) : '';
 
+        // 2. Overload
         document.querySelectorAll('#overloadTable tbody tr').forEach(row => {
             overTotal += calculateRowTotal(row);
         });
-        document.getElementById('overTotalHrs').textContent = overTotal > 0 ? overTotal : '';
+        document.getElementById('overTotalHrs').textContent = overTotal > 0 ? overTotal.toFixed(1) : '';
 
-        // Calculate Involvement Total
+        // 3. Involvement
         let invTotal = 0;
         document.querySelectorAll('.inv-calc').forEach(inp => {
             invTotal += parseFloat(inp.value) || 0;
         });
 
-        // Update Grand Total (Teaching Load + Involvement)
-        // Note: Usually Total Workload includes Teaching Load hours + Involvement
-        // Adjust logic if Total Workload is ONLY Involvement
-        
-        // Assuming Total Workload = Involvement Sum (based on your template structure)
-        const grandTotal = invTotal; 
+        // 4. Grand Total (Formula: Regular + Overload + Involvement)
+        // Modify this formula if your school calculates it differently
+        const grandTotal = regTotal + overTotal + invTotal;
         
         document.getElementById('grandTotalDisplay').textContent = grandTotal.toFixed(1);
         document.getElementById('grandTotalInput').value = grandTotal;
     }
 
-    // Add event listeners to all inputs for real-time calc
+    // Real-time updates
     document.addEventListener('input', function(e) {
         if (e.target.matches('input[name*="lec"], input[name*="lab"], .inv-calc')) {
             calculateAllTotals();
         }
     });
 
-    // Initial Calculation
+    // Init
     calculateAllTotals();
 
     function addOverloadRow() {
         const tbody = document.getElementById('overloadBody');
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td><input type="text" name="over_code[]" class="sheet-input"></td>
-            <td><input type="text" name="over_title[]" class="sheet-input text-left"></td>
+            <td><input type="text" name="over_code[]" class="sheet-input font-bold"></td>
+            <td class="text-left"><input type="text" name="over_title[]" class="sheet-input text-left"></td>
             <td><input type="text" name="over_units[]" class="sheet-input"></td>
-            <td><input type="text" name="over_time[]" class="sheet-input" style="font-size: 11px;"></td>
+            <td><input type="text" name="over_time[]" class="sheet-input text-[10px]"></td>
             <td><input type="text" name="over_days[]" class="sheet-input"></td>
-            <td><input type="text" name="over_lec[]" class="sheet-input"></td>
-            <td><input type="text" name="over_lab[]" class="sheet-input"></td>
-            <td><span class="row-total"></span></td>
+            <td><input type="number" step="0.1" name="over_lec[]" class="sheet-input"></td>
+            <td><input type="number" step="0.1" name="over_lab[]" class="sheet-input"></td>
+            <td class="bg-gray-50 font-bold"><span class="row-total"></span></td>
             <td><input type="text" name="over_students[]" class="sheet-input"></td>
             <td><input type="text" name="over_room[]" class="sheet-input"></td>
             <td><input type="text" name="over_section[]" class="sheet-input"></td>

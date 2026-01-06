@@ -615,9 +615,10 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
             instructor = instructor_objs.get(instructors[i_idx])
             room = None if r_idx == TBA_ROOM_IDX else room_objs.get(rooms[r_idx])
             
-            is_weekend_bool = (day_idx >= 5)
-            is_evening_bool = (min_day >= 1020)
-            final_is_overtime = is_weekend_bool or is_evening_bool
+            is_weekend = (day_idx >= 5)             
+            is_weekday = (day_idx < 5)              
+            is_after_5pm = (min_day >= 1020)
+            final_is_overtime = is_weekend or (is_weekday and is_after_5pm)
 
             schedules_to_create.append(Schedule(
                 subject=sec_obj.subject,

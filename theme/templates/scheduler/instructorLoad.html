@@ -37,51 +37,53 @@
 
                 {% if selectedInstructorId %}
                 <div class="flex flex-col gap-1 mt-1">
-                    <div class="w-full h-4 rounded-full relative overflow-hidden flex bg-white border border-gray-300" title="Normal: {{ reg_limit }} + Overload: {{ overload_cap }}">
+                    <div class="w-full h-5 rounded-full relative overflow-hidden flex bg-gray-100 border border-gray-300" 
+                        title="Normal: {{ normal_load }} + Overload: {{ overload_load }}">
                         
-                        <div class="absolute top-0 left-0 h-full bg-gray-200 border-r border-gray-300 z-0" 
-                             style="width: {% widthratio reg_limit max_limit 100 %}%;">
+                        <div class="bg-emerald-500 h-full transition-all duration-500 relative z-20 shadow-sm border-r border-emerald-600" 
+                            style="width: {% widthratio normal_load max_limit 100 %}%;">
+                            {% if normal_load > 0 %}
+                            <span class="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-white">
+                                {{ normal_load }}
+                            </span>
+                            {% endif %}
                         </div>
 
-                        <div class="absolute top-0 bottom-0 right-0 z-0 bg-amber-50" 
-                             style="left: {% widthratio reg_limit max_limit 100 %}%; 
-                                    background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, #fcd34d 5px, #fcd34d 10px); 
-                                    opacity: 0.2;">
+                        <div class="h-full transition-all duration-500 relative z-10" 
+                            style="width: {% widthratio overload_load max_limit 100 %}%; 
+                                    background-color: #fbbf24;
+                                    background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255,255,255,0.3) 5px, rgba(255,255,255,0.3) 10px);">
+                            {% if overload_load > 0 %}
+                            <span class="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-amber-900">
+                                +{{ overload_load }}
+                            </span>
+                            {% endif %}
                         </div>
 
-                        <div class="{{ load_color }} h-full transition-all duration-500 relative z-10 shadow-sm" 
-                             style="width: {% widthratio current_load max_limit 100 %}%;">
-                             
-                             {% if current_load > 2 %}
-                             <span class="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-white drop-shadow-md">
-                                {{ current_load }} hrs
-                             </span>
-                             {% endif %}
-                        </div>
-
-                        <div class="absolute top-0 bottom-0 border-r-2 border-dashed border-gray-600 opacity-60 z-20" 
-                             style="left: {% widthratio reg_limit max_limit 100 %}%;">
+                        <div class="absolute top-0 bottom-0 border-r-2 border-dashed border-gray-600 opacity-60 z-30" 
+                            style="left: {% widthratio reg_limit max_limit 100 %}%;">
                         </div>
                     </div>
 
                     <div class="flex justify-between text-[10px] font-mono text-gray-500 px-1">
                         <span class="flex items-center gap-1">
-                            Current: <strong class="text-gray-800 text-xs">{{ current_load }}</strong>
+                            Total: <strong class="text-gray-800 text-xs">{{ current_load }} hrs</strong>
                         </span>
                         
-                        <span class="flex items-center gap-1">
-                            Normal: <strong class="text-gray-800">{{ reg_limit }}</strong>
-                        </span>
+                        <div class="flex gap-3">
+                            <span class="flex items-center gap-1">
+                                <span class="w-2 h-2 bg-emerald-500 rounded-full"></span>
+                                Normal: <strong>{{ normal_load }}</strong>/{{ reg_limit }}
+                            </span>
+
+                            <span class="flex items-center gap-1">
+                                <span class="w-2 h-2 bg-amber-400 rounded-full"></span>
+                                Overload: <strong>{{ overload_load }}</strong>/{{ overload_cap }}
+                            </span>
+                        </div>
 
                         <span class="flex items-center gap-1">
                             Max: <strong class="{{ load_color|cut:'bg-' }} text-xs">{{ max_limit }}</strong>
-                            {% if overload_cap > 0 %}
-                            <span class="text-amber-600 font-bold bg-amber-50 px-1 rounded border border-amber-200" title="Overload Allowance">
-                                +{{ overload_cap }}
-                            </span>
-                            {% else %}
-                            <span class="text-gray-300">(+0)</span>
-                            {% endif %}
                         </span>
                     </div>
                 </div>
