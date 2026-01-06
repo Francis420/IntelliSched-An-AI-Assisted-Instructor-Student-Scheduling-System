@@ -20,12 +20,9 @@ from authapi.views import has_role
 import re
 from django.http import HttpResponse, JsonResponse
 from django.template.loader import get_template
-from xhtml2pdf import pisa
 from django.db.models import Sum
-from weasyprint import HTML 
 from django.template.loader import render_to_string
 import math
-from weasyprint import HTML, CSS
 import openpyxl
 from openpyxl.styles import Alignment
 from openpyxl.utils import get_column_letter
