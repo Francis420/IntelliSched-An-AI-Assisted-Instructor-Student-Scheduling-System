@@ -1,128 +1,212 @@
 {% extends "base.html" %}
-{% block header %}| AI Matching Results{% endblock %}
+
+{% block title %}Semantic Matching Results{% endblock %}
+{% block header %}AI Recommendations{% endblock %}
+
 {% block content %}
-<div class="max-w-7xl mx-auto p-6 bg-white shadow rounded-xl">
+<div class="max-w-7xl mx-auto mt-8 px-4 sm:px-6 lg:px-8">
 
-  <h2 class="text-2xl font-bold mb-6">Top Recommended Instructors per Subject</h2>
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-900">Top Recommended Instructors</h2>
+            <p class="text-sm text-gray-500">AI-generated compatibility scores based on your configuration weights.</p>
+        </div>
 
-  <!-- 🔍 Search + View All -->
-  <div class="flex items-center justify-between mb-6">
-    <div class="flex items-center space-x-2 w-full max-w-lg">
-      <input type="text" 
-             id="subjectSearch" 
-             placeholder="Search subjects..." 
-             class="border px-4 py-2 rounded-lg w-full">
+        <div class="flex items-center gap-3 w-full md:w-auto">
+            
+            <div class="relative flex-grow md:flex-grow-0 md:w-72">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
+                <input type="text" 
+                       id="subjectSearch" 
+                       placeholder="Filter by Subject..." 
+                       class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-lg shadow-sm py-2">
+                
+                <button id="clearSearchBtn" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <a href="{% url 'matchingResults' batchId=batchId %}" 
+               class="flex-shrink-0 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 shadow-sm transition-colors duration-200 whitespace-nowrap"
+               id="viewAllBtn">
+               View Full Report
+            </a>
+        </div>
     </div>
-    <a href="{% url 'matchingResults' batchId=batchId %}" 
-       class="ml-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-       id="viewAllBtn">
-      View All
-    </a>
-  </div>
 
-  <!-- Results -->
-  <div id="subjectsContainer">
-    {% for subject in subjects %}
-    <div class="mb-6 border rounded-lg p-4 bg-gray-50 subject-card"
-         data-name="{{ subject.name|lower }}"
-         data-code="{{ subject.code|lower }}">
-      <h3 class="text-xl font-semibold mb-3">{{ subject.code }} - {{ subject.name }}</h3>
-      <table class="min-w-full border text-sm">
-        <thead>
-          <tr class="bg-gray-200">
-            <th class="px-3 py-2 border">Rank</th>
-            <th class="px-3 py-2 border">Instructor</th>
-            <th class="px-3 py-2 border">Total Score</th>
-            <th class="px-3 py-2 border">Primary Factor</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for match in subject.top_matches %}
-          <tr>
-            <td class="px-3 py-2 border">{{ forloop.counter }}</td>
-            <td class="px-3 py-2 border">{{ match.instructor.full_name }}</td>
-            <td class="px-3 py-2 border font-bold text-green-700">
-              {% if match.latestHistory %}
-                {{ match.latestHistory.confidenceScorePct|floatformat:1 }}%
-              {% else %}
-                -
-              {% endif %}
-            </td>
-            <td class="px-3 py-2 border">
-              {% if match.latestHistory %}
-                {{ match.latestHistory.primaryFactor }}
-              {% else %}
-                -
-              {% endif %}
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="5" class="px-3 py-2 text-center">
-              No recommended matches yet.
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <div id="noResultsMsg" class="hidden text-center py-12">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">No matching subjects</h3>
+        <p class="mt-1 text-sm text-gray-500">Try adjusting your search query.</p>
     </div>
-    {% empty %}
-    <p class="text-gray-600">No subjects found.</p>
-    {% endfor %}
-  </div>
+
+    <div id="subjectsContainer" class="space-y-6">
+        {% for subject in subjects %}
+        <div class="subject-card bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden transition-all duration-200 hover:shadow-md"
+             data-name="{{ subject.name|lower }}"
+             data-code="{{ subject.code|lower }}">
+            
+            <div class="bg-gray-50 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <div class="flex items-center">
+                    <span class="inline-flex items-center justify-center h-10 w-10 rounded-lg bg-indigo-100 text-indigo-700 font-bold text-sm ring-4 ring-white">
+                        {{ subject.code|slice:":3" }}
+                    </span>
+                    <div class="ml-4">
+                        <h3 class="text-lg font-bold text-gray-900">{{ subject.code }}</h3>
+                        <p class="text-sm text-gray-500">{{ subject.name }}</p>
+                    </div>
+                </div>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    {{ subject.top_matches|length }} Matches
+                </span>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-white">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">Rank</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Instructor</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Confidence Score</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Primary Driver</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for match in subject.top_matches %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if forloop.counter == 1 %}
+                                    <span class="flex items-center justify-center w-6 h-6 rounded-full bg-yellow-100 text-yellow-700 text-xs font-bold border border-yellow-200" title="Top Match">1</span>
+                                {% elif forloop.counter == 2 %}
+                                    <span class="flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 text-gray-600 text-xs font-bold border border-gray-300" title="2nd Place">2</span>
+                                {% elif forloop.counter == 3 %}
+                                    <span class="flex items-center justify-center w-6 h-6 rounded-full bg-orange-100 text-orange-700 text-xs font-bold border border-orange-200" title="3rd Place">3</span>
+                                {% else %}
+                                    <span class="text-sm text-gray-500 pl-2">{{ forloop.counter }}</span>
+                                {% endif %}
+                            </td>
+
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">{{ match.instructor.full_name }}</div>
+                            </td>
+
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if match.latestHistory %}
+                                    <div class="flex items-center">
+                                        {% with score=match.latestHistory.confidenceScorePct %}
+                                        <div class="flex-1 w-24 bg-gray-200 rounded-full h-2 mr-3">
+                                            <div class="h-2 rounded-full 
+                                                {% if score >= 80 %}bg-green-500
+                                                {% elif score >= 50 %}bg-yellow-500
+                                                {% else %}bg-red-500{% endif %}" 
+                                                style="width: {{ score|floatformat:0 }}%"></div>
+                                        </div>
+                                        <span class="text-sm font-bold 
+                                            {% if score >= 80 %}text-green-700
+                                            {% elif score >= 50 %}text-yellow-700
+                                            {% else %}text-red-700{% endif %}">
+                                            {{ score|floatformat:1 }}%
+                                        </span>
+                                        {% endwith %}
+                                    </div>
+                                {% else %}
+                                    <span class="text-sm text-gray-400">-</span>
+                                {% endif %}
+                            </td>
+
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if match.latestHistory %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                        {{ match.latestHistory.primaryFactor }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-gray-400 text-xs">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500 italic">
+                                No recommendations found for this subject.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% empty %}
+            <div class="text-center py-12 bg-white rounded-xl shadow-sm border border-gray-200">
+                <p class="text-gray-500 text-lg">No subjects found for this batch.</p>
+                <a href="{% url 'matchingConfig' %}" class="mt-4 inline-flex items-center text-indigo-600 hover:text-indigo-900 font-medium">
+                    Check Configuration &rarr;
+                </a>
+            </div>
+        {% endfor %}
+    </div>
 </div>
 
 <script>
-  // Subject search filter
-  const searchInput = document.getElementById('subjectSearch');
-  const subjectCards = document.querySelectorAll('.subject-card');
-  const viewAllBtn = document.getElementById('viewAllBtn');
-  let typingTimer;
+    // Search Functionality
+    const searchInput = document.getElementById('subjectSearch');
+    const clearBtn = document.getElementById('clearSearchBtn');
+    const subjectCards = document.querySelectorAll('.subject-card');
+    const noResultsMsg = document.getElementById('noResultsMsg');
+    
+    // Restore previous search if exists
+    const storedQuery = localStorage.getItem("subjectSearchQuery");
+    if (storedQuery) {
+        searchInput.value = storedQuery;
+        filterSubjects(storedQuery);
+    }
 
-  if (localStorage.getItem("subjectSearchQuery")) {
-    searchInput.value = localStorage.getItem("subjectSearchQuery");
-    filterSubjects(searchInput.value);
-  }
-
-  searchInput.addEventListener('keyup', () => {
-    clearTimeout(typingTimer);
-    typingTimer = setTimeout(() => {
-      const query = searchInput.value;
-      localStorage.setItem("subjectSearchQuery", query);
-      filterSubjects(query);
-    }, 300);
-  });
-
-  viewAllBtn.addEventListener('click', () => {
-    localStorage.removeItem("subjectSearchQuery");
-  });
-
-  function filterSubjects(query) {
-    const q = query.toLowerCase();
-    subjectCards.forEach(card => {
-      const name = card.dataset.name;
-      const code = card.dataset.code;
-      card.style.display = (name.includes(q) || code.includes(q)) ? 'block' : 'none';
+    // Input Listener
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value;
+        localStorage.setItem("subjectSearchQuery", query);
+        filterSubjects(query);
     });
-  }
 
-  // Show more / Show less toggle
-  document.querySelectorAll('.toggle-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const cell = btn.closest('td');
-      const shortText = cell.querySelector('.short-text');
-      const fullText = cell.querySelector('.full-text');
-
-      if (fullText.classList.contains('hidden')) {
-        shortText.classList.add('hidden');
-        fullText.classList.remove('hidden');
-        btn.textContent = 'Show less';
-      } else {
-        shortText.classList.remove('hidden');
-        fullText.classList.add('hidden');
-        btn.textContent = 'Show more';
-      }
+    // Clear Button Listener
+    clearBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        localStorage.removeItem("subjectSearchQuery");
+        filterSubjects('');
+        searchInput.focus();
     });
-  });
+
+    function filterSubjects(query) {
+        const q = query.toLowerCase().trim();
+        let visibleCount = 0;
+
+        // Toggle Clear Button
+        if (q.length > 0) {
+            clearBtn.classList.remove('hidden');
+        } else {
+            clearBtn.classList.add('hidden');
+        }
+
+        // Filter Logic
+        subjectCards.forEach(card => {
+            const name = card.dataset.name;
+            const code = card.dataset.code;
+            
+            if (name.includes(q) || code.includes(q)) {
+                card.style.display = 'block';
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        // Toggle No Results Message
+        if (visibleCount === 0 && subjectCards.length > 0) {
+            noResultsMsg.classList.remove('hidden');
+        } else {
+            noResultsMsg.classList.add('hidden');
+        }
+    }
 </script>
 {% endblock %}

@@ -1,93 +1,140 @@
 {% extends 'base.html' %}
-{% block title %}Rooms{% endblock %}
-{% block header %}| Rooms{% endblock %}
+
+{% block title %}Room Management{% endblock %}
+{% block header %}Room Management{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto mt-10 px-4 sm:px-6 lg:px-8">
+<div class="max-w-7xl mx-auto mt-8 px-4 sm:px-6 lg:px-8">
 
-  <!-- Search Bar -->
-  <div class="mb-6">
-    <input type="text" id="searchInput"
-           class="w-full sm:w-1/2 border border-gray-300 rounded-md py-2 px-3 focus:ring-blue-500 focus:border-blue-500"
-           placeholder="Search by code, building, type, or notes..."
-           value="{{ query }}">
-  </div>
+    <div class="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
 
-  <!-- Add Room Button -->
-  <div class="mb-4 text-right">
-    <a href="{% url 'roomCreate' %}"
-       class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition">
-      + Add New Room
-    </a>
-  </div>
+        <div class="px-6 py-5 border-b border-gray-200 bg-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <p class="text-sm text-gray-500">Manage lecture rooms, laboratories and room capacities.</p>
+            </div>
+            <a href="{% url 'roomCreate' %}" 
+               class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-sm transition-all">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Add New Room
+            </a>
+        </div>
 
-  <!-- Rooms Container -->
-  <div id="roomContainer">
-    {% include 'scheduling/rooms/_table.html' %}
-  </div>
+        <div class="p-6 bg-white border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            
+            <div class="relative w-full md:w-96">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
+                <input type="text" id="searchInput" 
+                       class="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg leading-5 bg-gray-50 placeholder-gray-500 focus:outline-none focus:bg-white focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150 ease-in-out"
+                       placeholder="Search by code, building, or type..." 
+                       value="{{ query }}">
+                
+                <div id="search-spinner" class="absolute inset-y-0 right-0 pr-3 flex items-center hidden">
+                    <svg class="animate-spin h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </div>
+            </div>
 
-  <!-- Pagination -->
-  <div id="paginationControls" class="mt-6 flex justify-center"></div>
+            <div class="flex items-center space-x-2 text-sm text-gray-500">
+                </div>
+        </div>
+
+        <div id="roomContainer" class="min-h-[200px]">
+            {% include 'scheduling/rooms/_table.html' %}
+        </div>
+        
+        </div>
 </div>
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
     const searchInput = document.getElementById("searchInput");
     const container = document.getElementById("roomContainer");
-    const paginationControls = document.getElementById("paginationControls");
+    const spinner = document.getElementById("search-spinner");
+    let typingTimer;
 
+    // 1. Restore State from LocalStorage (Persistence)
     let savedQuery = localStorage.getItem("roomQuery") || "";
     let savedPage = localStorage.getItem("roomPage") || 1;
 
+    // Only restore search text if the server didn't provide one and we have a saved one
     if (!searchInput.value && savedQuery) {
         searchInput.value = savedQuery;
     }
 
+    // 2. Main Fetch Function
     function fetchData(page = 1) {
         const query = searchInput.value.trim();
+        
+        // Save state
         localStorage.setItem("roomQuery", query);
         localStorage.setItem("roomPage", page);
 
-        fetch(`{% url 'roomListLive' %}?q=${encodeURIComponent(query)}&page=${page}`)
-            .then(res => res.json())
+        // UI: Show Spinner
+        spinner.classList.remove('hidden');
+        container.classList.add('opacity-50'); // Dim the table slightly
+
+        // Construct URL
+        const url = `{% url 'roomListLive' %}?q=${encodeURIComponent(query)}&page=${page}`;
+
+        fetch(url)
+            .then(res => {
+                if (!res.ok) throw new Error("Network response failed");
+                return res.json();
+            })
             .then(data => {
+                // Update HTML
                 container.innerHTML = data.html;
-                renderPagination(data.page, data.num_pages);
+                
+                // Re-bind Pagination Events
+                // (Assumes your _table.html includes the pagination links with class 'live-page-link')
+                bindPagination();
+            })
+            .catch(err => {
+                console.error("Error loading rooms:", err);
+                container.innerHTML = `<div class="p-6 text-center text-red-500">Unable to load data. Please refresh.</div>`;
+            })
+            .finally(() => {
+                // UI: Hide Spinner & Undim
+                spinner.classList.add('hidden');
+                container.classList.remove('opacity-50');
             });
     }
 
-    function renderPagination(current, total) {
-        if (total <= 1) {
-            paginationControls.innerHTML = "";
-            return;
-        }
-        let html = `<nav><ul class="flex space-x-2">`;
-        for (let i = 1; i <= total; i++) {
-            html += `<li>
-                        <a href="#" data-page="${i}"
-                           class="px-3 py-1 rounded-md ${i == current ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}">
-                          ${i}
-                        </a>
-                     </li>`;
-        }
-        html += `</ul></nav>`;
-        paginationControls.innerHTML = html;
-
-        paginationControls.querySelectorAll("a").forEach(el => {
-            el.addEventListener("click", function(e) {
+    // 3. Helper to Bind Pagination Links
+    // Note: ensure your _table.html pagination links have class="live-page-link" and data-page="x"
+    function bindPagination() {
+        const links = container.querySelectorAll(".live-page-link");
+        links.forEach(link => {
+            link.addEventListener("click", function(e) {
                 e.preventDefault();
                 fetchData(this.dataset.page);
             });
         });
+        
+        // If your current _table.html generates pagination completely separately, 
+        // you might need to adapt this part. Ideally, putting pagination INSIDE _table.html is best.
     }
 
-    let typingTimer;
+    // 4. Input Listener (Debounce)
     searchInput.addEventListener("input", () => {
         clearTimeout(typingTimer);
-        typingTimer = setTimeout(() => fetchData(1), 300);
+        spinner.classList.remove('hidden'); // Show spinner immediately
+        typingTimer = setTimeout(() => fetchData(1), 300); // Reset to page 1 on new search
     });
 
-    fetchData(savedPage);
+    // 5. Initial Load (using saved page)
+    // If the input is empty on load (and no saved query), you might just want page 1.
+    // But if we restored a query, we fetch that query's results.
+    if(searchInput.value.trim() !== "") {
+        fetchData(savedPage); 
+    } else {
+        // If needed, bind existing pagination on initial server render
+        bindPagination(); 
+    }
 });
 </script>
 {% endblock %}

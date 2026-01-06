@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="max-w-xl mx-auto mt-6 p-6 bg-white shadow rounded-xl">
-  <h2 class="text-2xl font-bold mb-4">Edit Matching Config for {{ semester.name }}</h2>
+  <h2 class="text-2xl font-bold mb-4">Update Matching Config for {{ semester.name }}</h2>
 
   <form method="post" oninput="updateTotal()">
     {% csrf_token %}
@@ -36,7 +36,7 @@
 
     <button id="saveBtn" type="submit" 
             class="bg-green-600 text-white px-4 py-2 rounded-lg w-full">
-      💾 Save Configuration
+      Save Configuration
     </button>
   </form>
 </div>

@@ -2,80 +2,144 @@
 {% block title %}Instructor Dashboard{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto mt-6">
-  <!-- Welcome Header -->
-  <div class="bg-white p-8 rounded-2xl shadow mb-8">
-    <h1 class="text-3xl font-bold text-gray-800">
-      Welcome, {{ request.user.firstName|default:"Instructor" }}!
-    </h1>
-    <p class="mt-2 text-gray-600 text-lg">
-      Here’s an overview of your teaching profile and activities.
-    </p>
-  </div>
+<div class="min-h-screen bg-gray-50 pb-12">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+    
+    <div class="md:flex md:items-center md:justify-between mb-8">
+      <div class="flex-1 min-w-0">
+        <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
+          Instructor Dashboard
+        </h2>
+        <p class="mt-1 text-sm text-gray-500">
+          Welcome back, {{ request.user.firstName|default:"Instructor" }}. Manage your profile and scheduling settings.
+        </p>
+      </div>
+      <div class="mt-4 flex md:mt-0 md:ml-4">
+        <span class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+          📅 {{ "now"|date:"l, F j, Y" }}
+        </span>
+      </div>
+    </div>
 
-  <!-- Overview Cards -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-    <a href="{% url 'experienceList' %}" class="bg-blue-600 text-white p-6 rounded-2xl shadow hover:bg-blue-700 transition">
-      <h2 class="text-xl font-semibold">Experience{{ experience_count|pluralize }}</h2>
-      <p class="mt-2 text-sm text-blue-100">
-        {{ experience_count }} recorded
-      </p>
-    </a>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      
+      <div class="lg:col-span-2 space-y-6">
+        
+        <h3 class="text-lg font-medium leading-6 text-gray-900 mt-8">Profile & Qualifications</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          
+          <a href="{% url 'experienceList' %}" class="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition border border-gray-100 group">
+            <div class="p-5">
+              <div class="flex items-center">
+                <div class="flex-shrink-0 bg-blue-100 rounded-md p-3 group-hover:bg-blue-600 transition-colors">
+                  <svg class="h-6 w-6 text-blue-600 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt class="text-sm font-medium text-gray-500 truncate">Experience</dt>
+                    <dd>
+                      <div class="text-lg font-medium text-gray-900">{{ experience_count }} Items</div>
+                    </dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </a>
 
-    <a href="{% url 'credentialList' %}" class="bg-purple-600 text-white p-6 rounded-2xl shadow hover:bg-purple-700 transition">
-      <h2 class="text-xl font-semibold">Credential{{ credential_count|pluralize }}</h2>
-      <p class="mt-2 text-sm text-purple-100">
-        {{ credential_count }} uploaded
-      </p>
-    </a>
+          <a href="{% url 'credentialList' %}" class="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition border border-gray-100 group">
+            <div class="p-5">
+              <div class="flex items-center">
+                <div class="flex-shrink-0 bg-purple-100 rounded-md p-3 group-hover:bg-purple-600 transition-colors">
+                  <svg class="h-6 w-6 text-purple-600 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt class="text-sm font-medium text-gray-500 truncate">Credentials</dt>
+                    <dd>
+                      <div class="text-lg font-medium text-gray-900">{{ credential_count }} Docs</div>
+                    </dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </a>
 
-    <a href="{% url 'availabilityList' %}" class="bg-green-600 text-white p-6 rounded-2xl shadow hover:bg-green-700 transition">
-      <h2 class="text-xl font-semibold">Availabilit{{ availability_count|pluralize:"y,ies" }}</h2>
-      <p class="mt-2 text-sm text-green-100">
-        {{ availability_count }} slot{{ availability_count|pluralize }} set
-      </p>
-    </a>
+          <a href="{% url 'teachingHistoryList' %}" class="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition border border-gray-100 group">
+            <div class="p-5">
+              <div class="flex items-center">
+                <div class="flex-shrink-0 bg-teal-100 rounded-md p-3 group-hover:bg-teal-600 transition-colors">
+                  <svg class="h-6 w-6 text-teal-600 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt class="text-sm font-medium text-gray-500 truncate">History</dt>
+                    <dd>
+                      <div class="text-lg font-medium text-gray-900">{{ teaching_history_count }} Classes</div>
+                    </dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </a>
 
-    <a href="{% url 'preferenceList' %}" class="bg-orange-600 text-white p-6 rounded-2xl shadow hover:bg-orange-700 transition">
-      <h2 class="text-xl font-semibold">Preference{{ preference_count|pluralize }}</h2>
-      <p class="mt-2 text-sm text-orange-100">
-        {{ preference_count }} preference{{ preference_count|pluralize }}
-      </p>
-    </a>
+        </div>
+      </div>
 
-    <a href="{% url 'teachingHistoryList' %}" class="bg-teal-600 text-white p-6 rounded-2xl shadow hover:bg-teal-700 transition">
-      <h2 class="text-xl font-semibold">Teaching History</h2>
-      <p class="mt-2 text-sm text-teal-100">
-        {{ teaching_history_count }} subject{{ teaching_history_count|pluralize }} taught
-      </p>
-    </a>
-  </div>
-
-
-  <!-- Recent Activity -->
-  <div class="mt-10 bg-white p-6 rounded-2xl shadow">
-    <h2 class="text-2xl font-semibold text-gray-800 mb-4">Recent Updates</h2>
-    {% if recent_activities %}
-      <ul class="divide-y divide-gray-200">
-        {% for activity in recent_activities %}
-          <li class="py-3">
-            {% if activity.url %}
-              <a href="{{ activity.url }}" class="font-medium text-blue-600 hover:underline">
-                {{ activity.title }}
-              </a>
+      <div class="lg:col-span-1">
+        <div class="bg-white rounded-lg shadow border border-gray-100">
+          <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Recent Activity</h3>
+            <p class="mt-1 max-w-2xl text-sm text-gray-500">Your latest profile updates.</p>
+          </div>
+          <div class="px-4 py-5 sm:p-6">
+            {% if recent_activities %}
+            <div class="flow-root">
+              <ul class="-mb-8">
+                {% for activity in recent_activities %}
+                <li>
+                  <div class="relative pb-8">
+                    {% if not forloop.last %}
+                      <span class="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200" aria-hidden="true"></span>
+                    {% endif %}
+                    <div class="relative flex space-x-3">
+                      <div>
+                        <span class="h-8 w-8 rounded-full bg-indigo-50 flex items-center justify-center ring-8 ring-white">
+                          <svg class="h-4 w-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+                        </span>
+                      </div>
+                      <div class="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
+                        <div>
+                          <p class="text-sm text-gray-900 font-medium">
+                            {% if activity.url %}
+                              <a href="{{ activity.url }}" class="hover:underline">{{ activity.title }}</a>
+                            {% else %}
+                              {{ activity.title }}
+                            {% endif %}
+                          </p>
+                          {% if activity.description %}
+                            <p class="text-xs text-gray-500 mt-0.5">{{ activity.description }}</p>
+                          {% endif %}
+                        </div>
+                        <div class="text-right text-xs text-gray-400 whitespace-nowrap">
+                          {{ activity.timestamp|date:"M d" }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                {% endfor %}
+              </ul>
+            </div>
             {% else %}
-              <span class="font-medium text-gray-700">{{ activity.title }}</span>
+            <div class="text-center py-6">
+              <p class="text-sm text-gray-500 italic">No recent activity.</p>
+            </div>
             {% endif %}
-            {% if activity.description %}
-              <p class="text-sm text-gray-500">{{ activity.description }}</p>
-            {% endif %}
-            <p class="text-xs text-gray-400">{{ activity.timestamp|date:"M d, Y H:i" }}</p>
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p class="text-gray-500">No recent activities yet.</p>
-    {% endif %}
+          </div>
+        </div>
+      </div>
+
+    </div>
   </div>
 </div>
 {% endblock %}

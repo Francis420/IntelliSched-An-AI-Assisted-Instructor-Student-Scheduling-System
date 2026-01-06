@@ -1,74 +1,142 @@
 {% extends 'base.html' %}
+
+{% block title %}Instructor Dashboard{% endblock %}
+{% block header %}Instructor Dashboard{% endblock %}
+
 {% block content %}
-<div class="max-w-6xl mx-auto p-6 space-y-6">
-  <div id="dashboardSections" class="space-y-4">
+<div class="min-h-screen bg-gray-50 pb-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+        
+        <div class="md:flex md:items-center md:justify-between mb-8">
+            <div class="flex-1 min-w-0">
+                <p class="mt-1 text-sm text-gray-500">
+                    Manage your professional experience, academic credentials, and teaching records.
+                </p>
+            </div>
+        </div>
 
-    <!-- 🧩 EXPERIENCE -->
-    <section class="bg-white rounded-2xl shadow p-5 transition">
-      <div class="flex justify-between items-center mb-3">
-        <h2 class="text-lg font-semibold text-gray-700">Experiences</h2>
-        <a href="{% url 'experienceCreate' %}"
-           class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg shadow">
-          + Add
-        </a>
-      </div>
+        <div class="space-y-8">
 
-      <input type="text" id="experiences-search" placeholder="Search experiences..."
-             class="w-full md:w-1/2 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none mb-4"
-             oninput="debouncedSearch('experiences')">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gray-50/50">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-blue-100 rounded-lg text-blue-600">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-900">Professional Experience</h3>
+                            <p class="text-xs text-gray-500">Work history and industry roles</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-3 w-full sm:w-auto">
+                        <div class="relative w-full sm:w-64">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                            </div>
+                            <input type="text" id="experiences-search" 
+                                   class="block w-full pl-10 sm:text-sm border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" 
+                                   placeholder="Filter records..."
+                                   oninput="debouncedSearch('experiences')">
+                        </div>
+                        <a href="{% url 'experienceCreate' %}" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none shadow-sm transition-colors">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            Add
+                        </a>
+                    </div>
+                </div>
 
-      <div id="section-experiences">
-        <div class="text-gray-500 text-center py-4">Loading experiences...</div>
-      </div>
-
-      <div id="pagination-experiences" class="mt-4 flex justify-center items-center gap-3 text-sm"></div>
-    </section>
-
-
-    <!-- 🪪 CREDENTIALS -->
-    <section class="bg-white rounded-2xl shadow p-5 transition">
-      <div class="flex justify-between items-center mb-3">
-        <h2 class="text-lg font-semibold text-gray-700">Credentials</h2>
-        <a href="{% url 'credentialCreate' %}"
-           class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg shadow">
-          + Add
-        </a>
-      </div>
-
-      <input type="text" id="credentials-search" placeholder="Search credentials..."
-             class="w-full md:w-1/2 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none mb-4"
-             oninput="debouncedSearch('credentials')">
-
-      <div id="section-credentials">
-        <div class="text-gray-500 text-center py-4">Loading credentials...</div>
-      </div>
-
-      <div id="pagination-credentials" class="mt-4 flex justify-center items-center gap-3 text-sm"></div>
-    </section>
+                <div id="section-experiences" class="min-h-[100px]">
+                    <div class="p-6 space-y-4 animate-pulse">
+                        <div class="h-4 bg-gray-100 rounded w-3/4"></div>
+                        <div class="h-4 bg-gray-100 rounded w-1/2"></div>
+                        <div class="h-4 bg-gray-100 rounded w-5/6"></div>
+                    </div>
+                </div>
+                
+                <div id="pagination-experiences" class="px-6 py-3 border-t border-gray-100 bg-gray-50 flex justify-end items-center gap-2 text-sm"></div>
+            </div>
 
 
-    <!-- 🏫 TEACHING HISTORY -->
-    <section class="bg-white rounded-2xl shadow p-5 transition">
-      <div class="flex justify-between items-center mb-3">
-        <h2 class="text-lg font-semibold text-gray-700">Teaching History</h2>
-        <a href="{% url 'legacyExperienceCreate' %}"
-           class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg shadow">
-          + Add
-        </a>
-      </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gray-50/50">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-purple-100 rounded-lg text-purple-600">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-900">Academic Credentials</h3>
+                            <p class="text-xs text-gray-500">Degrees, certifications, and diplomas</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-3 w-full sm:w-auto">
+                        <div class="relative w-full sm:w-64">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                            </div>
+                            <input type="text" id="credentials-search" 
+                                   class="block w-full pl-10 sm:text-sm border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500" 
+                                   placeholder="Filter credentials..."
+                                   oninput="debouncedSearch('credentials')">
+                        </div>
+                        <a href="{% url 'credentialCreate' %}" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-lg text-white bg-purple-600 hover:bg-purple-700 focus:outline-none shadow-sm transition-colors">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            Add
+                        </a>
+                    </div>
+                </div>
 
-      <input type="text" id="history-search" placeholder="Search teaching history..."
-             class="w-full md:w-1/2 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none mb-4"
-             oninput="debouncedSearch('history')">
+                <div id="section-credentials" class="min-h-[100px]">
+                    <div class="p-6 space-y-4 animate-pulse">
+                        <div class="h-4 bg-gray-100 rounded w-3/4"></div>
+                        <div class="h-4 bg-gray-100 rounded w-1/2"></div>
+                    </div>
+                </div>
+                <div id="pagination-credentials" class="px-6 py-3 border-t border-gray-100 bg-gray-50 flex justify-end items-center gap-2 text-sm"></div>
+            </div>
 
-      <div id="section-history">
-        <div class="text-gray-500 text-center py-4">Loading teaching history...</div>
-      </div>
 
-      <div id="pagination-history" class="mt-4 flex justify-center items-center gap-3 text-sm"></div>
-    </section>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gray-50/50">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-teal-100 rounded-lg text-teal-600">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-900">Teaching History</h3>
+                            <p class="text-xs text-gray-500">Previous subjects and loads</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-3 w-full sm:w-auto">
+                        <div class="relative w-full sm:w-64">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                            </div>
+                            <input type="text" id="history-search" 
+                                   class="block w-full pl-10 sm:text-sm border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500" 
+                                   placeholder="Filter history..."
+                                   oninput="debouncedSearch('history')">
+                        </div>
+                        <a href="{% url 'legacyExperienceCreate' %}" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-lg text-white bg-teal-600 hover:bg-teal-700 focus:outline-none shadow-sm transition-colors">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            Add
+                        </a>
+                    </div>
+                </div>
 
-  </div>
+                <div id="section-history" class="min-h-[100px]">
+                     <div class="p-6 space-y-4 animate-pulse">
+                        <div class="h-4 bg-gray-100 rounded w-3/4"></div>
+                        <div class="h-4 bg-gray-100 rounded w-1/2"></div>
+                    </div>
+                </div>
+                <div id="pagination-history" class="px-6 py-3 border-t border-gray-100 bg-gray-50 flex justify-end items-center gap-2 text-sm"></div>
+            </div>
+
+        </div>
+    </div>
 </div>
 
 <script>
@@ -79,7 +147,26 @@ document.addEventListener("DOMContentLoaded", function() {
         history: "{% url 'legacyExperienceListLive' %}",
     };
 
+    // Helper: Show Skeleton
+    function showLoading(key) {
+        document.getElementById(`section-${key}`).innerHTML = `
+            <div class="p-6 space-y-4 animate-pulse">
+                <div class="flex items-center space-x-4">
+                    <div class="h-10 w-10 bg-gray-200 rounded-full"></div>
+                    <div class="space-y-2 flex-1">
+                        <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                        <div class="h-4 bg-gray-200 rounded w-1/2"></div>
+                    </div>
+                </div>
+                <div class="h-4 bg-gray-200 rounded w-5/6"></div>
+            </div>`;
+    }
+
     function loadSection(key, query = "", page = 1) {
+        // We only show full skeleton on initial load or search, not pagination if possible, 
+        // but for simplicity we show it to indicate activity.
+        // showLoading(key); 
+        
         const url = new URL(endpoints[key], window.location.origin);
         if (query) url.searchParams.append("q", query);
         url.searchParams.append("page", page);
@@ -87,41 +174,61 @@ document.addEventListener("DOMContentLoaded", function() {
         fetch(url)
             .then(res => res.json())
             .then(data => {
-                document.getElementById(`section-${key}`).innerHTML = data.html;
+                const container = document.getElementById(`section-${key}`);
+                
+                // Animate content fade in
+                container.style.opacity = '0';
+                container.innerHTML = data.html;
+                
+                // Apply a small fade-in transition
+                setTimeout(() => {
+                    container.style.transition = 'opacity 0.3s ease';
+                    container.style.opacity = '1';
+                }, 50);
 
                 const pagDiv = document.getElementById(`pagination-${key}`);
-                pagDiv.innerHTML = `
-                    <button ${data.has_previous ? '' : 'disabled'}
-                        class="px-4 py-1.5 rounded-full font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 transition disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
-                        onclick="changePage('${key}', ${data.page - 1})">
-                        Previous
-                    </button>
-                    <span class="text-gray-500 font-medium select-none">Page ${data.page} of ${data.num_pages}</span>
-                    <button ${data.has_next ? '' : 'disabled'}
-                        class="px-4 py-1.5 rounded-full font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
-                        onclick="changePage('${key}', ${data.page + 1})">
-                        Next
-                    </button>
-                `;
+                
+                if (data.num_pages > 1) {
+                    pagDiv.innerHTML = `
+                        <span class="text-xs text-gray-500 mr-4">Page ${data.page} of ${data.num_pages}</span>
+                        <div class="inline-flex rounded-md shadow-sm isolate">
+                            <button ${data.has_previous ? '' : 'disabled'}
+                                class="relative inline-flex items-center rounded-l-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                onclick="changePage('${key}', ${data.page - 1})">
+                                Prev
+                            </button>
+                            <button ${data.has_next ? '' : 'disabled'}
+                                class="relative -ml-px inline-flex items-center rounded-r-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                onclick="changePage('${key}', ${data.page + 1})">
+                                Next
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    pagDiv.innerHTML = '';
+                }
             })
-            .catch(() => {
-                document.getElementById(`section-${key}`).innerHTML =
-                  `<p class='text-red-500 text-center'>Error loading ${key}.</p>`;
+            .catch(err => {
+                console.error(err);
+                document.getElementById(`section-${key}`).innerHTML = 
+                    `<div class="p-8 text-center text-red-500 text-sm">
+                        <p>Failed to load data. Please refresh.</p>
+                     </div>`;
             });
     }
 
-    // Debounce helper for search
+    // Debounce helper
     let debounceTimeout;
     function debouncedSearch(key) {
         clearTimeout(debounceTimeout);
         debounceTimeout = setTimeout(() => {
             const query = document.getElementById(`${key}-search`).value.trim();
-            loadSection(key, query);
-        }, 400);
+            loadSection(key, query, 1);
+        }, 300);
     }
     window.debouncedSearch = debouncedSearch;
 
-    // Pagination control
+    // Pagination
     function changePage(key, page) {
         const query = document.getElementById(`${key}-search`).value.trim();
         loadSection(key, query, page);

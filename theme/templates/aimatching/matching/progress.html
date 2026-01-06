@@ -1,31 +1,83 @@
 {% extends "base.html" %}
-{% block header %}| Matching Progress{% endblock %}
+
+{% block title %}Semantic Matching Progress{% endblock %}
+{% block header %}Semantic Matching Progress{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto p-6 bg-white shadow-md rounded-xl text-center">
-    <h2 class="text-2xl font-bold mb-6">Matching Progress</h2>
+<div class="max-w-4xl mx-auto mt-10 px-4 sm:px-6 lg:px-8">
 
-    <div class="w-full bg-gray-200 rounded-full h-6 mb-4">
-        <div id="progress-fill" class="bg-blue-600 h-6 rounded-full text-white text-sm flex items-center justify-center"
-             style="width: 0%;">
-            0%
+    <div class="bg-white shadow-xl rounded-2xl border border-gray-200 overflow-hidden">
+        
+        <div class="px-6 py-6 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div id="status-icon-container" class="p-2 bg-blue-100 rounded-lg">
+                    <svg id="status-icon-spin" class="w-6 h-6 text-blue-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    <svg id="status-icon-check" class="w-6 h-6 text-green-600 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    <svg id="status-icon-x" class="w-6 h-6 text-red-600 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold text-gray-900" id="main-heading">Running Algorithm</h2>
+                    <p class="text-sm text-gray-500" id="sub-heading">Calculating semantic compatibility scores...</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <span class="block text-2xl font-black text-indigo-600" id="percentage-text">0%</span>
+            </div>
+        </div>
+
+        <div class="p-8">
+            <div class="w-full bg-gray-200 rounded-full h-4 mb-8 overflow-hidden">
+                <div id="progress-fill" 
+                     class="bg-indigo-600 h-4 rounded-full transition-all duration-300 ease-out flex items-center justify-end"
+                     style="width: 0%;">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-100 text-center">
+                    <span class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Tasks Completed</span>
+                    <span class="block text-2xl font-bold text-gray-800 mt-1">
+                        <span id="stat-completed">0</span><span class="text-gray-400 text-lg"> / <span id="stat-total">--</span></span>
+                    </span>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-100 text-center">
+                    <span class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Instructors</span>
+                    <span class="block text-2xl font-bold text-gray-800 mt-1" id="stat-instructors">--</span>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-100 text-center">
+                    <span class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Subjects</span>
+                    <span class="block text-2xl font-bold text-gray-800 mt-1" id="stat-subjects">--</span>
+                </div>
+            </div>
+
+            <div class="bg-slate-800 rounded-lg p-4 font-mono text-sm shadow-inner min-h-[80px] flex flex-col justify-center">
+                <div class="flex items-center space-x-2 text-green-400 mb-1">
+                    <span class="animate-pulse">●</span>
+                    <span class="uppercase tracking-wider text-xs font-bold">System Status:</span>
+                    <span id="progress-status" class="text-white">Connecting...</span>
+                </div>
+                <div id="progress-current" class="text-gray-300 truncate">
+                    Waiting for server stream...
+                </div>
+            </div>
+
+            <div class="mt-8 flex justify-center">
+                <button id="cancel-btn" class="group relative flex justify-center py-2 px-6 border border-transparent font-medium rounded-md text-white bg-red-100 text-red-700 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors">
+                    Cancel Matching
+                </button>
+                
+                <a href="{% url 'configList' %}" id="finish-btn" class="hidden inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Return to Configurations
+                </a>
+            </div>
         </div>
     </div>
-
-    <p id="progress-details" class="text-gray-700">Waiting for updates...</p>
-    <p id="progress-status" class="mt-2 font-semibold text-blue-700"></p>
-    <p id="progress-current" class="text-gray-800 mt-2 italic"></p>
-    <p id="progress-debug" class="text-sm text-gray-500 mt-1"></p>
-    
-    <button id="cancel-btn" class="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors duration-200">
-        Cancel Matching
-    </button>
 </div>
 
 <script>
     const batchId = "{{ batchId }}";
 
-    // Helper function to get CSRF token from cookie
+    // --- Cookie Helper ---
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -40,10 +92,31 @@
         }
         return cookieValue;
     }
-
     const csrftoken = getCookie('csrftoken');
 
-    // Setup WebSocket connection
+    // --- UI Elements ---
+    const ui = {
+        fill: document.getElementById("progress-fill"),
+        percent: document.getElementById("percentage-text"),
+        status: document.getElementById("progress-status"),
+        current: document.getElementById("progress-current"),
+        heading: document.getElementById("main-heading"),
+        subHeading: document.getElementById("sub-heading"),
+        statCompleted: document.getElementById("stat-completed"),
+        statTotal: document.getElementById("stat-total"),
+        statInstructors: document.getElementById("stat-instructors"),
+        statSubjects: document.getElementById("stat-subjects"),
+        cancelBtn: document.getElementById("cancel-btn"),
+        finishBtn: document.getElementById("finish-btn"),
+        icons: {
+            spin: document.getElementById("status-icon-spin"),
+            check: document.getElementById("status-icon-check"),
+            x: document.getElementById("status-icon-x"),
+            container: document.getElementById("status-icon-container")
+        }
+    };
+
+    // --- WebSocket ---
     const socket = new WebSocket(
         (window.location.protocol === "https:" ? "wss://" : "ws://") + 
         window.location.host + "/ws/progress/" + batchId + "/"
@@ -52,78 +125,94 @@
     socket.onmessage = function(e) {
         const data = JSON.parse(e.data);
 
-        const percentage = data.percentage.toFixed(2);
-        const completed = data.completedTasks;
-        const total = data.totalTasks;
-        const status = data.status;
-        const subjects = data.subjectCount;
-        const instructors = data.instructorCount;
+        // 1. Update Progress Bar & Text
+        const percentage = data.percentage.toFixed(0);
+        ui.fill.style.width = percentage + "%";
+        ui.percent.textContent = percentage + "%";
+
+        // 2. Update Stats Grid
+        ui.statCompleted.textContent = data.completedTasks;
+        ui.statTotal.textContent = data.totalTasks;
+        ui.statInstructors.textContent = data.instructorCount;
+        ui.statSubjects.textContent = data.subjectCount;
+        ui.status.textContent = data.status.toUpperCase();
+
+        // 3. Update Current Log
         const currentInstructor = data.currentInstructor || "";
         const currentSubject = data.currentSubject || "";
-
-        // Update progress bar
-        const fill = document.getElementById("progress-fill");
-        fill.style.width = percentage + "%";
-        fill.textContent = percentage + "%";
-
-        // Update details
-        document.getElementById("progress-details").textContent = 
-            `Completed ${completed} of ${total} tasks`;
-
-        document.getElementById("progress-status").textContent = 
-            `Status: ${status}`;
-
-        // Show current matching info
         if (currentInstructor && currentSubject) {
-            document.getElementById("progress-current").textContent =
-                `Currently matching: ${currentInstructor} → ${currentSubject}`;
+            ui.current.innerHTML = `Matching <span class="text-white font-bold">${currentInstructor}</span> with <span class="text-white font-bold">${currentSubject}</span>`;
         } else {
-            document.getElementById("progress-current").textContent = "";
+            ui.current.textContent = "Processing batch data...";
         }
 
-        // Debug info
-        document.getElementById("progress-debug").textContent = 
-            `Subjects: ${subjects}, Instructors: ${instructors}, Total Tasks: ${total}`;
-
-        // Handle Cancelled State UI
+        // 4. Handle Cancelled State
         if (data.status === "cancelled") {
-            const statusText = document.getElementById("progress-status");
-            statusText.textContent = "❌ Matching Cancelled";
-            statusText.classList.remove("text-blue-700");
-            statusText.classList.add("text-red-700");
-            
-            const btn = document.getElementById("cancel-btn");
-            btn.disabled = true;
-            btn.classList.add("opacity-50", "cursor-not-allowed");
-            btn.textContent = "Cancelled";
-        }
+            setVisualState('cancelled');
+        } 
         
-        // Handle Completed State UI
+        // 5. Handle Completed State
         if (data.status === "completed") {
-             document.getElementById("cancel-btn").style.display = 'none';
+            setVisualState('completed');
         }
     };
 
     socket.onclose = function() {
-        const statusText = document.getElementById("progress-status");
-        statusText.textContent = "⚠️ Connection closed";
-        statusText.classList.add("text-yellow-600");
+        if (ui.status.textContent !== "COMPLETED" && ui.status.textContent !== "CANCELLED") {
+            ui.status.textContent = "DISCONNECTED";
+            ui.current.textContent = "Connection to server lost.";
+            ui.current.classList.add("text-red-400");
+        }
     };
 
-    // Updated Cancel Button Logic with Confirmation
-    document.getElementById("cancel-btn").onclick = function() {
-        // 1. Show Browser Confirmation
-        if (!confirm("Are you sure you want to stop the matching process? Progress will be saved up to this point, but the batch will be marked as cancelled.")) {
-            return;
+    // --- Visual State Management ---
+    function setVisualState(state) {
+        // Hide spinner
+        ui.icons.spin.classList.add('hidden');
+        
+        if (state === 'completed') {
+            ui.fill.classList.remove('bg-indigo-600');
+            ui.fill.classList.add('bg-green-500');
+            
+            ui.icons.check.classList.remove('hidden');
+            ui.icons.container.classList.remove('bg-blue-100');
+            ui.icons.container.classList.add('bg-green-100');
+            
+            ui.heading.textContent = "Matching Complete";
+            ui.subHeading.textContent = "All compatibility scores have been calculated.";
+            
+            ui.cancelBtn.classList.add('hidden');
+            ui.finishBtn.classList.remove('hidden');
+            
+            // Set final bar to 100% just in case
+            ui.fill.style.width = "100%";
+            ui.percent.textContent = "100%";
+        } 
+        else if (state === 'cancelled') {
+            ui.fill.classList.remove('bg-indigo-600');
+            ui.fill.classList.add('bg-red-500');
+            
+            ui.icons.x.classList.remove('hidden');
+            ui.icons.container.classList.remove('bg-blue-100');
+            ui.icons.container.classList.add('bg-red-100');
+            
+            ui.heading.textContent = "Process Cancelled";
+            ui.subHeading.textContent = "The operation was stopped by the user.";
+            
+            ui.cancelBtn.disabled = true;
+            ui.cancelBtn.textContent = "Cancelled";
+            ui.cancelBtn.classList.add('opacity-50', 'cursor-not-allowed');
         }
+    }
 
-        // 2. Disable button and update text to show processing
-        const btn = this;
-        btn.disabled = true;
-        btn.textContent = "Cancelling...";
-        btn.classList.add("opacity-75");
+    // --- Cancel Button Logic ---
+    ui.cancelBtn.onclick = function() {
+        if (!confirm("Stop the matching process? Partial progress will be saved.")) return;
 
-        // 3. Send Cancel Request
+        // UI Feedback immediately
+        this.disabled = true;
+        this.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-red-700 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Stopping...`;
+
         fetch(`/aimatching/matching/cancel/${batchId}/`, {
             method: "POST",
             headers: {
@@ -133,23 +222,15 @@
         })
         .then(response => response.json())
         .then(data => {
-            if (data.success) {
-                console.log("Cancellation request sent successfully.");
-                // The WebSocket 'onmessage' will update the UI to "Cancelled" automatically
-            } else {
+            if (!data.success) {
                 alert("Failed to cancel: " + data.message);
-                // Re-enable button if the server rejected the cancellation
-                btn.disabled = false;
-                btn.textContent = "Cancel Matching";
-                btn.classList.remove("opacity-75");
+                window.location.reload(); // Reset state on failure
             }
         })
         .catch(() => {
-            alert("Network error while cancelling.");
-            // Re-enable button on network failure
-            btn.disabled = false;
-            btn.textContent = "Cancel Matching";
-            btn.classList.remove("opacity-75");
+            alert("Network error.");
+            this.disabled = false;
+            this.textContent = "Cancel Matching";
         });
     };
 </script>

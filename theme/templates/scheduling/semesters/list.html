@@ -1,49 +1,74 @@
 {% extends 'base.html' %}
-{% block title %}Semesters{% endblock %}
-{% block header %}| Semesters{% endblock %}
+
+{% block title %}Semester Management{% endblock %}
+{% block header %}Semester Management{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto mt-10 px-4 sm:px-6 lg:px-8">
-  <!-- Flash Messages -->
-  {% if messages %}
-    {% for message in messages %}
-      <div class="mb-4 px-4 py-2 rounded text-white
-                  {% if message.tags == 'error' %}bg-red-500{% else %}bg-green-500{% endif %}">
-        {{ message }}
-      </div>
-    {% endfor %}
-  {% endif %}
+<div class="max-w-7xl mx-auto mt-8 px-4 sm:px-6 lg:px-8">
 
-  <!-- Search Bar -->
-  <div class="mb-6">
-    <input type="text" id="searchInput"
-           class="w-full sm:w-1/2 border border-gray-300 rounded-md py-2 px-3 focus:ring-blue-500 focus:border-blue-500"
-           placeholder="Search semesters..."
-           value="{{ query }}">
-  </div>
+    {% if messages %}
+        <div class="mb-6 space-y-2">
+            {% for message in messages %}
+                <div class="flex items-center p-4 rounded-lg shadow-sm border-l-4 
+                            {% if message.tags == 'error' %}bg-red-50 border-red-500 text-red-700{% else %}bg-green-50 border-green-500 text-green-700{% endif %}">
+                    {% if message.tags == 'error' %}
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    {% else %}
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    {% endif %}
+                    <span class="font-medium text-sm">{{ message }}</span>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
 
-  <!-- Add Semester Button -->
-  <div class="mb-4 text-right">
-    <a href="{% url 'semesterCreate' %}"
-       class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition">
-      + Create New Semester
-    </a>
-  </div>
+    <div class="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
 
-  <div id="semesterContainer">
-    {% include 'scheduling/semesters/_table.html' %}
-  </div>
+        <div class="px-6 py-5 border-b border-gray-200 bg-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <p class="text-sm text-gray-500">Manage academic terms, start/end dates, and active status.</p>
+            </div>
+            <a href="{% url 'semesterCreate' %}" 
+               class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-sm transition-all">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Create New Semester
+            </a>
+        </div>
 
-  <!-- Pagination -->
-  <div id="paginationControls" class="mt-6 flex justify-center"></div>
+        <div class="p-6 bg-white border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            
+            <div class="relative w-full md:w-96">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
+                <input type="text" id="searchInput" 
+                       class="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg leading-5 bg-gray-50 placeholder-gray-500 focus:outline-none focus:bg-white focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150 ease-in-out"
+                       placeholder="Search by code (e.g., '1st Sem 2024')..." 
+                       value="{{ query|default:'' }}">
+                
+                <div id="search-spinner" class="absolute inset-y-0 right-0 pr-3 flex items-center hidden">
+                    <svg class="animate-spin h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div id="semesterContainer" class="min-h-[200px]">
+            {% include 'scheduling/semesters/_table.html' %}
+        </div>
+    </div>
 </div>
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
     const searchInput = document.getElementById("searchInput");
     const container = document.getElementById("semesterContainer");
-    const paginationControls = document.getElementById("paginationControls");
+    const spinner = document.getElementById("search-spinner");
+    let typingTimer;
 
+    // 1. Restore State (Persistence)
     let savedQuery = localStorage.getItem("semesterQuery") || "";
     let savedPage = localStorage.getItem("semesterPage") || 1;
 
@@ -51,51 +76,72 @@ document.addEventListener("DOMContentLoaded", function() {
         searchInput.value = savedQuery;
     }
 
+    // 2. Main Fetch Function
     function fetchData(page = 1) {
         const query = searchInput.value.trim();
+        
+        // Save state to LocalStorage
         localStorage.setItem("semesterQuery", query);
         localStorage.setItem("semesterPage", page);
 
+        // Update URL for shareability
+        const urlObj = new URL(window.location);
+        urlObj.searchParams.set("q", query);
+        urlObj.searchParams.set("page", page);
+        window.history.replaceState({}, "", urlObj);
+
+        // UI Loading State
+        spinner.classList.remove('hidden');
+        container.classList.add('opacity-50');
+
         fetch(`{% url 'semesterListLive' %}?q=${encodeURIComponent(query)}&page=${page}`)
-            .then(res => res.json())
+            .then(res => {
+                if(!res.ok) throw new Error("Network error");
+                return res.json();
+            })
             .then(data => {
+                // Update Table
                 container.innerHTML = data.html;
-                renderPagination(data.page, data.num_pages);
+                
+                // Rebind Pagination (assuming _table.html contains the pagination links)
+                bindPagination();
+            })
+            .catch(err => {
+                console.error(err);
+                container.innerHTML = `<div class="p-6 text-center text-red-500">Error loading semesters. Please refresh.</div>`;
+            })
+            .finally(() => {
+                // Reset UI
+                spinner.classList.add('hidden');
+                container.classList.remove('opacity-50');
             });
     }
 
-    function renderPagination(current, total) {
-        if (total <= 1) {
-            paginationControls.innerHTML = "";
-            return;
-        }
-        let html = `<nav><ul class="flex space-x-2">`;
-        for (let i = 1; i <= total; i++) {
-            html += `<li>
-                        <a href="#" data-page="${i}" 
-                           class="px-3 py-1 rounded-md ${i == current ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}">
-                          ${i}
-                        </a>
-                     </li>`;
-        }
-        html += `</ul></nav>`;
-        paginationControls.innerHTML = html;
-
-        paginationControls.querySelectorAll("a").forEach(el => {
-            el.addEventListener("click", function(e) {
+    // 3. Bind Pagination Links
+    function bindPagination() {
+        document.querySelectorAll(".live-page-link").forEach(link => {
+            link.addEventListener("click", function(e) {
                 e.preventDefault();
                 fetchData(this.dataset.page);
             });
         });
     }
 
-    let typingTimer;
+    // 4. Input Listener (Debounce)
     searchInput.addEventListener("input", () => {
         clearTimeout(typingTimer);
+        spinner.classList.remove('hidden');
         typingTimer = setTimeout(() => fetchData(1), 300);
     });
 
-    fetchData(savedPage);
+    // 5. Initial Load
+    // If we have a query (restored from storage), fetch new results.
+    // Otherwise, just bind the pagination links that came with the initial HTML.
+    if (searchInput.value.trim() !== "") {
+        fetchData(savedPage);
+    } else {
+        bindPagination();
+    }
 });
 </script>
 {% endblock %}

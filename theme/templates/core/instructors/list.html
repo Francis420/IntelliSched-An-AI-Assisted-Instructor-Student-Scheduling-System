@@ -1,56 +1,108 @@
 {% extends 'base.html' %}
-{% block header %}| Instructor Accounts{% endblock %}
+
+{% block header %}Instructor Management{% endblock %}
+
 {% block content %}
-<div class="max-w-6xl mx-auto mt-10 px-4 sm:px-6 lg:px-8">
-  <h2 class="text-2xl font-bold text-gray-800 mb-6">Instructor Accounts</h2>
+<div class="max-w-7xl mx-auto mt-8 px-4 sm:px-6 lg:px-8">
+    
+    <div class="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
+        
+        <div class="px-6 py-5 border-b border-gray-200 bg-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <p class="text-sm text-gray-500">Manage faculty accounts, settings, and loads limits.</p>
+            </div>
+            <a href="{% url 'instructorAccountCreate' %}" 
+               class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-sm transition-all">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Create New Instructor
+            </a>
+        </div>
 
-  <a href="{% url 'instructorAccountCreate' %}"
-     class="inline-block mb-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition">
-    + Create New Instructor Account
-  </a>
+        <div class="p-6 bg-white border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            
+            <div class="relative w-full md:w-96">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
+                <input type="text" id="searchBox" 
+                       class="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg leading-5 bg-gray-50 placeholder-gray-500 focus:outline-none focus:bg-white focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150 ease-in-out"
+                       placeholder="Search by name, ID, or email..." 
+                       value="{{ query|default:'' }}">
+                
+                <div id="search-spinner" class="absolute inset-y-0 right-0 pr-3 flex items-center hidden">
+                    <svg class="animate-spin h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </div>
+            </div>
 
-  <!-- 🔍 Live Search -->
-  <input type="text" id="searchBox" class="border px-4 py-2 rounded w-full mb-4"
-         placeholder="Search by name, ID, or email..." value="{{ query|default:'' }}">
+            <div class="flex items-center space-x-2 text-sm">
+                <span class="text-gray-500 font-medium mr-2">Permanent instructor settings:</span>
+                <a href="{% url 'instructorRankList' %}" class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 hover:text-gray-900 transition">Ranks</a>
+                <a href="{% url 'instructorDesignationList' %}" class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 hover:text-gray-900 transition">Designations</a>
+                <a href="{% url 'instructorAttainmentList' %}" class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 hover:text-gray-900 transition">Attainments</a>
+            </div>
+        </div>
 
-  <div id="results-container">
-    {% include "core/instructors/_list_table.html" %}
-  </div>
+        <div id="results-container" class="min-h-[200px]">
+            {% include "core/instructors/_list_table.html" %}
+        </div>
+    </div>
 </div>
 
 <script>
-function fetchResults(page = 1) {
-  const q = document.getElementById("searchBox").value;
-  const url = "{% url 'instructorAccountListLive' %}?q=" + encodeURIComponent(q) + "&page=" + page;
+    // Configuration
+    const searchBox = document.getElementById("searchBox");
+    const resultsContainer = document.getElementById("results-container");
+    const spinner = document.getElementById("search-spinner");
+    let typingTimer;
 
-  fetch(url)
-    .then(response => response.json())
-    .then(data => {
-      document.getElementById("results-container").innerHTML = data.html;
+    function fetchResults(page = 1) {
+        const q = searchBox.value;
+        const url = "{% url 'instructorAccountListLive' %}?q=" + encodeURIComponent(q) + "&page=" + page;
 
-      // Rebind pagination links
-      document.querySelectorAll(".live-page-link").forEach(link => {
-        link.addEventListener("click", function(e) {
-          e.preventDefault();
-          fetchResults(this.dataset.page);
+        // Show Spinner
+        spinner.classList.remove('hidden');
+
+        fetch(url)
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
+            .then(data => {
+                resultsContainer.innerHTML = data.html;
+                bindPaginationLinks();
+            })
+            .catch(error => {
+                console.error('Error fetching data:', error);
+                resultsContainer.innerHTML = `<div class="p-6 text-center text-red-500">Error loading data. Please try again.</div>`;
+            })
+            .finally(() => {
+                // Hide Spinner
+                spinner.classList.add('hidden');
+            });
+    }
+
+    function bindPaginationLinks() {
+        document.querySelectorAll(".live-page-link").forEach(link => {
+            link.addEventListener("click", function(e) {
+                e.preventDefault();
+                fetchResults(this.dataset.page);
+            });
         });
-      });
+    }
+
+    // Debounce search input (300ms delay)
+    searchBox.addEventListener("input", function() {
+        clearTimeout(typingTimer);
+        spinner.classList.remove('hidden'); // Show spinner immediately when typing starts
+        typingTimer = setTimeout(() => fetchResults(1), 300);
     });
-}
 
-// Debounce search input
-let typingTimer;
-document.getElementById("searchBox").addEventListener("input", function() {
-  clearTimeout(typingTimer);
-  typingTimer = setTimeout(() => fetchResults(1), 300);
-});
-
-// Initial pagination setup
-document.querySelectorAll(".live-page-link").forEach(link => {
-  link.addEventListener("click", function(e) {
-    e.preventDefault();
-    fetchResults(this.dataset.page);
-  });
-});
+    // Initial Bind
+    document.addEventListener("DOMContentLoaded", () => {
+        bindPaginationLinks();
+    });
 </script>
 {% endblock %}

@@ -1,141 +1,314 @@
 {% extends 'base.html' %}
-{% block header %}| Scheduler Dashboard{% endblock %}
+{% block title %}GoogleOR CP-SAT Scheduler Dashboard{% endblock %}
+{% block header %}GoogleOR CP-SAT Scheduler Dashboard{% endblock %}
+
 {% block content %}
-<div class="max-w-5xl mx-auto p-6 space-y-6">
-  <!-- Control Buttons -->
-  <div class="flex space-x-4">
-    <button id="startBtn"
-      class="bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700 transition">
-      ▶ Start Scheduling
-    </button>
-    <button id="stopBtn"
-      class="bg-red-600 text-white px-4 py-2 rounded-lg shadow hover:bg-red-700 transition hidden">
-      ⏹ Stop Scheduler
-    </button>
-  </div>
+<div class="min-h-screen bg-gray-50 p-6 md:p-10">
+    <div class="max-w-6xl mx-auto space-y-6">
+        
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div id="statusBadge" class="px-4 py-2 rounded-full text-sm font-semibold bg-gray-200 text-gray-700 shadow-sm flex items-center space-x-2 transition-all duration-300">
+                <span id="statusDot" class="w-2.5 h-2.5 rounded-full bg-gray-500"></span>
+                <span id="statusText">Idle</span>
+            </div>
+        </div>
 
-  <!-- Progress Section -->
-  <div class="mt-6 bg-white rounded-2xl shadow border border-gray-100 p-6">
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-lg font-semibold text-gray-700">Live Logs</h2>
-      <span id="statusText" class="text-sm text-gray-500">Idle</span>
-    </div>
+        <hr class="border-gray-200">
 
-    <!-- Optional progress bar (hidden by default) -->
-    <div id="progressWrapper" class="w-full bg-gray-200 h-4 rounded-full overflow-hidden hidden">
-      <div id="progressBar" class="h-full bg-indigo-600 w-0 transition-all duration-300"></div>
-    </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            <div class="md:col-span-1 bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-center space-y-4">
+                <h2 class="text-lg font-semibold text-gray-800">Solver Controls</h2>
+                
+                <button id="startBtn" class="w-full group flex items-center justify-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-lg shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg class="w-5 h-5 text-indigo-200 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    <span>Start Solver</span>
+                </button>
 
-    <!-- Live log output -->
-    <div id="log"
-         class="mt-4 text-sm text-gray-100 font-mono bg-gray-900 rounded-lg p-4 h-96 overflow-y-auto border border-gray-700 shadow-inner">
-      <p class="text-gray-500 italic">Waiting for scheduler output...</p>
+                <button id="stopBtn" class="w-full hidden group flex items-center justify-center space-x-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-4 py-3 rounded-lg transition-all duration-200">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg>
+                    <span>Stop Execution</span>
+                </button>
+
+                <button id="clearBtn" class="w-full text-xs text-gray-400 hover:text-gray-600 underline text-center pt-2">
+                    Clear Console Logs
+                </button>
+            </div>
+
+            <div class="md:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-800">Execution Monitor</h2>
+                    <p class="text-sm text-gray-500">Tracking CP-SAT solver duration</p>
+                </div>
+
+                <div class="flex items-center justify-center py-4">
+                    <div class="text-center">
+                        <div id="timerDisplay" class="text-5xl font-mono font-bold text-gray-700 tracking-wider">
+                            00:00:00
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2 uppercase tracking-widest font-semibold">Elapsed Time</p>
+                    </div>
+                </div>
+
+                <div id="activeIndicator" class="hidden flex justify-center items-center space-x-2 text-indigo-600 text-sm font-medium animate-pulse">
+                    <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Solver is optimizing...</span>
+                </div>
+                <div id="idleIndicator" class="text-center text-sm text-gray-400">
+                    System ready.
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gray-900 rounded-xl shadow-lg border border-gray-800 overflow-hidden flex flex-col h-[500px]">
+            <div class="bg-gray-800 px-4 py-2 flex items-center justify-between border-b border-gray-700">
+                <div class="flex items-center space-x-2">
+                    <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                    <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                    <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                </div>
+                <span class="text-xs text-gray-400 font-mono">user@cp-sat-solver:~/output</span>
+            </div>
+
+            <div id="log" class="flex-1 p-4 overflow-y-auto font-mono text-sm space-y-1 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900">
+                <div class="text-gray-500 italic border-l-2 border-gray-700 pl-2">Waiting for solver output stream...</div>
+            </div>
+        </div>
+
     </div>
-  </div>
 </div>
 
+<style>
+    .scrollbar-thin::-webkit-scrollbar { width: 8px; }
+    .scrollbar-thin::-webkit-scrollbar-track { background: #111827; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+    .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+</style>
+
 <script>
-  const batchId = "{{ batch_id }}";
-  const progressBar = document.getElementById("progressBar");
-  const log = document.getElementById("log");
-  const statusText = document.getElementById("statusText");
-  const startBtn = document.getElementById("startBtn");
-  const stopBtn = document.getElementById("stopBtn");
-  const MAX_LOG_LINES = 200;
+    const batchId = "{{ batch_id }}";
+    const log = document.getElementById("log");
+    const statusText = document.getElementById("statusText");
+    const statusBadge = document.getElementById("statusBadge");
+    const statusDot = document.getElementById("statusDot");
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const timerDisplay = document.getElementById("timerDisplay");
+    const activeIndicator = document.getElementById("activeIndicator");
+    const idleIndicator = document.getElementById("idleIndicator");
+    
+    const MAX_LOG_LINES = 500;
+    let isConnected = false;
+    let timerInterval = null;
+    let secondsElapsed = 0;
 
-  function appendLog(text) {
-    const lines = log.innerText.trim().split("\n");
-    lines.push(text);
-    if (lines.length > MAX_LOG_LINES) lines.splice(0, lines.length - MAX_LOG_LINES);
-    log.innerText = lines.join("\n");
-    log.scrollTop = log.scrollHeight;
-  }
-
-  // 🧩 Function to restore previous state when reloading
-  async function loadStatus() {
-    try {
-      const res = await fetch(`/scheduler/status/?batch_id=${batchId}`);
-      const data = await res.json();
-
-      if (data.logs) {
-        log.innerText = data.logs.join("\n") + "\n";
-        log.scrollTop = log.scrollHeight;
-      }
-
-      progressBar.style.width = (data.progress || 0) + "%";
-      statusText.innerText = data.status || "idle";
-
-      if (data.status === "running") {
-        startBtn.disabled = true;
-        stopBtn.classList.remove("hidden");
-      } else {
-        startBtn.disabled = false;
-        stopBtn.classList.add("hidden");
-      }
-    } catch (e) {
-      console.error("Failed to fetch scheduler status:", e);
+    // --- Helper: Timer Logic ---
+    function startTimer() {
+        stopTimer(); // ensure clear
+        timerInterval = setInterval(() => {
+            secondsElapsed++;
+            const date = new Date(0);
+            date.setSeconds(secondsElapsed);
+            const timeString = date.toISOString().substr(11, 8);
+            timerDisplay.innerText = timeString;
+        }, 1000);
     }
-  }
 
-  // 🧩 Setup WebSocket with auto-reconnect
-  function connectWebSocket() {
-    const socket = new WebSocket(`ws://${window.location.host}/ws/scheduler/${batchId}/`);
+    function stopTimer() {
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+    }
 
-    socket.onopen = () => console.log("WebSocket connected");
-    socket.onclose = () => {
-      console.warn("WebSocket disconnected, retrying in 3s...");
-      setTimeout(connectWebSocket, 3000);
+    function resetTimer() {
+        stopTimer();
+        secondsElapsed = 0;
+        timerDisplay.innerText = "00:00:00";
+    }
+
+    // --- Helper: Update UI State ---
+    function updateUIState(status) {
+        status = (status || "idle").toLowerCase();
+        statusText.innerText = status.charAt(0).toUpperCase() + status.slice(1);
+
+        // Reset badge basics
+        statusBadge.className = "px-4 py-2 rounded-full text-sm font-semibold shadow-sm flex items-center space-x-2 transition-colors duration-300 ";
+        
+        // Define styles per state
+        if (status.includes("running") || status.includes("processing")) {
+            // Running State
+            statusBadge.classList.add("bg-indigo-100", "text-indigo-800", "border", "border-indigo-200");
+            statusDot.className = "w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse";
+            
+            startBtn.disabled = true;
+            startBtn.classList.add("opacity-50", "cursor-not-allowed");
+            stopBtn.classList.remove("hidden");
+            
+            // Toggle Indicators
+            activeIndicator.classList.remove("hidden");
+            idleIndicator.classList.add("hidden");
+            
+            // Ensure timer is running if not already
+            if (!timerInterval) startTimer();
+        } 
+        else if (status.includes("done") || status.includes("complete") || status.includes("optimal")) {
+            // Success State
+            statusBadge.classList.add("bg-green-100", "text-green-800", "border", "border-green-200");
+            statusDot.className = "w-2.5 h-2.5 rounded-full bg-green-500";
+
+            startBtn.disabled = false;
+            startBtn.classList.remove("opacity-50", "cursor-not-allowed");
+            stopBtn.classList.add("hidden");
+
+            activeIndicator.classList.add("hidden");
+            idleIndicator.innerText = "Execution Complete";
+            idleIndicator.classList.remove("hidden");
+            
+            stopTimer();
+        } 
+        else if (status.includes("error") || status.includes("failed")) {
+            // Error State
+            statusBadge.classList.add("bg-red-100", "text-red-800", "border", "border-red-200");
+            statusDot.className = "w-2.5 h-2.5 rounded-full bg-red-500";
+
+            startBtn.disabled = false;
+            startBtn.classList.remove("opacity-50", "cursor-not-allowed");
+            stopBtn.classList.add("hidden");
+
+            activeIndicator.classList.add("hidden");
+            idleIndicator.innerText = "Execution Failed";
+            idleIndicator.classList.remove("hidden");
+            
+            stopTimer();
+        } 
+        else { 
+            // Idle State
+            statusBadge.classList.add("bg-gray-100", "text-gray-700", "border", "border-gray-200");
+            statusDot.className = "w-2.5 h-2.5 rounded-full bg-gray-500";
+
+            startBtn.disabled = false;
+            startBtn.classList.remove("opacity-50", "cursor-not-allowed");
+            stopBtn.classList.add("hidden");
+            
+            activeIndicator.classList.add("hidden");
+            idleIndicator.classList.remove("hidden");
+            
+            stopTimer();
+        }
+    }
+
+    // --- Helper: Formatted Log Append ---
+    function appendLog(text) {
+        const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+        const lineDiv = document.createElement('div');
+        
+        // Color coding for CP-SAT specifics
+        let textColor = "text-gray-300";
+        if (text.toLowerCase().includes("error") || text.includes("❌")) textColor = "text-red-400 font-bold";
+        else if (text.toLowerCase().includes("optimal") || text.includes("solution found")) textColor = "text-green-400 font-bold underline";
+        else if (text.includes("Parameters")) textColor = "text-purple-300";
+        else if (text.includes("Objective")) textColor = "text-blue-300";
+
+        lineDiv.className = `flex space-x-3 hover:bg-gray-800 p-0.5 rounded ${textColor}`;
+        lineDiv.innerHTML = `
+            <span class="text-gray-600 select-none">[${time}]</span>
+            <span>${text}</span>
+        `;
+
+        if (log.querySelector('.italic')) log.innerHTML = '';
+        log.appendChild(lineDiv);
+
+        if (log.children.length > MAX_LOG_LINES) log.removeChild(log.firstChild);
+        log.scrollTop = log.scrollHeight;
+    }
+
+    // --- API: Load Initial Status ---
+    async function loadStatus() {
+        try {
+            const res = await fetch(`/scheduler/status/?batch_id=${batchId}`);
+            const data = await res.json();
+
+            if (data.logs && Array.isArray(data.logs)) {
+                log.innerHTML = '';
+                data.logs.forEach(l => appendLog(l));
+            }
+            // Update Status (This will trigger timer start/stop logic)
+            updateUIState(data.status);
+
+        } catch (e) {
+            console.error("Failed to fetch status:", e);
+            appendLog("Error fetching initial status.", "error");
+        }
+    }
+
+    // --- WebSocket Logic ---
+    function connectWebSocket() {
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const socket = new WebSocket(`${protocol}//${window.location.host}/ws/scheduler/${batchId}/`);
+
+        socket.onopen = () => {
+            isConnected = true;
+            appendLog(">> Connection established. Ready for CP-SAT output.");
+        };
+
+        socket.onclose = () => {
+            if (isConnected) appendLog(">> Connection lost. Reconnecting...", "warning");
+            isConnected = false;
+            setTimeout(connectWebSocket, 3000);
+        };
+
+        socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            
+            // 1. Update Log
+            if (data.message) appendLog(data.message);
+
+            // 2. Update Status (Note: We ignore data.progress now)
+            if (data.status) updateUIState(data.status);
+        };
+    }
+
+    // --- Event Listeners ---
+    startBtn.onclick = async () => {
+        resetTimer();
+        updateUIState("running"); // Optimistic update
+        appendLog(">> Initializing CP-SAT Solver...");
+        
+        try {
+            const res = await fetch(`/scheduler/start/?batch_id=${batchId}`);
+            const data = await res.json();
+            appendLog(data.message);
+        } catch (err) {
+            appendLog("Failed to start scheduler: " + err);
+            updateUIState("error");
+        }
     };
 
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      const msg = `[${data.status}] ${data.message}`;
-      appendLog(msg);
-
-      progressBar.style.width = (data.progress || 0) + "%";
-      statusText.innerText = data.status;
-
-      // 🔍 Detect keywords from actual scheduler log lines
-      const lowerMsg = (data.message || "").toLowerCase();
-      if (lowerMsg.includes("[running]")) {
-        startBtn.disabled = true;
-        stopBtn.classList.remove("hidden");
-      } 
-      else if (lowerMsg.includes("[done]") || lowerMsg.includes("✅ scheduling complete")) {
-        stopBtn.classList.add("hidden");
-        startBtn.disabled = false;
-      } 
-      else if (lowerMsg.includes("error") || lowerMsg.includes("❌")) {
-        stopBtn.classList.add("hidden");
-        startBtn.disabled = false;
-      }
+    stopBtn.onclick = async () => {
+        if (!confirm("Stop the solver? Current optimal solution (if any) may be lost.")) return;
+        
+        appendLog(">> Sending STOP signal...");
+        try {
+            const res = await fetch(`/scheduler/stop/?batch_id=${batchId}`);
+            const data = await res.json();
+            appendLog(data.message);
+            updateUIState("idle");
+        } catch (err) {
+            appendLog("Failed to stop scheduler: " + err);
+        }
     };
-  }
 
-  // 🧩 Button handlers
-  startBtn.onclick = async () => {
-    startBtn.disabled = true;
-    stopBtn.classList.remove("hidden");
-    appendLog("▶ Starting scheduler...");
-    await fetch(`/scheduler/start/?batch_id=${batchId}`)
-      .then(res => res.json())
-      .then(data => appendLog(`▶ ${data.message}`));
-  };
+    clearBtn.onclick = () => {
+        log.innerHTML = '<div class="text-gray-500 italic border-l-2 border-gray-700 pl-2">Console cleared.</div>';
+    };
 
-  stopBtn.onclick = async () => {
-    if (!confirm("Are you sure you want to stop the scheduler?")) return;
-    await fetch(`/scheduler/stop/?batch_id=${batchId}`)
-      .then(res => res.json())
-      .then(data => {
-        appendLog(`⏹ ${data.message}`);
-        statusText.innerText = "stopped";
-        stopBtn.classList.add("hidden");
-        startBtn.disabled = false;
-      });
-  };
-
-  loadStatus();
-  connectWebSocket();
+    // --- Init ---
+    loadStatus();
+    connectWebSocket();
 </script>
-
 {% endblock %}

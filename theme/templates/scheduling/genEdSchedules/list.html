@@ -1,91 +1,130 @@
 {% extends 'base.html' %}
-{% block title %}GenEd Schedules{% endblock %}
-{% block header %}| GenEd Schedules{% endblock %}
+
+{% block title %}GenEd Schedules Management{% endblock %}
+{% block header %}General Education Management{% endblock %}
+
 {% block content %}
-<div class="max-w-6xl mx-auto mt-10 px-4 sm:px-6 lg:px-8">
-  <!-- Search Bar -->
-  <div class="mb-6">
-    <input type="text" id="searchInput"
-           class="w-full sm:w-1/2 border border-gray-300 rounded-md py-2 px-3 focus:ring-blue-500 focus:border-blue-500"
-           placeholder="Search by semester, code, section, instructor, or day..."
-           value="{{ query }}">
-  </div>
+<div class="max-w-7xl mx-auto mt-8 px-4 sm:px-6 lg:px-8">
 
-  <!-- Add GenEd Schedule Button -->
-  <div class="mb-4 text-right">
-    <a href="{% url 'genedScheduleCreate' %}"
-       class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition">
-      + Add GenEd Schedule
-    </a>
-  </div>
+    <div class="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
 
-  <!-- Schedule Container -->
-  <div id="scheduleContainer">
-    {% include 'scheduling/genEdSchedules/_table.html' %}
-  </div>
+        <div class="px-6 py-5 border-b border-gray-200 bg-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <p class="text-sm text-gray-500">Manage schedules of General Education subjects.</p>
+            </div>
+            <a href="{% url 'genedScheduleCreate' %}" 
+               class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-sm transition-all">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Add GenEd Schedule
+            </a>
+        </div>
 
-  <!-- Pagination -->
-  <div id="paginationControls" class="mt-6 flex justify-center"></div>
+        <div class="p-6 bg-white border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            
+            <div class="relative w-full md:w-96">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
+                <input type="text" id="searchInput" 
+                       class="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg leading-5 bg-gray-50 placeholder-gray-500 focus:outline-none focus:bg-white focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150 ease-in-out"
+                       placeholder="Search semester, code, instructor..." 
+                       value="{{ query|default:'' }}">
+                
+                <div id="search-spinner" class="absolute inset-y-0 right-0 pr-3 flex items-center hidden">
+                    <svg class="animate-spin h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2 text-sm text-gray-500">
+            </div>
+        </div>
+
+        <div id="scheduleContainer" class="min-h-[200px]">
+            {% include 'scheduling/genEdSchedules/_table.html' %}
+        </div>
+    </div>
 </div>
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
     const searchInput = document.getElementById("searchInput");
     const container = document.getElementById("scheduleContainer");
-    const paginationControls = document.getElementById("paginationControls");
+    const spinner = document.getElementById("search-spinner");
+    let typingTimer;
 
+    // 1. Restore State (Persistence)
     let savedQuery = localStorage.getItem("genedQuery") || "";
     let savedPage = localStorage.getItem("genedPage") || 1;
 
+    // Use saved query if input is empty
     if (!searchInput.value && savedQuery) {
         searchInput.value = savedQuery;
     }
 
+    // 2. Main Fetch Function
     function fetchData(page = 1) {
         const query = searchInput.value.trim();
+        
+        // Save State
         localStorage.setItem("genedQuery", query);
         localStorage.setItem("genedPage", page);
 
+        // Update URL for shareability
+        const urlObj = new URL(window.location);
+        urlObj.searchParams.set("q", query);
+        urlObj.searchParams.set("page", page);
+        window.history.replaceState({}, "", urlObj);
+
+        // UI Loading
+        spinner.classList.remove('hidden');
+        container.classList.add('opacity-50');
+
         fetch(`{% url 'genedScheduleListLive' %}?q=${encodeURIComponent(query)}&page=${page}`)
-            .then(res => res.json())
+            .then(res => {
+                if(!res.ok) throw new Error("Network error");
+                return res.json();
+            })
             .then(data => {
                 container.innerHTML = data.html;
-                renderPagination(data.page, data.num_pages);
+                bindPagination();
+            })
+            .catch(err => {
+                console.error(err);
+                container.innerHTML = `<div class="p-6 text-center text-red-500">Error loading schedules.</div>`;
+            })
+            .finally(() => {
+                spinner.classList.add('hidden');
+                container.classList.remove('opacity-50');
             });
     }
 
-    function renderPagination(current, total) {
-        if (total <= 1) {
-            paginationControls.innerHTML = "";
-            return;
-        }
-        let html = `<nav><ul class="flex space-x-2">`;
-        for (let i = 1; i <= total; i++) {
-            html += `<li>
-                        <a href="#" data-page="${i}"
-                           class="px-3 py-1 rounded-md ${i == current ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}">
-                          ${i}
-                        </a>
-                     </li>`;
-        }
-        html += `</ul></nav>`;
-        paginationControls.innerHTML = html;
-
-        paginationControls.querySelectorAll("a").forEach(el => {
-            el.addEventListener("click", function(e) {
+    // 3. Bind Pagination Links
+    // (Assumes _table.html includes the pagination HTML with class 'live-page-link')
+    function bindPagination() {
+        document.querySelectorAll(".live-page-link").forEach(link => {
+            link.addEventListener("click", function(e) {
                 e.preventDefault();
                 fetchData(this.dataset.page);
             });
         });
     }
 
-    let typingTimer;
+    // 4. Input Listener (Debounce)
     searchInput.addEventListener("input", () => {
         clearTimeout(typingTimer);
+        spinner.classList.remove('hidden');
         typingTimer = setTimeout(() => fetchData(1), 300);
     });
 
-    fetchData(savedPage);
+    // 5. Initial Load
+    if (searchInput.value.trim() !== "") {
+        fetchData(savedPage);
+    } else {
+        bindPagination();
+    }
 });
 </script>
 {% endblock %}

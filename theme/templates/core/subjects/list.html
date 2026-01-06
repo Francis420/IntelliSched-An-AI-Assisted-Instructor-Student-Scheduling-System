@@ -1,107 +1,163 @@
 {% extends 'base.html' %}
-{% block header %}| Subjects{% endblock %}
+
+{% block title %}Subject Management{% endblock %}
+{% block header %}Subjects{% endblock %}
+
 {% block content %}
-<div class="max-w-6xl mx-auto mt-10 px-4 sm:px-6 lg:px-8">
-  <form id="curriculumForm" method="get" class="mb-4">
-    <select id="curriculumSelect" name="curriculumId"
-      class="w-full border rounded-md px-3 py-2"
-      onchange="fetchSubjects(1)">
-      {% for curriculum in curriculums %}
-        <option value="{{ curriculum.curriculumId }}"
-          {% if curriculum.curriculumId == selectedCurriculumId %}selected{% endif %}>
-          {{ curriculum.name }} ({{ curriculum.effectiveSy }})
-        </option>
-      {% endfor %}
-    </select>
-  </form>
+<div class="max-w-7xl mx-auto mt-8 px-4 sm:px-6 lg:px-8">
 
-  <!-- Search -->
-  <input type="text" id="subjectSearch" 
-         class="border rounded px-3 py-2 w-full mb-4"
-         placeholder="Search subjects..."
-         value="{{ query|default:'' }}">
+    <div class="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
 
-  <!-- Add Subject Button -->
-  <div class="mb-4 text-right">
-    <a id="addSubjectBtn"
-       href="{% url 'subjectCreate' %}?curriculumId={{ selectedCurriculumId }}"
-       class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition">
-      + Add Subject
-    </a>
-  </div>
+        <div class="px-6 py-5 border-b border-gray-200 bg-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <p class="text-sm text-gray-500">Manage the subject settings per curriculum.</p>
+            </div>
+            
+            <a id="addSubjectBtn" 
+               href="{% url 'subjectCreate' %}?curriculumId={{ selectedCurriculumId }}"
+               class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-sm transition-all">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Add Subject
+            </a>
+        </div>
 
-  <!-- Results Container -->
-  <div id="subjectsContainer">
-    {% include "core/subjects/_list_table.html" %}
-  </div>
+        <div class="p-6 bg-white border-b border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-4">
+            
+            <div class="relative">
+                <label for="curriculumSelect" class="sr-only">Select Curriculum</label>
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                </div>
+                <select id="curriculumSelect" 
+                        class="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 focus:outline-none focus:bg-white focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150 ease-in-out">
+                    {% for curriculum in curriculums %}
+                        <option value="{{ curriculum.curriculumId }}"
+                            {% if curriculum.curriculumId|stringformat:"s" == selectedCurriculumId|stringformat:"s" %}selected{% endif %}>
+                            {{ curriculum.name }} ({{ curriculum.effectiveSy }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
+                <input type="text" id="subjectSearch" 
+                       class="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg bg-gray-50 placeholder-gray-500 focus:outline-none focus:bg-white focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150 ease-in-out"
+                       placeholder="Search subject code, description..." 
+                       value="{{ query|default:'' }}">
+                
+                <div id="search-spinner" class="absolute inset-y-0 right-0 pr-3 flex items-center hidden">
+                    <svg class="animate-spin h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div id="subjectsContainer" class="min-h-[200px]">
+            {% include "core/subjects/_list_table.html" %}
+        </div>
+    </div>
 </div>
+
 <script>
-  const searchInput = document.getElementById("subjectSearch");
-  const curriculumSelect = document.getElementById("curriculumSelect");
+document.addEventListener("DOMContentLoaded", function() {
+    // Elements
+    const searchInput = document.getElementById("subjectSearch");
+    const curriculumSelect = document.getElementById("curriculumSelect");
+    const container = document.getElementById("subjectsContainer");
+    const spinner = document.getElementById("search-spinner");
+    const addBtn = document.getElementById("addSubjectBtn");
+    
+    let typingTimer;
 
-  // Restore search query from localStorage
-  if (localStorage.getItem("subjectSearch")) {
-    searchInput.value = localStorage.getItem("subjectSearch");
-  }
+    // 1. Restore Search Query (Optional: Decide if you want to restore Curriculum too)
+    // Generally for dropdowns, it's better to let the Server logic (Django view) handle 
+    // the initial 'selected' state based on session or user profile, but we restore the text search here.
+    if (localStorage.getItem("subjectSearch")) {
+        searchInput.value = localStorage.getItem("subjectSearch");
+    }
 
-  // 1. Create a reusable function to bind events
-  function bindPaginationEvents() {
-    document.querySelectorAll(".live-page-link").forEach(link => {
-      // Clone the node to remove existing listeners (prevents duplicate firing)
-      // or simply bind. Since we often replace innerHTML, simple binding is usually fine.
-      // But to be safe, we just add the listener.
-      link.addEventListener("click", function(e) {
-        e.preventDefault();
-        const page = this.dataset.page;
-        fetchSubjects(page);
-      });
+    // 2. Main Fetch Logic
+    function fetchSubjects(page = 1) {
+        const q = searchInput.value.trim();
+        const curriculumId = curriculumSelect.value;
+
+        // Save text query for persistence
+        localStorage.setItem("subjectSearch", q);
+
+        // UI Loading States
+        spinner.classList.remove('hidden');
+        container.classList.add('opacity-50');
+
+        // Update Browser URL (for shareability)
+        const urlObj = new URL(window.location);
+        urlObj.searchParams.set("q", q);
+        urlObj.searchParams.set("page", page);
+        urlObj.searchParams.set("curriculumId", curriculumId);
+        window.history.replaceState({}, "", urlObj);
+
+        // Perform Fetch
+        fetch(`{% url 'subjectListLive' %}?q=${encodeURIComponent(q)}&page=${page}&curriculumId=${curriculumId}`)
+            .then(response => {
+                if(!response.ok) throw new Error("Network error");
+                return response.json();
+            })
+            .then(data => {
+                container.innerHTML = data.html;
+                
+                // Update "Add Subject" button link dynamically
+                // so if user clicks it, it auto-fills the correct curriculum
+                const createUrl = "{% url 'subjectCreate' %}";
+                addBtn.href = `${createUrl}?curriculumId=${curriculumId}`;
+                
+                bindPagination();
+            })
+            .catch(err => {
+                console.error(err);
+                container.innerHTML = `<div class="p-6 text-center text-red-500">Error loading subjects. Please try again.</div>`;
+            })
+            .finally(() => {
+                spinner.classList.add('hidden');
+                container.classList.remove('opacity-50');
+            });
+    }
+
+    // 3. Bind Pagination Links
+    function bindPagination() {
+        document.querySelectorAll(".live-page-link").forEach(link => {
+            link.addEventListener("click", function(e) {
+                e.preventDefault();
+                fetchSubjects(this.dataset.page);
+            });
+        });
+    }
+
+    // 4. Event Listeners
+    
+    // Text Search (Debounced)
+    searchInput.addEventListener("input", () => {
+        clearTimeout(typingTimer);
+        spinner.classList.remove('hidden');
+        typingTimer = setTimeout(() => fetchSubjects(1), 300);
     });
-  }
 
-  function fetchSubjects(page = 1) {
-    const q = searchInput.value;
-    const curriculumId = curriculumSelect.value;
+    // Curriculum Dropdown (Immediate fetch)
+    curriculumSelect.addEventListener("change", () => {
+        fetchSubjects(1);
+    });
 
-    // Save query for persistence
-    localStorage.setItem("subjectSearch", q);
-
-    const url = new URL(window.location);
-    url.searchParams.set("q", q);
-    url.searchParams.set("page", page);
-    url.searchParams.set("curriculumId", curriculumId);
-    window.history.replaceState({}, "", url);
-
-    fetch(`{% url 'subjectListLive' %}?q=${encodeURIComponent(q)}&page=${page}&curriculumId=${curriculumId}`)
-      .then(response => response.json())
-      .then(data => {
-        document.getElementById("subjectsContainer").innerHTML = data.html;
-        
-        // Update the Add Button URL based on current selection
-        document.getElementById("addSubjectBtn").href = `{% url 'subjectCreate' %}?curriculumId=${curriculumId}`;
-
-        // 2. Rebind pagination links after content replacement
-        bindPaginationEvents();
-      });
-  }
-
-  // Debounce search
-  let timeout = null;
-  searchInput.addEventListener("input", () => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => fetchSubjects(1), 300);
-  });
-
-  // Fetch on curriculum change
-  curriculumSelect.addEventListener("change", () => {
-    fetchSubjects(1);
-  });
-
-  // 3. INITIALIZE: Bind events to the buttons rendered by Django on first load
-  bindPaginationEvents();
-
-  // If there was a saved search, fetch immediately (which will rebind again)
-  if (searchInput.value) {
-    fetchSubjects(1);
-  }
+    // 5. Initial Check
+    // If text box has value (restored from localstorage), trigger a fetch.
+    // Otherwise, just bind existing pagination (Django server rendered initial state).
+    if (searchInput.value) {
+        fetchSubjects(1);
+    } else {
+        bindPagination();
+    }
+});
 </script>
 {% endblock %}

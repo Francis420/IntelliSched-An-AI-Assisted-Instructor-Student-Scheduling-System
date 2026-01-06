@@ -1,80 +1,164 @@
 {% extends "base.html" %}
+
+{% block title %}Batch Results{% endblock %}
+{% block header %}Semantic Matching Report{% endblock %}
+
 {% block content %}
-<div class="max-w-7xl mx-auto p-6 bg-white shadow rounded-xl">
+<div class="max-w-7xl mx-auto mt-8 px-4 sm:px-6 lg:px-8">
 
-  <h3>
-  Matching Results for Batch {{ batchId }}
-  {% if generated_at %}
-    <small>Ran on {{ generated_at|date:"F j, Y, g:i A" }}</small>
-  {% endif %}
-  </h3>
+    <div class="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
+        
+        <div class="px-6 py-6 border-b border-gray-200 bg-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <div class="flex items-center gap-3 mb-1">
+                    <h2 class="text-xl font-bold text-gray-900">Batch Results</h2>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                        ID: {{ batchId }}
+                    </span>
+                </div>
+                {% if generated_at %}
+                <div class="flex items-center text-sm text-gray-500">
+                    <svg class="mr-1.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    Generated on {{ generated_at|date:"F j, Y, g:i A" }}
+                </div>
+                {% endif %}
+            </div>
+          
+        </div>
 
+        <div class="p-6 bg-white border-b border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-4">
+            
+            <div class="relative">
+                <label for="instructor-search" class="sr-only">Search Instructor</label>
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                </div>
+                <input type="text" 
+                       id="instructor-search" 
+                       value="{{ instructor_query|default:'' }}"
+                       placeholder="Filter by Instructor..." 
+                       class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-lg py-2">
+            </div>
 
-  <!-- Search Filters -->
-  <div class="flex gap-4 mb-4">
-    <input type="text" id="instructor-search" class="border rounded p-2 flex-1"
-       placeholder="Search Instructor..." value="{{ instructor_query|default:'' }}">
-  <input type="text" id="subject-search" class="border rounded p-2 flex-1"
-        placeholder="Search Subject..." value="{{ subject_query|default:'' }}">
-  </div>
+            <div class="relative">
+                <label for="subject-search" class="sr-only">Search Subject</label>
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                </div>
+                <input type="text" 
+                       id="subject-search" 
+                       value="{{ subject_query|default:'' }}"
+                       placeholder="Filter by Subject..." 
+                       class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-lg py-2">
+            </div>
+        </div>
 
-  <div id="results-container">
-    {% include "aimatching/matching/_results_table.html" %}
-  </div>
+        <div class="relative min-h-[300px]">
+            
+            <div id="loading-overlay" class="hidden absolute inset-0 bg-white bg-opacity-75 z-10 flex items-center justify-center">
+                <div class="flex flex-col items-center">
+                    <svg class="animate-spin h-8 w-8 text-indigo-600 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span class="text-sm font-medium text-indigo-600">Updating results...</span>
+                </div>
+            </div>
 
+            <div id="results-container">
+                {% include "aimatching/matching/_results_table.html" %}
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
-function fetchResults(page = 1) {
-  const subject = document.getElementById("subject-search").value;
-  const instructor = document.getElementById("instructor-search").value;
+    // --- UI Helpers ---
+    const overlay = document.getElementById('loading-overlay');
 
-  const url = new URL(window.location);
-  url.searchParams.set("subject", subject);
-  url.searchParams.set("instructor", instructor);
-  url.searchParams.set("page", page);
-  window.history.replaceState({}, "", url);
+    function toggleLoading(isLoading) {
+        if (isLoading) {
+            overlay.classList.remove('hidden');
+        } else {
+            overlay.classList.add('hidden');
+        }
+    }
 
-  fetch(`{% url 'matchingResultsLive' batchId=batchId %}?subject=${encodeURIComponent(subject)}&instructor=${encodeURIComponent(instructor)}&page=${page}`)
-    .then(response => response.json())
-    .then(data => {
-      document.getElementById("results-container").innerHTML = data.html;
-      attachPaginationEvents(); // ✅ re-attach events
+    // --- Core Fetch Logic ---
+    function fetchResults(page = 1) {
+        const subject = document.getElementById("subject-search").value;
+        const instructor = document.getElementById("instructor-search").value;
+
+        // Update URL
+        const url = new URL(window.location);
+        url.searchParams.set("subject", subject);
+        url.searchParams.set("instructor", instructor);
+        url.searchParams.set("page", page);
+        window.history.replaceState({}, "", url);
+
+        // Show Loader
+        toggleLoading(true);
+
+        // Fetch Data
+        fetch(`{% url 'matchingResultsLive' batchId=batchId %}?subject=${encodeURIComponent(subject)}&instructor=${encodeURIComponent(instructor)}&page=${page}`)
+            .then(response => {
+                if (!response.ok) throw new Error("Network response was not ok");
+                return response.json();
+            })
+            .then(data => {
+                document.getElementById("results-container").innerHTML = data.html;
+                attachPaginationEvents();
+            })
+            .catch(error => {
+                console.error("Error fetching results:", error);
+                // Optional: Show error message in container
+            })
+            .finally(() => {
+                // Hide Loader with slight delay for smoothness
+                setTimeout(() => toggleLoading(false), 200);
+            });
+    }
+
+    // --- Event Listeners ---
+    function attachPaginationEvents() {
+        document.querySelectorAll(".live-page-link").forEach(link => {
+            link.addEventListener("click", function(e) {
+                e.preventDefault();
+                // Assumes your partial adds 'data-page' to links
+                fetchResults(this.dataset.page);
+            });
+        });
+    }
+
+    // Called by sort buttons in the table (if they exist in partial)
+    function changeSort(col) {
+        const url = new URL(window.location);
+        let currentSort = url.searchParams.get("sort") || "total";
+        let dir = url.searchParams.get("dir") || "desc";
+
+        if (currentSort === col) {
+            dir = dir === "asc" ? "desc" : "asc";
+        } else {
+            dir = "asc";
+        }
+        
+        url.searchParams.set("sort", col);
+        url.searchParams.set("dir", dir);
+        window.history.replaceState({}, "", url);
+        
+        fetchResults(1);
+    }
+
+    // Debounced Search Inputs
+    let timeout = null;
+    document.querySelectorAll("#subject-search, #instructor-search").forEach(input => {
+        input.addEventListener("input", () => {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => fetchResults(1), 400); // Increased delay slightly for better performance
+        });
     });
-}
 
-function attachPaginationEvents() {
-  document.querySelectorAll(".live-page-link").forEach(link => {
-    link.addEventListener("click", function(e) {
-      e.preventDefault();
-      fetchResults(this.dataset.page);
-    });
-  });
-}
-
-function changeSort(col) {
-  const url = new URL(window.location);
-  let currentSort = url.searchParams.get("sort") || "total";
-  let dir = url.searchParams.get("dir") || "desc";
-  if (currentSort === col) {
-    dir = dir === "asc" ? "desc" : "asc";
-  } else {
-    dir = "asc";
-  }
-  url.searchParams.set("sort", col);
-  url.searchParams.set("dir", dir);
-  window.history.replaceState({}, "", url);
-  fetchResults(1);
-}
-
-let timeout = null;
-document.querySelectorAll("#subject-search, #instructor-search").forEach(input => {
-  input.addEventListener("input", () => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => fetchResults(1), 300);
-  });
-});
-
-attachPaginationEvents();
+    // Initial Attach
+    attachPaginationEvents();
 </script>
 {% endblock %}
