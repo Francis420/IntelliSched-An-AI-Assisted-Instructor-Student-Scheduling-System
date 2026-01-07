@@ -24,7 +24,7 @@ from django.db.models import Sum
 from django.template.loader import render_to_string
 import math
 import openpyxl
-from openpyxl.styles import Alignment
+from openpyxl.styles import Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from django.conf import settings
 from openpyxl.cell.cell import MergedCell
@@ -1786,3 +1786,125 @@ def instructorLoad(request):
     }
     
     return render(request, 'scheduler/instructorLoad.html', context)
+
+def setOuterBorder(ws, cellRange):
+    """Applies a thin outside border to a merged range."""
+    thin = Side(border_style="thin", color="000000")
+    border = Border(top=thin, left=thin, right=thin, bottom=thin)
+    for row in ws[cellRange]:
+        for cell in row:
+            cell.border = border
+
+def safe_write_room(ws, row, col, value):
+    """
+    Helper to write to a cell even if it's currently part of a merge.
+    Borrowed from the working exportWorkloadExcel logic.
+    """
+    cell = ws.cell(row=row, column=col)
+    target_cell = cell
+    if isinstance(cell, MergedCell):
+        for merged_range in ws.merged_cells.ranges:
+            if cell.coordinate in merged_range:
+                # Find the top-left cell of the merge to write the value
+                target_cell = ws.cell(row=merged_range.min_row, column=merged_range.min_col)
+                break
+    target_cell.value = value
+    target_cell.alignment = Alignment(wrap_text=True, horizontal='center', vertical='center')
+
+@login_required
+@has_role('deptHead')
+def exportRoomSchedule(request, room_id):
+    room = get_object_or_404(Room, roomId=room_id)
+    semester_id = request.GET.get("semester")
+    
+    # 1. Pull Semester
+    current_semester = Semester.objects.filter(semesterId=semester_id).first() if semester_id else Semester.objects.order_by('-createdAt').first()
+    
+    # 2. Pull Schedules - Match the query logic of exportWorkloadExcel
+    # Use iexact to handle 'finalized' vs 'Finalized'
+    schedules = Schedule.objects.filter(
+        room=room, 
+        status__iexact='finalized', 
+        semester=current_semester
+    ).select_related('subject', 'instructor', 'section')
+
+    # 3. Load Template
+    templatePath = os.path.join(settings.BASE_DIR, 'static/excel_templates/rooms_template.xlsx')
+    wb = openpyxl.load_workbook(templatePath)
+    ws = wb.active
+
+    # --- STEP 1: CLEAR EXISTING TEMPLATE MERGES (Crucial for Visualization) ---
+    # Your template has a merge at Row 13 for "code, header_faculty - section".
+    # We must destroy it so openpyxl doesn't see those cells as "Read Only".
+    for merge_range in list(ws.merged_cells.ranges):
+        if merge_range.min_row >= 11:
+            ws.unmerge_cells(str(merge_range))
+
+    # Clear the placeholder text manually
+    for r in range(11, 60):
+        for c in range(2, 9): # B to H
+            ws.cell(row=r, column=c).value = None
+
+    # --- STEP 2: PLOT DATA (Using row mapping logic) ---
+    day_map = {'Monday': 2, 'Tuesday': 3, 'Wednesday': 4, 'Thursday': 5, 'Friday': 6, 'Saturday': 7, 'Sunday': 8}
+
+    for sched in schedules:
+        col = day_map.get(sched.dayOfWeek)
+        if not col: continue
+
+        # Time Calculation
+        start_dec = sched.startTime.hour + (sched.startTime.minute / 60)
+        
+        # Row Logic: 7:00 AM (Row 11), 1:00 PM (Row 22)
+        if start_dec < 12.0:
+            curr_row = 11 + int((start_dec - 7) * 2)
+        elif start_dec >= 13.0:
+            curr_row = 22 + int((start_dec - 13) * 2)
+        else:
+            curr_row = 21 # Lunch row
+
+        duration_slots = int(sched.duration_minutes / 30)
+        end_row = curr_row + duration_slots - 1
+
+        # Data Formatting
+        instr = sched.instructor.full_name.upper() if sched.instructor else "TBA"
+        raw_sec = str(sched.section.sectionCode)
+        sec_suffix = raw_sec.split('-')[-1] if '-' in raw_sec else raw_sec
+        formatted_sec = f"{sched.subject.yearLevel}{sec_suffix}"
+
+        # Write to cell (Safe now because we unmerged)
+        target_cell = ws.cell(row=curr_row, column=col)
+        target_cell.value = f"{sched.subject.code}\n{instr}\n{formatted_sec}"
+        target_cell.alignment = Alignment(wrap_text=True, horizontal='center', vertical='center')
+
+        # Re-merge for the class duration
+        if end_row > curr_row:
+            ws.merge_cells(start_row=curr_row, start_column=col, end_row=end_row, end_column=col)
+        
+        setOuterBorder(ws, f"{get_column_letter(col)}{curr_row}:{get_column_letter(col)}{end_row}")
+
+    # --- STEP 3: HEADERS & SIGNATURE (Final Sweep) ---
+    dept_head = Instructor.objects.filter(
+        userlogin__user__roles__name='deptHead', 
+        userlogin__user__isActive=True
+    ).order_by('userlogin__user__is_superuser').first()
+    
+    replacements = {
+        'header_semester': get_semester_text(current_semester.term) if current_semester else "",
+        'header_sy': current_semester.academicYear if current_semester else "",
+        'room': room.roomCode,
+        'sig_dept_head': dept_head.full_name.upper() if dept_head else "TBA"
+    }
+
+    # Iterate through ALL cells to ensure the footer signature is caught
+    for row in ws.iter_rows():
+        for cell in row:
+            if cell.value and isinstance(cell.value, str):
+                for key, val in replacements.items():
+                    if key in cell.value:
+                        cell.value = cell.value.replace(key, val)
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="Room_{room.roomCode}_Schedule.xlsx"'
+    wb.save(response)
+    return response

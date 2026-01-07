@@ -23,4 +23,6 @@ urlpatterns = [
     path('api/updateScheduleSlot/', views.updateScheduleSlot, name='updateScheduleSlot'),
     path('roomManager/', views.roomScheduler, name='roomScheduler'),
     path('instructorLoadManager/', views.instructorLoad, name='instructorLoad'),
+
+    path('rooms/export/<int:room_id>/', views.exportRoomSchedule, name='exportRoomSchedule'),
 ]

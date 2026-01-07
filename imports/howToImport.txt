@@ -6,6 +6,8 @@ py .\manage.py [script.py] [file.csv]
 
 example:
 py .\manage.py importInstructorLogin C:\Users\user\Desktop\IntelliSched-An-AI-Assisted-Instructor-Student-Scheduling-System\imports\InstructorLogin.csv
+or
+python manage.py importSubjects imports\Subjects.csv
 
 currently there are:
 1. create curriculum
