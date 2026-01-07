@@ -3,7 +3,6 @@
 {% block header %} Add New Subject{% endblock %}
 {% block title %} Add New Subject {% endblock %}
 
-
 {% block content %}
 <div class="max-w-4xl mx-auto mt-10 px-4 pb-20">
     <div class="mb-8 flex items-center justify-between">
@@ -13,7 +12,7 @@
         </div>
     </div>
 
-    <form method="POST" class="space-y-8">
+    <form method="POST" class="space-y-8" id="subjectForm">
         {% csrf_token %}
         
         <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
@@ -76,12 +75,15 @@
             </div>
             <div class="p-8">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    
                     <div class="space-y-4">
-                        <label class="block text-xs font-bold text-gray-500 uppercase ml-1">Lecture Duration (Minutes)</label>
+                        <label class="block text-xs font-bold text-gray-500 uppercase ml-1">Lecture Duration (Hours)</label>
                         <div class="relative">
-                            <input type="number" name="durationMinutes" required min="1" placeholder="180"
-                                   class="w-full pl-4 pr-12 py-3 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all shadow-sm">
-                            <span class="absolute right-4 top-3.5 text-xs text-gray-400 font-medium">min</span>
+                            <input type="hidden" name="durationMinutes" id="actualLectureMinutes">
+                            
+                            <input type="number" id="displayLectureHours" required min="0" step="any" placeholder="3"
+                                class="w-full pl-4 pr-12 py-3 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all shadow-sm">
+                            <span class="absolute right-4 top-3.5 text-xs text-gray-400 font-medium">hrs</span>
                         </div>
                         
                         <div class="flex items-center p-4 bg-gray-50 rounded-2xl border border-gray-100">
@@ -92,7 +94,7 @@
 
                     <div class="space-y-4">
                         <div class="flex items-center justify-between ml-1">
-                            <label class="block text-xs font-bold text-gray-500 uppercase">Laboratory Duration</label>
+                            <label class="block text-xs font-bold text-gray-500 uppercase">Laboratory Duration (Hours)</label>
                             <div class="flex items-center">
                                 <input type="checkbox" id="hasLab" name="hasLab" class="h-4 w-4 text-blue-600 rounded">
                                 <label for="hasLab" class="ml-2 text-xs font-bold text-blue-600 uppercase">Include Lab</label>
@@ -100,11 +102,13 @@
                         </div>
                         
                         <div id="lab-duration-container" class="relative opacity-50 transition-opacity">
-                            <input type="number" id="labDurationMinutes" name="labDurationMinutes" min="0" disabled placeholder="0"
-                                   class="w-full pl-4 pr-12 py-3 rounded-xl border-gray-200 bg-gray-100 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all shadow-sm">
-                            <span class="absolute right-4 top-3.5 text-xs text-gray-400 font-medium">min</span>
+                            <input type="hidden" name="labDurationMinutes" id="actualLabMinutes">
+
+                            <input type="number" id="displayLabHours" min="0" step="any" disabled placeholder="0"
+                                class="w-full pl-4 pr-12 py-3 rounded-xl border-gray-200 bg-gray-100 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all shadow-sm">
+                            <span class="absolute right-4 top-3.5 text-xs text-gray-400 font-medium">hrs</span>
                         </div>
-                        <p class="text-[10px] text-gray-400 italic">When enabled, the solver will seek a Laboratory-type room for this duration.</p>
+                        <p class="text-[10px] text-gray-400 italic">When enabled, the solver will seek a Laboratory-type room for this subject.</p>
                     </div>
                 </div>
             </div>
@@ -113,16 +117,16 @@
         <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 space-y-6">
             <div>
                 <label class="block text-xs font-bold text-gray-500 uppercase mb-2 ml-1">Subject Description</label>
-                <textarea name="description" rows="3" class="w-full px-4 py-3 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all" placeholder="Enter full catalog description..."></textarea>
+                <textarea name="description" rows="3" class="w-full px-4 py-3 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all" placeholder="Enter full subject description..."></textarea>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2 ml-1">Key Topics</label>
-                    <textarea name="subjectTopics" rows="3" class="w-full px-4 py-3 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all" placeholder="Syllabus bullet points..."></textarea>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2 ml-1">Subject Topics</label>
+                    <textarea name="subjectTopics" rows="3" class="w-full px-4 py-3 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all" placeholder="Subject Topics..."></textarea>
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-2 ml-1">Internal Notes</label>
-                    <textarea name="notes" rows="3" class="w-full px-4 py-3 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all" placeholder="Any special scheduling rules..."></textarea>
+                    <textarea name="notes" rows="3" class="w-full px-4 py-3 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all" placeholder="Any notes..."></textarea>
                 </div>
             </div>
         </div>
@@ -137,24 +141,55 @@
 </div>
 
 <script>
-    // Logic to toggle Lab duration input
-    const labCheckbox = document.getElementById('hasLab');
-    const labInput = document.getElementById('labDurationMinutes');
-    const labContainer = document.getElementById('lab-duration-container');
+    // --- HOURS TO MINUTES CONVERSION LOGIC ---
+    
+    // Function to calculate minutes from hours input
+    function updateMinutes(hoursInputId, hiddenInputId) {
+        const hoursElement = document.getElementById(hoursInputId);
+        const hiddenElement = document.getElementById(hiddenInputId);
+        
+        const hours = parseFloat(hoursElement.value);
+        
+        if (!isNaN(hours)) {
+            // Convert to minutes (Hours * 60)
+            hiddenElement.value = Math.round(hours * 60); 
+        } else {
+            hiddenElement.value = '';
+        }
+    }
 
+    // Lecture Listeners
+    const lectureHoursInput = document.getElementById('displayLectureHours');
+    lectureHoursInput.addEventListener('input', () => updateMinutes('displayLectureHours', 'actualLectureMinutes'));
+
+    // Lab Listeners
+    const labHoursInput = document.getElementById('displayLabHours');
+    const labCheckbox = document.getElementById('hasLab');
+    const labContainer = document.getElementById('lab-duration-container');
+    const labHiddenInput = document.getElementById('actualLabMinutes');
+
+    // Update Lab minutes when typing
+    labHoursInput.addEventListener('input', () => updateMinutes('displayLabHours', 'actualLabMinutes'));
+
+    // --- TOGGLE LOGIC (Updated to target the new Hours input) ---
     labCheckbox.addEventListener('change', function() {
         if (this.checked) {
-            labInput.disabled = false;
-            labInput.classList.remove('bg-gray-100');
-            labInput.classList.add('bg-gray-50');
+            // Enable visual input
+            labHoursInput.disabled = false;
+            labHoursInput.classList.remove('bg-gray-100');
+            labHoursInput.classList.add('bg-gray-50');
             labContainer.classList.remove('opacity-50');
-            labInput.focus();
+            labHoursInput.focus();
         } else {
-            labInput.disabled = true;
-            labInput.value = '';
-            labInput.classList.add('bg-gray-100');
-            labInput.classList.remove('bg-gray-50');
+            // Disable and clear visual input
+            labHoursInput.disabled = true;
+            labHoursInput.value = '';
+            labHoursInput.classList.add('bg-gray-100');
+            labHoursInput.classList.remove('bg-gray-50');
             labContainer.classList.add('opacity-50');
+            
+            // Also clear the hidden minutes input
+            labHiddenInput.value = ''; 
         }
     });
 </script>

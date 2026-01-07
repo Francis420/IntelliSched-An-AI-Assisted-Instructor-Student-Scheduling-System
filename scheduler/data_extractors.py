@@ -10,8 +10,6 @@ def get_solver_data(semester):
     instructors_qs = list(
         Instructor.objects.filter(
             employmentType__in=['permanent', 'part-time', 'overload']
-        ).exclude(
-            employmentType='on-leave/retired'
         ).select_related('rank', 'designation'
         ).order_by('instructorId')
         

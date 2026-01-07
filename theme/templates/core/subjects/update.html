@@ -85,10 +85,15 @@
             </div>
             <div class="p-8 space-y-8">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    
                     <div class="space-y-4">
-                        <label class="block text-xs font-bold text-gray-500 uppercase ml-1">Lecture Duration (Mins)</label>
-                        <input type="number" name="durationMinutes" min="0" value="{{ subject.durationMinutes }}" required 
-                               class="w-full px-4 py-3 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm">
+                        <label class="block text-xs font-bold text-gray-500 uppercase ml-1">Lecture Duration (Hours)</label>
+                        <div class="relative">
+                            <input type="hidden" name="durationMinutes" id="actualLectureMinutes" value="{{ subject.durationMinutes }}">
+                            
+                            <input type="number" id="displayLectureHours" min="0" step="any" required 
+                                   class="w-full px-4 py-3 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm">
+                        </div>
                         
                         <div class="flex items-center p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 group cursor-pointer">
                             <input type="checkbox" name="isPriorityForRooms" id="priorityToggle" class="h-5 w-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500" {% if subject.isPriorityForRooms %}checked{% endif %}>
@@ -98,7 +103,7 @@
 
                     <div class="space-y-4">
                         <div class="flex items-center justify-between ml-1">
-                            <label class="block text-xs font-bold text-gray-500 uppercase">Lab Duration (Mins)</label>
+                            <label class="block text-xs font-bold text-gray-500 uppercase">Lab Duration (Hours)</label>
                             <div class="flex items-center space-x-2">
                                 <span class="text-[10px] font-bold text-gray-400 uppercase">Enabled</span>
                                 <label class="relative inline-flex items-center cursor-pointer">
@@ -107,9 +112,11 @@
                                 </label>
                             </div>
                         </div>
-                        <div id="labFields" class="transition-all duration-300 {% if not subject.hasLab %}opacity-40 grayscale pointer-events-none{% endif %}">
-                            <input type="number" id="labDurationInput" name="labDurationMinutes" min="0"
-                                   value="{{ subject.labDurationMinutes|default_if_none:'' }}" 
+                        
+                        <div id="labFields" class="relative transition-all duration-300 {% if not subject.hasLab %}opacity-40 grayscale pointer-events-none{% endif %}">
+                            <input type="hidden" name="labDurationMinutes" id="actualLabMinutes" value="{{ subject.labDurationMinutes|default_if_none:0 }}">
+                            
+                            <input type="number" id="displayLabHours" min="0" step="any"
                                    class="w-full px-4 py-3 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm"
                                    {% if not subject.hasLab %}disabled{% endif %}>
                         </div>
@@ -120,7 +127,7 @@
 
         <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 space-y-6">
             <div class="space-y-1">
-                <label class="block text-xs font-bold text-gray-500 uppercase ml-1">Catalog Description</label>
+                <label class="block text-xs font-bold text-gray-500 uppercase ml-1">Subject Description</label>
                 <textarea name="description" rows="3" class="w-full px-4 py-3 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm">{{ subject.description }}</textarea>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -129,7 +136,7 @@
                     <textarea name="subjectTopics" rows="3" class="w-full px-4 py-3 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm">{{ subject.subjectTopics }}</textarea>
                 </div>
                 <div class="space-y-1">
-                    <label class="block text-xs font-bold text-gray-500 uppercase ml-1">Administrative Notes</label>
+                    <label class="block text-xs font-bold text-gray-500 uppercase ml-1">Notes</label>
                     <textarea name="notes" rows="3" class="w-full px-4 py-3 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm">{{ subject.notes }}</textarea>
                 </div>
             </div>
@@ -149,19 +156,64 @@
 </div>
 
 <script>
+    // --- 1. FUNCTION: Update Hidden Minutes when User types Hours ---
+    function updateMinutes(hoursInputId, hiddenInputId) {
+        const hoursElement = document.getElementById(hoursInputId);
+        const hiddenElement = document.getElementById(hiddenInputId);
+        
+        const hours = parseFloat(hoursElement.value);
+        
+        if (!isNaN(hours)) {
+            // Hours * 60 = Minutes (Rounded)
+            hiddenElement.value = Math.round(hours * 60); 
+        } else {
+            hiddenElement.value = '';
+        }
+    }
+
+    // --- 2. FUNCTION: Initialize Visible Hours from DB Minutes ---
+    function initHours(hiddenInputId, hoursInputId) {
+        const hiddenElement = document.getElementById(hiddenInputId);
+        const hoursElement = document.getElementById(hoursInputId);
+        
+        const minutes = parseFloat(hiddenElement.value);
+        if (!isNaN(minutes) && minutes > 0) {
+            // Minutes / 60 = Hours
+            // We use standard division (e.g. 90/60 = 1.5)
+            hoursElement.value = minutes / 60;
+        }
+    }
+
+    // --- SETUP VARIABLES ---
+    const lectureHoursInput = document.getElementById('displayLectureHours');
+    const labHoursInput = document.getElementById('displayLabHours');
+    const labHiddenInput = document.getElementById('actualLabMinutes');
+    
+    // --- RUN INITIALIZATION ---
+    // Convert DB minutes to Hours for display immediately
+    initHours('actualLectureMinutes', 'displayLectureHours');
+    initHours('actualLabMinutes', 'displayLabHours');
+
+    // --- ADD LISTENERS FOR TYPING ---
+    lectureHoursInput.addEventListener('input', () => updateMinutes('displayLectureHours', 'actualLectureMinutes'));
+    labHoursInput.addEventListener('input', () => updateMinutes('displayLabHours', 'actualLabMinutes'));
+
+
+    // --- TOGGLE LOGIC (Lab) ---
     const labToggle = document.getElementById('hasLabToggle');
     const labFields = document.getElementById('labFields');
-    const labInput = document.getElementById('labDurationInput');
 
     labToggle.addEventListener('change', () => {
         if (labToggle.checked) {
             labFields.classList.remove('opacity-40', 'grayscale', 'pointer-events-none');
-            labInput.disabled = false;
-            labInput.focus();
+            labHoursInput.disabled = false;
+            labHoursInput.focus();
         } else {
             labFields.classList.add('opacity-40', 'grayscale', 'pointer-events-none');
-            labInput.value = '';
-            labInput.disabled = true;
+            // Clear both inputs
+            labHoursInput.value = '';
+            labHiddenInput.value = ''; // Don't forget to clear the hidden one too!
+            labHoursInput.disabled = true;
         }
     });
 </script>
