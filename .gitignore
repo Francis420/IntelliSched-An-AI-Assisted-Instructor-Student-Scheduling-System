@@ -1,5 +1,5 @@
 
-# Ignore virtual environment
+# Ignore virtual environments
 root310/
 root/
 
@@ -8,10 +8,11 @@ theme/static_src/node_modules/
 theme/static_src/root/
 theme/static_src/root310/
 
+# Ignore Hugging Face models
 aimatching/models
-
 hf_models/
 
+# Ignore migration files
 adminpanel/migrations
 aimatching/migrations
 authapi/migrations
@@ -20,5 +21,7 @@ instructors/migrations
 scheduler/migrations
 scheduling/migrations
 students/migrations
+
+# Make sure to setup these environment files according to your local setup
 Intellisched/settings.py
 .env
