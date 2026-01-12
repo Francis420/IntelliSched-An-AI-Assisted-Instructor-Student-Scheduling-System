@@ -166,40 +166,61 @@ def instructorDashboard(request):
 
     instructor = user_login.instructor
 
-    # Counts for overview cards
-    experience_count = InstructorExperience.objects.filter(instructor=instructor).count()
-    credential_count = InstructorCredentials.objects.filter(instructor=instructor).count()
+    # ---- Overview counts ----
+    experience_count = InstructorExperience.objects.filter(
+        instructor=instructor
+    ).count()
 
-    # Get latest updates from each model
-    experiences = InstructorExperience.objects.filter(instructor=instructor).order_by('-createdAt')[:3]
-    credentials = InstructorCredentials.objects.filter(instructor=instructor).order_by('-createdAt')[:3]
+    credential_count = InstructorCredentials.objects.filter(
+        instructor=instructor
+    ).count()
 
+    # ---- Latest records ----
+    experiences = InstructorExperience.objects.filter(
+        instructor=instructor
+    ).order_by('-createdAt')[:3]
 
+    credentials = InstructorCredentials.objects.filter(
+        instructor=instructor
+    ).order_by('-updatedAt')[:3]
 
-    # Combine & sort all recent activities
+    # ---- Normalize timestamps for sorting ----
+    def get_activity_timestamp(obj):
+        if isinstance(obj, InstructorExperience):
+            return obj.createdAt
+        if isinstance(obj, InstructorCredentials):
+            return obj.updatedAt
+        return None
+
     recent_activities = sorted(
         chain(experiences, credentials),
-        key=attrgetter("createdAt"),
+        key=get_activity_timestamp,
         reverse=True
     )[:5]
 
-    # Normalize with edit URLs
+    # ---- Activity feed ----
     activity_feed = []
+
     for item in recent_activities:
         if isinstance(item, InstructorExperience):
-            url = reverse('experienceUpdate', args=[item.pk])
             label = "Experience"
+            url = reverse('experienceUpdate', args=[item.pk])
+            timestamp = item.createdAt
+            title = item.title
+            description = getattr(item, "description", "")
         elif isinstance(item, InstructorCredentials):
-            url = reverse('credentialUpdate', args=[item.pk])
             label = "Credential"
+            url = reverse('credentialUpdate', args=[item.pk])
+            timestamp = item.updatedAt
+            title = item.title
+            description = f"Issued by {item.issuer}"
         else:
-            url = None
-            label = "Update"
+            continue
 
         activity_feed.append({
-            "title": f"{label}: {getattr(item, 'title', getattr(item, 'name', 'Update'))}",
-            "description": getattr(item, "description", getattr(item, "details", "")),
-            "timestamp": item.createdAt,
+            "title": f"{label}: {title}",
+            "description": description,
+            "timestamp": timestamp,
             "url": url,
         })
 
@@ -209,4 +230,5 @@ def instructorDashboard(request):
         "credential_count": credential_count,
         "recent_activities": activity_feed,
     }
+
     return render(request, 'dashboards/instructorDashboard.html', context)
