@@ -21,16 +21,9 @@ urlpatterns = [
     # Availability checks
     path('check-username-availability/', views.checkUsernameAvailability, name='check_username_availability'),
     path('check-instructorid-availability/', views.checkInstructorIdAvailability, name='check_instructorid_availability'),
-    path('check-studentid-availability/', views.checkStudentIdAvailability, name='check_studentid_availability'),
-
-    # Student accounts
-    path('students/', views.studentAccountList, name='studentAccountList'),
-    path("students/live/", views.studentAccountListLive, name="studentAccountListLive"),
-    path('students/create/', views.studentAccountCreate, name='studentAccountCreate'),
-    path('students/update/<int:userId>/', views.studentAccountUpdate, name='studentAccountUpdate'),
 
     # Recommendation Dashboard
-    path('recommendations/', views.recommendInstructors, name='recommendations'),
+    path('recommendations/', views.recommendInstructors, name='recommendInstructors'),
 
     # Instructor Profile
     path('profile/', views.instructorProfile, name='instructorProfile'),

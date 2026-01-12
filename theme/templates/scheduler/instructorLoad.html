@@ -38,7 +38,7 @@
                 {% if selectedInstructorId %}
                 <div class="flex flex-col gap-1 mt-1">
                     <div class="w-full h-5 rounded-full relative overflow-hidden flex bg-gray-100 border border-gray-300" 
-                        title="Normal: {{ normal_load }} + Overload: {{ overload_load }}">
+                        title="Regular: {{ normal_load }} + Overload: {{ overload_load }}">
                         
                         <div class="bg-emerald-500 h-full transition-all duration-500 relative z-20 shadow-sm border-r border-emerald-600" 
                             style="width: {% widthratio normal_load max_limit 100 %}%;">
@@ -73,7 +73,7 @@
                         <div class="flex gap-3">
                             <span class="flex items-center gap-1">
                                 <span class="w-2 h-2 bg-emerald-500 rounded-full"></span>
-                                Normal: <strong>{{ normal_load }}</strong>/{{ reg_limit }}
+                                Regular: <strong>{{ normal_load }}</strong>/{{ reg_limit }}
                             </span>
 
                             <span class="flex items-center gap-1">

@@ -25,7 +25,7 @@ class UserManager(BaseUserManager):
 
 
 # ---------- Role Model ----------
-# This model defines roles that users can have, such as "deptHead", "instructor" or "student".
+# This model defines roles that users can have, such as "deptHead" or "instructor".
 class Role(models.Model):
     name = models.CharField(max_length=20, unique=True)
     label = models.CharField(max_length=50) 
@@ -148,30 +148,12 @@ class Instructor(models.Model):
         return self.instructorId
 
 
-# ---------- Student Table ----------
-# This model represents students in the system, identified by their student ID.
-class Student(models.Model):
-    studentId = models.CharField(primary_key=True, max_length=20)  # e.g., "2025-123456"
-    createdAt = models.DateTimeField(auto_now_add=True)
-
-    @property
-    def full_name(self):
-        user = self.userlogin_set.select_related("user").first()
-        if user and user.user:
-            return f"{user.user.firstName} {user.user.lastName}"
-        return self.studentId
-
-    def __str__(self):
-        return self.studentId
-
-
 # ---------- UserLogin ----------
-# This model tracks user logins, linking them to the User, Instructor or Student models.
+# This model tracks user logins, linking them to the User and Instructor models.
 class UserLogin(models.Model):
     loginId = models.AutoField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     instructor = models.ForeignKey(Instructor, on_delete=models.SET_NULL, null=True, blank=True)
-    student = models.ForeignKey(Student, on_delete=models.SET_NULL, null=True, blank=True)
     createdAt = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

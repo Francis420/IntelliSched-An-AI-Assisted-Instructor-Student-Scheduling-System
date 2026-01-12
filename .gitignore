@@ -20,3 +20,5 @@ instructors/migrations
 scheduler/migrations
 scheduling/migrations
 students/migrations
+Intellisched/settings.py
+.env

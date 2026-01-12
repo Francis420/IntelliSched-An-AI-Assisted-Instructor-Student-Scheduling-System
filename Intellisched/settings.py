@@ -31,7 +31,6 @@ INSTALLED_APPS = [
     'channels',
 
     'core.apps.CoreConfig',
-    'students',
     'instructors.apps.InstructorsConfig',
     'scheduling.apps.SchedulingConfig',
     'adminpanel',

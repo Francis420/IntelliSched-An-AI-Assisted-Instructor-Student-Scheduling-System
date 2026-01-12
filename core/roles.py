@@ -8,7 +8,6 @@ def seed_roles():
     roles = [
         ('deptHead', 'Department Head'),
         ('instructor', 'Instructor'),
-        ('student', 'Student'),
     ]
 
     for name, label in roles:

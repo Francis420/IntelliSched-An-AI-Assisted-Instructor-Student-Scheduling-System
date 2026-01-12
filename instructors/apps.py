@@ -14,8 +14,6 @@ class InstructorsConfig(AppConfig):
             InstructorDesignation,
             InstructorRank,
             InstructorAcademicAttainment,
-            InstructorAbsence,
-            InstructorAvailability,
         )
 
         auditlog.register(InstructorExperience)
@@ -25,7 +23,5 @@ class InstructorsConfig(AppConfig):
         auditlog.register(InstructorDesignation)
         auditlog.register(InstructorRank)
         auditlog.register(InstructorAcademicAttainment)
-        auditlog.register(InstructorAbsence)
-        auditlog.register(InstructorAvailability)
 
         import instructors.signals

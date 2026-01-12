@@ -11,13 +11,6 @@ urlpatterns = [
     path('experiences/create/', views.experienceCreate, name='experienceCreate'),
     path('experiences/<int:experienceId>/edit/', views.experienceUpdate, name='experienceUpdate'),
     path('experiences/<int:experienceId>/delete/', views.experienceDelete, name='experienceDelete'),
-    
-    # Instructor Availability
-    path('availability/', views.availabilityList, name='availabilityList'),
-    path("availability/live/", views.availabilityListLive, name="availabilityListLive"),
-    path('availability/create/', views.availabilityCreate, name='availabilityCreate'),
-    path('availability/<int:availabilityId>/edit/', views.availabilityUpdate, name='availabilityUpdate'),
-    path('availability/<int:availabilityId>/delete/', views.availabilityDelete, name='availabilityDelete'),
 
     # Instructor Credentials
     path('credentials/', views.credentialList, name='credentialList'),

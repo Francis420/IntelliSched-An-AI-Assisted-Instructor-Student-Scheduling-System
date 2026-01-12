@@ -1,6 +1,6 @@
 #scheduling\models.py
 from django.db import models
-from core.models import Student, User
+from core.models import User
 from django.utils import timezone
 from django.apps import apps
 from datetime import datetime, timedelta

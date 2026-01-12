@@ -12,7 +12,6 @@ from core.models import (
     User, 
     Role, 
     Instructor, 
-    Student, 
     UserLogin,
 )
 from instructors.models import ( 
@@ -64,15 +63,6 @@ def checkInstructorIdAvailability(request):
     return JsonResponse({
         'isAvailable': not exists,
         'message': 'Instructor ID available.' if not exists else 'Instructor ID already taken.'
-    })
-
-@require_GET
-def checkStudentIdAvailability(request):
-    studentId = request.GET.get('value', '').strip()
-    exists = Student.objects.filter(studentId=studentId).exists()
-    return JsonResponse({
-        'isAvailable': not exists,
-        'message': 'Student ID available.' if not exists else 'Student ID already taken.'
     })
 
 @login_required
@@ -539,159 +529,6 @@ def instructorAccountDelete(request, userId):
 
     return render(request, 'core/instructors/delete.html', {'user': user})
 
-
-
-# ---------- Student Accounts ----------
-@login_required
-@has_role('deptHead')
-def studentAccountList(request):
-    query = request.GET.get("q", "").strip()
-    page = int(request.GET.get("page", 1))
-
-    student_logins = UserLogin.objects.select_related('user', 'student') \
-        .filter(user__roles__name='student', student__isnull=False) \
-        .distinct()
-
-    # Attach readable names
-    for login in student_logins:
-        login.student_display_name = login.student.full_name
-
-    if query:
-        student_logins = [
-            l for l in student_logins
-            if query.lower() in l.student_display_name.lower()
-            or query.lower() in l.user.email.lower()
-            or query.lower() in l.student.studentId.lower()
-        ]
-
-    paginator = Paginator(student_logins, 10)
-    page_obj = paginator.get_page(page)
-
-    return render(request, "core/students/list.html", {
-        "studentLogins": page_obj,
-        "query": query
-    })
-
-
-@login_required
-@has_role('deptHead')
-def studentAccountListLive(request):
-    query = request.GET.get("q", "").strip()
-    page = int(request.GET.get("page", 1))
-
-    student_logins = UserLogin.objects.select_related('user', 'student') \
-        .filter(user__roles__name='student', student__isnull=False) \
-        .distinct()
-
-    for login in student_logins:
-        login.student_display_name = login.student.full_name
-
-    if query:
-        student_logins = [
-            l for l in student_logins
-            if query.lower() in l.student_display_name.lower()
-            or query.lower() in l.user.email.lower()
-            or query.lower() in l.student.studentId.lower()
-        ]
-
-    paginator = Paginator(student_logins, 10)
-    page_obj = paginator.get_page(page)
-
-    html = render_to_string("core/students/_list_table.html", {
-        "studentLogins": page_obj
-    }, request=request)
-
-    return JsonResponse({
-        "html": html,
-        "page": page_obj.number,
-        "num_pages": paginator.num_pages,
-        "has_next": page_obj.has_next(),
-        "has_previous": page_obj.has_previous(),
-    })
-
-
-@transaction.atomic
-def studentAccountCreate(request):
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        email = request.POST.get('email')
-        password = request.POST.get('password')
-        firstName = request.POST.get('firstName')
-        lastName = request.POST.get('lastName')
-        middleInitial = request.POST.get('middleInitial')
-        studentId = request.POST.get('studentId')
-
-        if User.objects.filter(username=username).exists():
-            messages.error(request, 'Username already exists.')
-        elif Student.objects.filter(studentId=studentId).exists():
-            messages.error(request, 'Student ID already exists.')
-        else:
-            # Create User
-            user = User.objects.create_user(
-                username=username,
-                email=email,
-                password=password,
-                firstName=firstName,
-                lastName=lastName,
-                middleInitial=middleInitial,
-                isActive=True
-            )
-
-            # Assign Role
-            studentRole = Role.objects.get(name='student')
-            user.roles.add(studentRole)
-
-            # Create Student Profile
-            student = Student.objects.create(studentId=studentId)
-
-            # Link in UserLogin
-            UserLogin.objects.create(user=user, student=student)
-
-            messages.success(request, 'Student account successfully created.')
-            return redirect('studentAccountList')
-
-    return render(request, 'core/students/create.html')
-
-@login_required
-@has_role('deptHead')
-@has_role('student')
-@transaction.atomic
-def studentAccountUpdate(request, userId):
-    user = get_object_or_404(User, pk=userId)
-    user_login = get_object_or_404(UserLogin, user=user)
-
-    if not user_login.student:
-        messages.error(request, "This account is not linked to any student.")
-        return redirect('studentAccountList')
-
-    student = user_login.student
-
-    if request.method == 'POST':
-        # Update User info
-        user.firstName = request.POST.get('firstName')
-        user.lastName = request.POST.get('lastName')
-        user.middleInitial = request.POST.get('middleInitial')
-        user.email = request.POST.get('email')
-        user.save()
-
-        # Update Student info
-        newStudentId = request.POST.get('studentId')
-
-        if newStudentId and newStudentId != student.studentId:
-            if Student.objects.filter(studentId=newStudentId).exclude(pk=student.pk).exists():
-                messages.error(request, 'Student ID already exists.')
-                return redirect('studentAccountUpdate', userId=user.userId)
-            student.studentId = newStudentId
-
-        student.save()
-
-        messages.success(request, 'Student account updated successfully.')
-        return redirect('studentAccountList')
-
-    return render(request, 'core/students/update.html', {
-        'user': user,
-        'student': student
-    })
 
 
 @login_required

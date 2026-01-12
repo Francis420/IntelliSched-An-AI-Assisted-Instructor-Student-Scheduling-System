@@ -14,7 +14,6 @@ from scheduling.models import (
     InstructorSchedulingConfiguration,
 )
 from core.models import (
-    Student,
     UserLogin,
 )
 from django.db import transaction

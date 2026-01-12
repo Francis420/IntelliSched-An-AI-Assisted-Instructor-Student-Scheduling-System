@@ -11,13 +11,11 @@ python manage.py importSubjects imports\Subjects.csv
 
 currently there are:
 1. create curriculum
-2. importSubjects -done
-3. importInstructorLogin - done
-4. importLegacyExperience - done
-importInstructorAvailability
-importInstructorCredential
-importInstructorExperience
-importInstructorSubjectPreference
-importInstructorTeachingHistory
+2. importSubjects
+3. importInstructorLogin
+4. importLegacyExperience
+5. importInstructorCredential
+6. importInstructorExperience
+7. importInstructorTeachingHistory
 C:\Users\Bea Dadula\IntelliSched-An-AI-Assisted-Instructor-Student-Scheduling-System\imports\InstructorLogin.csv
 

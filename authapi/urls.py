@@ -8,5 +8,4 @@ urlpatterns = [
     # Test Dashboards
     path('department/dashboard/', views.deptHeadDashboard, name='deptHeadDashboard'),
     path('instructor/dashboard/', views.instructorDashboard, name='instructorDashboard'),
-    path('student/dashboard/', views.studentDashboard, name='studentDashboard'),
 ]

@@ -5,16 +5,15 @@ from django.contrib.auth.decorators import login_required
 from rest_framework.authtoken.models import Token
 from django.core.exceptions import PermissionDenied
 from functools import wraps
-from core.models import User, UserLogin, Student, Role, Instructor
+from core.models import User, UserLogin, Role, Instructor
 from django.urls import reverse
 from django.contrib.auth import authenticate, login 
-from instructors.models import InstructorExperience, InstructorCredentials, InstructorAvailability
+from instructors.models import InstructorExperience, InstructorCredentials
 from itertools import chain
 from operator import attrgetter
 from scheduling.models import Curriculum, Semester, Subject, Room
 from aimatching.models import MatchingRun
 from operator import itemgetter
-from students.models import Enrollment, Attendance
 
 
 def has_role(required_role):
@@ -49,7 +48,7 @@ def loginView(request):
 
             roles = user.roles.all()
 
-            preferred_order = ['deptHead', 'instructor', 'student']
+            preferred_order = ['deptHead', 'instructor']
             sorted_roles = sorted(
                 roles, key=lambda r: preferred_order.index(r.name) if r.name in preferred_order else 99
             )
@@ -69,8 +68,6 @@ def loginView(request):
                 return redirect('recommendInstructors')
             elif selected_role == 'instructor':
                 return redirect('instructorDashboard')
-            elif selected_role == 'student':
-                return redirect('studentDashboard')
 
         else:
             messages.error(request, 'Invalid username or password.')
@@ -96,7 +93,6 @@ def deptHeadDashboard(request):
     semester_count = Semester.objects.count()
     subject_count = Subject.objects.count()
     instructor_count = Instructor.objects.count()
-    student_count = Student.objects.count()
     room_count = Room.objects.count()
     matching_runs = MatchingRun.objects.count()
 
@@ -151,7 +147,6 @@ def deptHeadDashboard(request):
         "semester_count": semester_count,
         "subject_count": subject_count,
         "instructor_count": instructor_count,
-        "student_count": student_count,
         "room_count": room_count,
         "matching_runs": matching_runs,
         "recent_activities": recent_activities,
@@ -174,17 +169,16 @@ def instructorDashboard(request):
     # Counts for overview cards
     experience_count = InstructorExperience.objects.filter(instructor=instructor).count()
     credential_count = InstructorCredentials.objects.filter(instructor=instructor).count()
-    availability_count = InstructorAvailability.objects.filter(instructor=instructor).count()
 
     # Get latest updates from each model
     experiences = InstructorExperience.objects.filter(instructor=instructor).order_by('-createdAt')[:3]
     credentials = InstructorCredentials.objects.filter(instructor=instructor).order_by('-createdAt')[:3]
-    availabilities = InstructorAvailability.objects.filter(instructor=instructor).order_by('-createdAt')[:3]
+
 
 
     # Combine & sort all recent activities
     recent_activities = sorted(
-        chain(experiences, credentials, availabilities),
+        chain(experiences, credentials),
         key=attrgetter("createdAt"),
         reverse=True
     )[:5]
@@ -198,9 +192,6 @@ def instructorDashboard(request):
         elif isinstance(item, InstructorCredentials):
             url = reverse('credentialUpdate', args=[item.pk])
             label = "Credential"
-        elif isinstance(item, InstructorAvailability):
-            url = reverse('availabilityUpdate', args=[item.pk])
-            label = "Availability"
         else:
             url = None
             label = "Update"
@@ -216,34 +207,6 @@ def instructorDashboard(request):
         "instructor": instructor,
         "experience_count": experience_count,
         "credential_count": credential_count,
-        "availability_count": availability_count,
         "recent_activities": activity_feed,
     }
     return render(request, 'dashboards/instructorDashboard.html', context)
-
-
-@login_required
-@has_role('student')
-def studentDashboard(request):
-    # Get student from UserLogin
-    user_login = get_object_or_404(UserLogin, user=request.user)
-    student = user_login.student
-
-    # Enrollments
-    enrollments = Enrollment.objects.filter(student=student).select_related(
-        "schedule__subject", "schedule__instructor", "schedule__section"
-    ).order_by("-enrollmentDate")
-
-    # Attendance summary (latest 5 records)
-    attendance_records = Attendance.objects.filter(student=student).select_related(
-        "schedule__subject"
-    ).order_by("-date")[:5]
-
-    context = {
-        "student": student,
-        "enrollment_count": enrollments.count(),
-        "recent_enrollments": enrollments[:5],
-        "attendance_records": attendance_records,
-    }
-    return render(request, "dashboards/studentDashboard.html", context)
-

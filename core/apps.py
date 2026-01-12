@@ -6,11 +6,10 @@ class CoreConfig(AppConfig):
 
     def ready(self):
         from auditlog.registry import auditlog
-        from .models import User, Role, Instructor, Student, UserLogin
+        from .models import User, Role, Instructor, UserLogin
         from . import signals_audit
 
         auditlog.register(User)
         auditlog.register(Role)
         auditlog.register(Instructor)
-        auditlog.register(Student)
         auditlog.register(UserLogin)
