@@ -17,9 +17,9 @@ INTERVAL_MINUTES = 30
 WEEK_MINUTES = 7 * 24 * 60
 
 MATCH_WEIGHT_SCALE = 100
-REAL_ROOM_REWARD = 500         
+REAL_ROOM_REWARD = 10000         
 
-TBA_PENALTY_NORMAL = 100 #increase to discourage TBA rooms about 5000     
+TBA_PENALTY_NORMAL = 5000 #increase to discourage TBA rooms  
 TBA_PENALTY_PRIORITY = 200000 
 
 WEEKEND_TIME_PENALTY_PER_MINUTE = 5000 
@@ -580,7 +580,7 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
     model.Maximize(sum(objective_terms))
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = time_limit_seconds
-    solver.parameters.num_search_workers = 1
+    solver.parameters.num_search_workers = 3
     solver.parameters.random_seed = 42
     solver.parameters.log_search_progress = True
     

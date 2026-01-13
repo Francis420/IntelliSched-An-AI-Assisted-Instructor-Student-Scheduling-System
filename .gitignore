@@ -25,3 +25,6 @@ students/migrations
 # Make sure to setup these environment files according to your local setup
 Intellisched/settings.py
 .env
+
+theme/templates/aimatching/matching/progress.html
+theme/templates/scheduler/schedulerDashboard.html

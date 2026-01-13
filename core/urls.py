@@ -23,7 +23,7 @@ urlpatterns = [
     path('check-instructorid-availability/', views.checkInstructorIdAvailability, name='check_instructorid_availability'),
 
     # Recommendation Dashboard
-    path('recommendations/', views.recommendInstructors, name='recommendInstructors'),
+    path('recommendations/', views.recommendInstructors, name='recommendations'),
 
     # Instructor Profile
     path('profile/', views.instructorProfile, name='instructorProfile'),
