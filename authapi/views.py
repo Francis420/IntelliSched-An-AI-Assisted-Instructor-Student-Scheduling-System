@@ -65,7 +65,7 @@ def loginView(request):
                 return redirect(next_url)
 
             if selected_role == 'deptHead':
-                return redirect('recommendInstructors')
+                return redirect('deptHeadDashboard')
             elif selected_role == 'instructor':
                 return redirect('instructorDashboard')
 
