@@ -25,4 +25,5 @@ urlpatterns = [
     path('instructorLoadManager/', views.instructorLoad, name='instructorLoad'),
 
     path('rooms/export/<int:room_id>/', views.exportRoomSchedule, name='exportRoomSchedule'),
+    path('api/getInstructorLoadStats/', views.getInstructorLoadStats, name='getInstructorLoadStats'),
 ]

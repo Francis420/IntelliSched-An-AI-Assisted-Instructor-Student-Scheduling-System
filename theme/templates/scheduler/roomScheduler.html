@@ -23,18 +23,27 @@
                 </div>
                 
                 <form method="get" class="flex items-center gap-2">
-                    <select name="room" class="border-gray-300 border rounded text-xs px-2 py-1.5 bg-gray-50 text-gray-700 font-medium focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm" onchange="this.form.submit()">
-                        <option value="" disabled {% if not selectedRoomId %}selected{% endif %}>-- Select Room --</option>
-                        {% regroup rooms by building as building_list %}
-                        {% for building in building_list %}
-                            <optgroup label="{{ building.grouper }}">
-                                {% for r in building.list %}
-                                    <option value="{{ r.roomId }}" {% if selectedRoomId == r.roomId %}selected{% endif %}>
-                                        {{ r.roomCode }}
-                                    </option>
-                                {% endfor %}
-                            </optgroup>
+                    <select name="semester" class="border-gray-300 border rounded-md px-2 py-1.5 text-sm bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none w-48" onchange="this.form.submit()">
+                        {% for sem in semesters %}
+                            <option value="{{ sem.semesterId }}" {% if selected_semester.semesterId == sem.semesterId %}selected{% endif %}>
+                                {{ sem.term|title }} {{ sem.academicYear }}
+                            </option>
                         {% endfor %}
+                    </select>
+
+                    <select name="room" class="border-gray-300 border rounded-md px-2 py-1.5 text-sm bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none w-64" onchange="this.form.submit()">
+                        <option value="">-- Select Room --</option>
+                        {% for r in rooms %}
+                            <option value="{{ r.roomId }}" {% if selectedRoomId == r.roomId %}selected{% endif %}>
+                                {{ r.roomCode }} - {{ r.building }} {% if r.isLab %}(Lab){% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+
+                    <select name="room_type" class="border-gray-300 border rounded-md px-2 py-1.5 text-sm bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none w-32" onchange="this.form.submit()">
+                        <option value="" {% if selected_room_type == "" %}selected{% endif %}>All Types</option>
+                        <option value="lecture" {% if selected_room_type == "lecture" %}selected{% endif %}>Lecture</option>
+                        <option value="lab" {% if selected_room_type == "lab" %}selected{% endif %}>Laboratory</option>
                     </select>
                 </form>
 

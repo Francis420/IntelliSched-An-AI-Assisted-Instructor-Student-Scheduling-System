@@ -24,10 +24,18 @@
                     </div>
                     
                     <form method="get" class="flex items-center gap-2">
-                        <select name="instructor" class="border-gray-300 border rounded text-xs px-2 py-1.5 bg-gray-50 text-gray-700 font-medium focus:ring-2 focus:ring-emerald-500 outline-none shadow-sm" onchange="this.form.submit()">
-                            <option value="" disabled {% if not selectedInstructorId %}selected{% endif %}>-- Select Instructor --</option>
+                        <select name="semester" class="border-gray-300 border rounded-md px-2 py-1.5 text-sm bg-gray-50 focus:ring-2 focus:ring-emerald-500 outline-none w-48" onchange="this.form.submit()">
+                            {% for sem in semesters %}
+                                <option value="{{ sem.semesterId }}" {% if selected_semester.semesterId == sem.semesterId %}selected{% endif %}>
+                                    {{ sem.term|title }} {{ sem.academicYear }}
+                                </option>
+                            {% endfor %}
+                        </select>
+
+                        <select name="instructor" class="border-gray-300 border rounded-md px-2 py-1.5 text-sm bg-gray-50 focus:ring-2 focus:ring-emerald-500 outline-none w-64" onchange="this.form.submit()">
+                            <option value="">-- Select Instructor --</option>
                             {% for inst in instructors %}
-                                <option value="{{ inst.instructorId }}" {% if selectedInstructorId == inst.instructorId %}selected{% endif %}>
+                                <option value="{{ inst.instructorId }}" {% if selectedInstructorId == inst.instructorId|stringformat:"s" %}selected{% endif %}>
                                     {{ inst.full_name }}
                                 </option>
                             {% endfor %}
@@ -38,52 +46,50 @@
                 {% if selectedInstructorId %}
                 <div class="flex flex-col gap-1 mt-1">
                     <div class="w-full h-5 rounded-full relative overflow-hidden flex bg-gray-100 border border-gray-300" 
-                        title="Regular: {{ normal_load }} + Overload: {{ overload_load }}">
+                        title="Load Status">
                         
-                        <div class="bg-emerald-500 h-full transition-all duration-500 relative z-20 shadow-sm border-r border-emerald-600" 
-                            style="width: {% widthratio normal_load max_limit 100 %}%;">
-                            {% if normal_load > 0 %}
-                            <span class="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-white">
-                                {{ normal_load }}
+                        <div id="stat-bar-regular" 
+                            class="bg-emerald-500 h-full transition-all duration-500 relative z-20 shadow-sm border-r border-emerald-600" 
+                            style="width: {% if max_limit > 0 %}{% widthratio normal_load max_limit 100 %}{% else %}0{% endif %}%;">
+                            <span id="stat-text-regular-bar" class="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-white">
+                                {% if normal_load > 0 %}{{ normal_load }}{% endif %}
                             </span>
-                            {% endif %}
                         </div>
 
-                        <div class="h-full transition-all duration-500 relative z-10" 
-                            style="width: {% widthratio overload_load max_limit 100 %}%; 
+                        <div id="stat-bar-overload"
+                            class="h-full transition-all duration-500 relative z-10" 
+                            style="width: {% if max_limit > 0 %}{% widthratio overload_load max_limit 100 %}{% else %}0{% endif %}%; 
                                     background-color: #fbbf24;
                                     background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255,255,255,0.3) 5px, rgba(255,255,255,0.3) 10px);">
-                            {% if overload_load > 0 %}
-                            <span class="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-amber-900">
-                                +{{ overload_load }}
+                            <span id="stat-text-overload-bar" class="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-amber-900">
+                                {% if overload_load > 0 %}+{{ overload_load }}{% endif %}
                             </span>
-                            {% endif %}
                         </div>
-
+                        
                         <div class="absolute top-0 bottom-0 border-r-2 border-dashed border-gray-600 opacity-60 z-30" 
-                            style="left: {% widthratio reg_limit max_limit 100 %}%;">
+                            style="left: {% if max_limit > 0 %}{% widthratio reg_limit max_limit 100 %}{% else %}100{% endif %}%;">
                         </div>
                     </div>
 
                     <div class="flex justify-between text-[10px] font-mono text-gray-500 px-1">
                         <span class="flex items-center gap-1">
-                            Total: <strong class="text-gray-800 text-xs">{{ current_load }} hrs</strong>
+                            Total: <strong id="stat-text-total" class="text-gray-800 text-xs">{{ current_load }} hrs</strong>
                         </span>
                         
                         <div class="flex gap-3">
                             <span class="flex items-center gap-1">
                                 <span class="w-2 h-2 bg-emerald-500 rounded-full"></span>
-                                Regular: <strong>{{ normal_load }}</strong>/{{ reg_limit }}
+                                Regular: <strong id="stat-text-regular" class="text-gray-800">{{ normal_load }}</strong>/{{ reg_limit }}
                             </span>
 
                             <span class="flex items-center gap-1">
                                 <span class="w-2 h-2 bg-amber-400 rounded-full"></span>
-                                Overload: <strong>{{ overload_load }}</strong>/{{ overload_cap }}
+                                Overload: <strong id="stat-text-overload" class="text-gray-800">{{ overload_load }}</strong>/{{ overload_cap }}
                             </span>
                         </div>
 
                         <span class="flex items-center gap-1">
-                            Max: <strong class="{{ load_color|cut:'bg-' }} text-xs">{{ max_limit }}</strong>
+                            Max: <strong class="text-gray-600 text-xs">{{ max_limit }}</strong>
                         </span>
                     </div>
                 </div>
@@ -509,38 +515,133 @@
         }
     }
 
-    function updateSchedule(id, day, start, end, roomId, instructorId, forceSwap) {
-        const payload = {
-            scheduleId: id,
-            instructorId: instructorId,
-            forceSwap: forceSwap
-        };
-        
-        if (day) payload.day = day;
-        if (start) payload.startTime = start;
-        if (end) payload.endTime = end;
-        if (roomId) payload.roomId = roomId;
+    function updateSchedule(scheduleId, day, startTime, endTime, roomId, instructorId, forceSwap) {
+        const csrfToken = "{{ csrf_token }}";
 
-        fetch('{% url "updateScheduleSlot" %}', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-            body: JSON.stringify(payload)
+        fetch("{% url 'updateScheduleSlot' %}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrfToken
+            },
+            body: JSON.stringify({
+                scheduleId: scheduleId,
+                day: day,
+                startTime: startTime,
+                endTime: endTime,
+                roomId: roomId,
+                instructorId: instructorId,
+                forceSwap: forceSwap
+            })
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                window.location.reload(); 
+                // --- 1. UPDATE SCHEDULE CARD (LIVE) ---
+                const card = document.querySelector(`.schedule-card[data-id="${scheduleId}"]`);
+                if (card) {
+                    // Update internal data
+                    card.dataset.day = day;
+                    card.dataset.start = startTime;
+                    
+                    // Update Time Text on the card (e.g., "07:30 AM - 09:00 AM")
+                    const formatTime = (t) => {
+                        if (!t) return "";
+                        let [h, m] = t.split(':').map(Number);
+                        const ampm = h >= 12 ? 'PM' : 'AM';
+                        h = h % 12 || 12;
+                        return `${h}:${m.toString().padStart(2,'0')} ${ampm}`;
+                    };
+                    const timeStr = `${formatTime(startTime)} - ${formatTime(endTime)}`;
+                    
+                    // Find the div containing the time text (usually font-mono class)
+                    const timeDiv = card.querySelector('.font-mono');
+                    if (timeDiv) timeDiv.innerText = timeStr;
+
+                    // Move to new day column if necessary
+                    const newDayCol = document.querySelector(`div[data-day="${day}"]`);
+                    if (newDayCol && card.parentElement !== newDayCol) {
+                        newDayCol.appendChild(card);
+                        // Ensure grid styling if it was previously a sidebar item
+                        if (card.classList.contains('tba-card')) {
+                            card.classList.remove('tba-card', 'relative', 'hover:shadow-md');
+                            card.classList.add('absolute', 'w-[95%]', 'left-[2.5%]', 'border-l-4', 'border-l-emerald-600', 'overflow-hidden');
+                        }
+                    }
+
+                    // Snap to Grid (Preserving your existing layout logic)
+                    renderPositions(); 
+                }
+
+                // --- 2. UPDATE INSTRUCTOR STATS (LIVE) ---
+                const currentInstructorId = "{{ selectedInstructorId }}";
+                if (currentInstructorId) {
+                    fetch(`{% url 'getInstructorLoadStats' %}?instructorId=${currentInstructorId}`)
+                    .then(res => res.json())
+                    .then(statsData => {
+                        if (statsData.success && statsData.stats) {
+                            updateStatsUI(statsData.stats);
+                        }
+                    });
+                }
+
             } else if (data.needSwapConfirmation) {
                 if (confirm(data.message)) {
-                    updateSchedule(id, day, start, end, roomId, instructorId, true); 
+                    updateSchedule(scheduleId, day, startTime, endTime, roomId, instructorId, true);
                 } else {
-                    handleDragEnd({target: document.querySelector(`.schedule-card[data-id="${id}"]`)});
+                    window.location.reload(); // Revert
                 }
             } else {
                 alert(data.message);
-                handleDragEnd({target: document.querySelector(`.schedule-card[data-id="${id}"]`)});
+                window.location.reload(); // Revert
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            window.location.reload();
+        });
+    }
+
+    function fetchInstructorStats(instructorId) {
+        // Grab the current semester ID from the template context
+        const semesterId = "{{ selected_semester.semesterId }}"; 
+
+        fetch(`{% url 'getInstructorLoadStats' %}?instructorId=${instructorId}&semesterId=${semesterId}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success && data.stats) {
+                updateStatsUI(data.stats);
             }
         });
+    }
+
+    function updateStatsUI(stats) {
+        const { normal_load, overload_load, current_load, max_limit, reg_limit, overload_cap } = stats;
+
+        // Helper to safely set text
+        const setTxt = (id, val) => { 
+            const el = document.getElementById(id); 
+            if(el) el.innerText = val; 
+        };
+        
+        // Update Numbers
+        setTxt('stat-text-total', `${current_load} hrs`);
+        setTxt('stat-text-regular', normal_load);
+        setTxt('stat-text-overload', overload_load);
+
+        // Update Progress Bars
+        const normPct = max_limit > 0 ? (normal_load / max_limit) * 100 : 0;
+        const overPct = max_limit > 0 ? (overload_load / max_limit) * 100 : 0;
+
+        const barReg = document.getElementById('stat-bar-regular');
+        if(barReg) barReg.style.width = `${normPct}%`;
+
+        const barOver = document.getElementById('stat-bar-overload');
+        if(barOver) barOver.style.width = `${overPct}%`;
+
+        // Update Bar Inner Labels
+        setTxt('stat-text-regular-bar', normal_load > 0 ? normal_load : '');
+        setTxt('stat-text-overload-bar', overload_load > 0 ? `+${overload_load}` : '');
     }
 
     function renderPositions() {

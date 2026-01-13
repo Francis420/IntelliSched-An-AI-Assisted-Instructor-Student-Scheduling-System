@@ -84,63 +84,71 @@
 
                         <tbody class="bg-white divide-y divide-gray-100">
                             {% for row in matrix %}
-                            <tr class="h-10 group hover:bg-gray-50/50 transition-colors">
-                                
-                                <td class="px-2 py-1 text-[11px] font-mono text-gray-500 border-r border-gray-200 sticky left-0 bg-white group-hover:bg-gray-50/50 z-20 text-center align-top pt-2">
-                                    {{ row.time }}
-                                </td>
-                                
-                                {% for schedules_in_slot in row.days %}
-                                    <td class="p-0 border-r border-gray-100 relative align-top h-10 w-40">
-                                        <div class="absolute inset-0 border-b border-gray-50 pointer-events-none"></div>
-
-                                        {% for s in schedules_in_slot %}
-                                            {% if s.is_start_slot %}
-                                                <div class="absolute top-0 left-0 w-full p-1 z-10 transition-transform duration-200 hover:scale-[1.02] hover:z-20"
-                                                     style="height: calc({{ s.height_px }}px);">
-                                                    
-                                                    <div class="w-full h-full {{ s.color_class }} rounded-md shadow-sm border border-black/5 p-1.5 flex flex-col justify-between overflow-hidden cursor-default group/card relative">
-                                                        
-                                                        <div>
-                                                            <div class="flex items-start justify-between">
-                                                                <span class="font-bold text-xs text-white leading-tight truncate block w-full" title="{{ s.subject }}">
-                                                                    {{ s.subject }}
-                                                                </span>
-                                                            </div>
-                                                            <span class="text-[10px] text-white/90 font-medium block mt-0.5 truncate">
-                                                                Section {{ s.section }}
-                                                            </span>
-                                                        </div>
-
-                                                        <div class="space-y-0.5">
-                                                            <div class="flex flex-wrap gap-1">
-                                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-black/20 text-white backdrop-blur-sm">
-                                                                    {{ s.room }}
-                                                                </span>
-
-                                                                {% if 'Laboratory' in s.type_label or 'Lab' in s.type_label or s.type == 'LAB' %}
-                                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-white/30 text-white border border-white/20 shadow-sm">
-                                                                        LAB
-                                                                    </span>
-                                                                {% else %}
-                                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium border border-white/40 text-white/90">
-                                                                        LEC
-                                                                    </span>
-                                                                {% endif %}
-                                                            </div>
-
-                                                            <div class="text-[9px] text-white/80 font-mono pt-1 border-t border-white/10 mt-0.5">
-                                                                {{ s.start_time }} - {{ s.end_time }}
-                                                            </div>
-                                                        </div>
-                                                        
-                                                    </div>
-                                                </div>
-                                            {% endif %}
-                                        {% endfor %}
+                                <tr class="h-10 group transition-colors {% if row.time == '12:00 PM' or row.time == '12:30 PM' %}bg-gray-100/50{% else %}hover:bg-gray-50/50{% endif %}">
+                                    
+                                    <td class="px-2 py-1 text-[11px] font-mono text-gray-500 border-r border-gray-200 sticky left-0 bg-white group-hover:bg-gray-50/50 z-20 text-center align-top pt-2">
+                                        {{ row.time }}
                                     </td>
-                                {% endfor %}
-                            </tr>
+                                    
+                                    {% for schedules_in_slot in row.days %}
+                                        <td class="p-0 border-r border-gray-100 relative align-top h-10 w-40">
+                                            <div class="absolute inset-0 border-b border-gray-50 pointer-events-none"></div>
+
+                                            {% if row.time == '12:00 PM' or row.time == '12:30 PM' %}
+                                                {% if not schedules_in_slot %}
+                                                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20 select-none">
+                                                        <span class="text-[9px] font-bold text-gray-400 tracking-widest uppercase transform -rotate-12">LUNCHBREAK</span>
+                                                    </div>
+                                                {% endif %}
+                                            {% endif %}
+
+                                            {% for s in schedules_in_slot %}
+                                                {% if s.is_start_slot %}
+                                                    <div class="absolute top-0 left-0 w-full p-1 z-10 transition-transform duration-200 hover:scale-[1.02] hover:z-20"
+                                                        style="height: calc({{ s.height_px }}px);">
+                                                        
+                                                        <div class="w-full h-full {{ s.color_class }} rounded-md shadow-sm border border-black/5 p-1.5 flex flex-col justify-between overflow-hidden cursor-default group/card relative">
+                                                            
+                                                            <div>
+                                                                <div class="flex items-start justify-between">
+                                                                    <span class="font-bold text-xs text-white leading-tight truncate block w-full" title="{{ s.subject }}">
+                                                                        {{ s.subject }}
+                                                                    </span>
+                                                                </div>
+                                                                <span class="text-[10px] text-white/90 font-medium block mt-0.5 truncate">
+                                                                    Section {{ s.section }}
+                                                                </span>
+                                                            </div>
+
+                                                            <div class="space-y-0.5">
+                                                                <div class="flex flex-wrap gap-1">
+                                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-black/20 text-white backdrop-blur-sm">
+                                                                        {{ s.room }}
+                                                                    </span>
+
+                                                                    {% if 'Laboratory' in s.type_label or 'Lab' in s.type_label or s.type == 'LAB' %}
+                                                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-white/30 text-white border border-white/20 shadow-sm">
+                                                                            LAB
+                                                                        </span>
+                                                                    {% else %}
+                                                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium border border-white/40 text-white/90">
+                                                                            LEC
+                                                                        </span>
+                                                                    {% endif %}
+                                                                </div>
+
+                                                                <div class="text-[9px] text-white/80 font-mono pt-1 border-t border-white/10 mt-0.5">
+                                                                    {{ s.start_time }} - {{ s.end_time }}
+                                                                </div>
+                                                            </div>
+                                                            
+                                                        </div>
+                                                    </div>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </td>
+                                    {% endfor %}
+                                </tr>
                             {% endfor %}
                         </tbody>
                     </table>

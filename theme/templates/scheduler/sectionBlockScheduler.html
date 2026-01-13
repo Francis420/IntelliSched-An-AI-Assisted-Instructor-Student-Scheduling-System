@@ -13,13 +13,26 @@
         </div>
         
         <form method="get" class="flex items-center gap-3">
-            <label class="text-sm font-semibold text-gray-600">Select Block:</label>
-            <select name="block" class="border-gray-300 border rounded-md px-3 py-2 bg-gray-50 text-gray-700 font-medium focus:ring-2 focus:ring-emerald-500 outline-none" onchange="this.form.submit()">
-                {% for b in blocks %}
-                    <option value="{{ b.value }}" {% if selectedBlock == b.value %}selected{% endif %}>
-                        Block {{ b.label }}
+            <label class="text-sm font-semibold text-gray-600">Semester:</label>
+            <select name="semester" class="border-gray-300 border rounded-md px-3 py-2 bg-gray-50 text-gray-700 font-medium focus:ring-2 focus:ring-emerald-500 outline-none w-48" onchange="this.form.submit()">
+                {% for sem in semesters %}
+                    <option value="{{ sem.semesterId }}" {% if selected_semester.semesterId == sem.semesterId %}selected{% endif %}>
+                        {{ sem.term|title }} {{ sem.academicYear }}
                     </option>
                 {% endfor %}
+            </select>
+
+            <label class="text-sm font-semibold text-gray-600">Block:</label>
+            <select name="block" class="border-gray-300 border rounded-md px-3 py-2 bg-gray-50 text-gray-700 font-medium focus:ring-2 focus:ring-emerald-500 outline-none w-32" onchange="this.form.submit()">
+                {% if blocks %}
+                    {% for b in blocks %}
+                        <option value="{{ b.value }}" {% if selectedBlock == b.value %}selected{% endif %}>
+                            Block {{ b.label }}
+                        </option>
+                    {% endfor %}
+                {% else %}
+                    <option value="">No Blocks</option>
+                {% endif %}
             </select>
         </form>
     </div>

@@ -288,15 +288,14 @@
             <div class="border-l border-black pl-8">
                 <div class="font-bold text-sm mb-3 underline">IV. Summary</div>
                 <div class="space-y-3">
-                    <div class="flex justify-between items-center text-sm font-bold bg-gray-50 p-2 rounded">
-                        <span>TOTAL WORKLOAD:</span>
-                        <span class="text-lg"><span id="grandTotalDisplay">0.0</span> Hrs</span>
-                        <input type="hidden" name="grand_total" id="grandTotalInput">
+                    <div class="inv-row mt-4">
+                        <span>Total No. of Classes:</span>
+                        <input type="text" name="inv_classes" value="{{ involvement_data.no_of_classes }}" class="inv-input text-center font-bold">
                     </div>
                     
                     <div class="inv-row mt-4">
-                        <span>Total No. of Classes/Preps:</span>
-                        <input type="text" name="inv_classes" value="{{ involvement_data.no_of_classes }}" class="inv-input text-center font-bold">
+                        <span>Total No. of Preparation:</span>
+                        <input type="text" name="inv_preps" value="{{ involvement_data.no_of_preps }}" class="inv-input text-center font-bold">
                     </div>
                 </div>
             </div>
