@@ -25,3 +25,5 @@ students/migrations
 
 theme/templates/aimatching/matching/progress.html
 theme/templates/scheduler/schedulerDashboard.html
+
+.env
