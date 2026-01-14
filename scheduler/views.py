@@ -1603,7 +1603,8 @@ def updateScheduleSlot(request):
             instructor_conflict = Schedule.objects.filter(
                 instructor=target_instructor,
                 dayOfWeek=newDay,
-                status='finalized'
+                status='finalized',
+                semester=sched.semester  # <--- FIXED: Added Semester Check
             ).exclude(scheduleId=scheduleId).filter(
                 startTime__lt=newEndTime,
                 endTime__gt=newStartTime
@@ -1626,7 +1627,8 @@ def updateScheduleSlot(request):
         section_conflict = Schedule.objects.filter(
             status='finalized',
             dayOfWeek=newDay,
-            section__subject__yearLevel=current_year
+            section__subject__yearLevel=current_year,
+            semester=sched.semester  # <--- FIXED: Added Semester Check
         ).filter(
             Q(section__sectionCode=block_letter) |
             Q(section__sectionCode__endswith=f"-{block_letter}")
@@ -1647,7 +1649,8 @@ def updateScheduleSlot(request):
             room_conflict = Schedule.objects.filter(
                 room=target_room,
                 dayOfWeek=newDay,
-                status='finalized'
+                status='finalized',
+                semester=sched.semester  # <--- FIXED: Added Semester Check
             ).exclude(scheduleId=scheduleId).filter(
                 startTime__lt=newEndTime,
                 endTime__gt=newStartTime
@@ -1692,7 +1695,7 @@ def updateScheduleSlot(request):
         return JsonResponse({'success': True})
 
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)})   
+        return JsonResponse({'success': False, 'message': str(e)})
     
 
 @login_required
