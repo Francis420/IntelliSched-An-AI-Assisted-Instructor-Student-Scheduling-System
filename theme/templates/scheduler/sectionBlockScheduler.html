@@ -12,40 +12,65 @@
             <p class="text-sm text-gray-500">Polishing schedule for Block <span class="text-emerald-600 font-bold">{{ selectedBlockLabel }}</span></p>
         </div>
         
-        <form method="get" class="flex items-center gap-3">
-            <label class="text-sm font-semibold text-gray-600">Semester:</label>
-            <select name="semester" class="border-gray-300 border rounded-md px-3 py-2 bg-gray-50 text-gray-700 font-medium focus:ring-2 focus:ring-emerald-500 outline-none w-48" onchange="this.form.submit()">
-                {% for sem in semesters %}
-                    <option value="{{ sem.semesterId }}" {% if selected_semester.semesterId == sem.semesterId %}selected{% endif %}>
-                        {{ sem.term|title }} {{ sem.academicYear }}
-                    </option>
-                {% endfor %}
-            </select>
-
-            <label class="text-sm font-semibold text-gray-600">Block:</label>
-            <select name="block" class="border-gray-300 border rounded-md px-3 py-2 bg-gray-50 text-gray-700 font-medium focus:ring-2 focus:ring-emerald-500 outline-none w-32" onchange="this.form.submit()">
-                {% if blocks %}
-                    {% for b in blocks %}
-                        <option value="{{ b.value }}" {% if selectedBlock == b.value %}selected{% endif %}>
-                            Block {{ b.label }}
+        <div class="flex items-center gap-3">
+            <form method="get" class="flex items-center gap-3">
+                <label class="text-sm font-semibold text-gray-600">Semester:</label>
+                <select name="semester" class="text-sm border-gray-300 border rounded-md px-3 py-2 bg-gray-50 text-gray-700 font-medium focus:ring-2 focus:ring-emerald-500 outline-none w-48" onchange="this.form.submit()">
+                    {% for sem in semesters %}
+                        <option value="{{ sem.semesterId }}" {% if selected_semester.semesterId == sem.semesterId %}selected{% endif %}>
+                            {{ sem.term|title }} {{ sem.academicYear }}
                         </option>
                     {% endfor %}
-                {% else %}
-                    <option value="">No Blocks</option>
-                {% endif %}
-            </select>
-        </form>
+                </select>
+
+                <label class="text-sm font-semibold text-gray-600">Block:</label>
+                <select name="block" class="text-sm border-gray-300 border rounded-md px-3 py-2 bg-gray-50 text-gray-700 font-medium focus:ring-2 focus:ring-emerald-500 outline-none w-32" onchange="this.form.submit()">
+                    {% if blocks %}
+                        {% for b in blocks %}
+                            <option value="{{ b.value }}" {% if selectedBlock == b.value %}selected{% endif %}>
+                                Block {{ b.label }}
+                            </option>
+                        {% endfor %}
+                    {% else %}
+                        <option value="">No Blocks</option>
+                    {% endif %}
+                </select>
+            </form>
+
+            <div class="h-8 w-px bg-gray-300 mx-1"></div>
+
+            {% if selectedBlock and selected_semester %}
+                <a href="{% url 'previewSectionBlockSchedule' selectedBlock selected_semester.semesterId %}" 
+                target="_blank" 
+                class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-md shadow-sm transition-colors whitespace-nowrap">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    Preview
+                </a>
+            {% else %}
+                <button disabled
+                class="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-400 border border-gray-200 text-sm font-semibold rounded-md cursor-not-allowed whitespace-nowrap">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    Preview
+                </button>
+            {% endif %}
+        </div>
     </div>
 
     <div class="flex-1 bg-white border rounded-lg shadow overflow-hidden flex flex-col relative h-[85vh]">
-        <div class="grid grid-cols-7 border-b bg-gray-100 z-20">
+        <div class="grid grid-cols-8 border-b bg-gray-100 z-20">
             <div class="py-3 text-center text-xs font-bold text-gray-400 border-r uppercase tracking-wide">Time</div>
             {% for day in days %}
                 <div class="py-3 text-center text-sm font-bold text-gray-700 border-r">{{ day }}</div>
             {% endfor %}
         </div>
 
-        <div class="grid grid-cols-7 flex-1 overflow-y-auto relative" id="scheduleGrid">
+        <div class="grid grid-cols-8 flex-1 overflow-y-auto relative" id="scheduleGrid">
             
             <div class="border-r bg-gray-50 relative z-10">
                 {% for t in times %}
@@ -190,12 +215,47 @@
         const startDec = baseH + (finalM/60);
         const endDec = startDec + (activeDuration / 60);
 
-        // Lunch break validation
+        // 1. Lunch break validation
         if (startDec < 13 && endDec > 12) {
             alert("Cannot schedule during Lunch Break (12:00 PM - 1:00 PM).");
             cancelEdit();
             return; 
         }
+
+        // --- 2. STRICT CONFLICT CHECK (Red Box Collision) ---
+        const conflictLayer = dayColumn.querySelector('.conflict-layer');
+        let hasConflict = false;
+        let conflictReason = "";
+
+        if (conflictLayer) {
+            const conflicts = conflictLayer.querySelectorAll('.conflict-box');
+            
+            for (const box of conflicts) {
+                // Get position/height of the red box
+                const boxTop = parseFloat(box.style.top);
+                const boxHeight = parseFloat(box.style.height);
+
+                // Convert pixels to decimal hours
+                // Time = (Pixels / 48) + 7
+                const conflictStart = (boxTop / PIXELS_PER_HOUR) + START_HOUR;
+                const conflictEnd = conflictStart + (boxHeight / PIXELS_PER_HOUR);
+
+                // Check for Overlap (with small buffer for precision)
+                if (startDec < conflictEnd - 0.01 && endDec > conflictStart + 0.01) {
+                    hasConflict = true;
+                    // Extract text from the red box
+                    conflictReason = box.innerText.replace('BUSY', '').trim() || "Instructor is busy";
+                    break; 
+                }
+            }
+        }
+
+        if (hasConflict) {
+            alert(`Instructor Conflict! ${conflictReason}`);
+            cancelEdit(); // Reverts the visual state
+            return; // STOP EXECUTION
+        }
+        // --- 3. PROCEED WITH UPDATE ---
 
         const newStartStr = `${baseH.toString().padStart(2,'0')}:${finalM===0?'00':'30'}`;
         const eh = Math.floor(endDec);
@@ -292,12 +352,24 @@
 
     async function fetchConflicts(instructorId, currentId) {
         const loader = document.getElementById('conflictLoading');
-        loader.classList.remove('hidden');
+        if(loader) loader.classList.remove('hidden');
+
+        // 1. Clear existing conflict boxes before fetching new ones
+        document.querySelectorAll('.conflict-box').forEach(el => el.remove());
+
         try {
-            const url = `${API_URL_CONFLICTS}?instructorId=${instructorId}&scheduleId=${currentId}`;
+            // 2. Get the Semester ID
+            const semesterEl = document.querySelector('select[name="semester"]');
+            const semesterId = semesterEl ? semesterEl.value : '';
+
+            // 3. Updated URL: Added &source=sectionBlockScheduler
+            const url = `${API_URL_CONFLICTS}?instructorId=${instructorId}&scheduleId=${currentId}&semesterId=${semesterId}&source=sectionBlockScheduler`;
+            
             const res = await fetch(url);
             const data = await res.json();
-            loader.classList.add('hidden');
+            
+            if(loader) loader.classList.add('hidden');
+
             data.busySlots.forEach(slot => {
                 const dayCol = document.querySelector(`.day-column[data-day="${slot.day}"] .conflict-layer`);
                 if(dayCol) {
@@ -305,15 +377,25 @@
                     const [eh, em] = slot.endTime.split(':').map(Number);
                     const top = (sh + sm/60 - START_HOUR) * PIXELS_PER_HOUR;
                     const height = (eh + em/60 - (sh + sm/60)) * PIXELS_PER_HOUR;
+                    
                     const div = document.createElement('div');
-                    div.className = "conflict-box absolute w-full bg-red-100/80 border-y border-red-300 z-10 p-1 text-center";
+                    // Added 'pointer-events-none' so it doesn't block dropping items
+                    div.className = "conflict-box absolute w-full left-0 bg-red-100/90 border-y border-red-400 z-10 p-1 text-center flex flex-col justify-center pointer-events-none";
                     div.style.top = `${top}px`;
                     div.style.height = `${height}px`;
-                    div.innerHTML = `<span class="text-[9px] font-bold text-red-600 uppercase">BUSY: ${slot.reason}</span>`;
+                    
+                    // Display specific reason (e.g., "Instructor teaching IT 101")
+                    div.innerHTML = `
+                        <span class="text-[9px] font-bold text-red-800 uppercase">BUSY</span>
+                        <span class="text-[8px] text-red-800 leading-tight line-clamp-2">${slot.reason}</span>
+                    `;
                     dayCol.appendChild(div);
                 }
             });
-        } catch(e) { console.error(e); }
+        } catch(e) { 
+            console.error(e); 
+            if(loader) loader.classList.add('hidden');
+        }
     }
 
     function formatTimeLabel(timeStr) {

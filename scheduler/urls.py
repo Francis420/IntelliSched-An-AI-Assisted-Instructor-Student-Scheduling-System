@@ -23,7 +23,8 @@ urlpatterns = [
     path('api/updateScheduleSlot/', views.updateScheduleSlot, name='updateScheduleSlot'),
     path('roomManager/', views.roomScheduler, name='roomScheduler'),
     path('instructorLoadManager/', views.instructorLoad, name='instructorLoad'),
-
-    path('rooms/export/<int:room_id>/', views.exportRoomSchedule, name='exportRoomSchedule'),
     path('api/getInstructorLoadStats/', views.getInstructorLoadStats, name='getInstructorLoadStats'),
+
+    path('print/roomSchedule/<int:roomId>/<int:semesterId>/', views.previewRoomSchedule, name='previewRoomSchedule'),
+    path('print/sectionSchedule/<str:blockStr>/<int:semesterId>/', views.previewSectionBlockSchedule, name='previewSectionBlockSchedule'),
 ]

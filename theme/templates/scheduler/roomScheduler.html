@@ -11,54 +11,89 @@
 
         <div class="flex-1 flex flex-col h-full min-w-0 relative z-0">
             
-            <div class="bg-white border-b border-gray-200 z-30 shadow-sm px-4 py-3 flex justify-between items-center">
-                <div>
-                    <h1 class="text-lg font-bold text-gray-800 flex items-center gap-2">
-                        <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+            <div class="bg-white border-b border-gray-200 relative z-50 shadow-sm px-6 py-3 flex justify-between items-center gap-4">
+    
+                <div class="flex-shrink-0 self-center">
+                    <h1 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                        </svg>
                         Room Assignment
                     </h1>
+
                     <p class="text-xs text-gray-500">
                         Viewing: <span class="font-bold text-indigo-600">{{ selectedRoomLabel|default:"Select a room" }}</span>
                     </p>
                 </div>
-                
-                <form method="get" class="flex items-center gap-2">
-                    <select name="semester" class="border-gray-300 border rounded-md px-2 py-1.5 text-sm bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none w-48" onchange="this.form.submit()">
-                        {% for sem in semesters %}
-                            <option value="{{ sem.semesterId }}" {% if selected_semester.semesterId == sem.semesterId %}selected{% endif %}>
-                                {{ sem.term|title }} {{ sem.academicYear }}
-                            </option>
-                        {% endfor %}
-                    </select>
 
-                    <select name="room" class="border-gray-300 border rounded-md px-2 py-1.5 text-sm bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none w-64" onchange="this.form.submit()">
-                        <option value="">-- Select Room --</option>
-                        {% for r in rooms %}
-                            <option value="{{ r.roomId }}" {% if selectedRoomId == r.roomId %}selected{% endif %}>
-                                {{ r.roomCode }} - {{ r.building }} {% if r.isLab %}(Lab){% endif %}
-                            </option>
-                        {% endfor %}
-                    </select>
+                <form method="get" class="flex flex-col items-end gap-2">
+                    
+                    <div class="flex items-center gap-2">
+                        <div class="relative">
+                            <select name="semester" class="appearance-none border border-gray-300 rounded px-2 py-1 text-sm bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none w-40 cursor-pointer" onchange="this.form.submit()">
+                                {% for sem in semesters %}
+                                    <option value="{{ sem.semesterId }}" {% if selected_semester.semesterId == sem.semesterId %}selected{% endif %}>
+                                        {{ sem.term|title }} {{ sem.academicYear }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                        </div>
 
-                    <select name="room_type" class="border-gray-300 border rounded-md px-2 py-1.5 text-sm bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none w-32" onchange="this.form.submit()">
-                        <option value="" {% if selected_room_type == "" %}selected{% endif %}>All Types</option>
-                        <option value="lecture" {% if selected_room_type == "lecture" %}selected{% endif %}>Lecture</option>
-                        <option value="lab" {% if selected_room_type == "lab" %}selected{% endif %}>Laboratory</option>
-                    </select>
+                        <div class="relative">
+                            <select name="room" class="appearance-none border border-gray-300 rounded px-2 py-1 text-sm bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none w-48 cursor-pointer" onchange="this.form.submit()">
+                                <option value="">-- Select Room --</option>
+                                {% for r in rooms %}
+                                    <option value="{{ r.roomId }}" {% if selectedRoomId == r.roomId %}selected{% endif %}>
+                                        {{ r.roomCode }} - {{ r.building }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <div class="relative">
+                            <select name="room_type" class="appearance-none border border-gray-300 rounded px-2 py-1 text-sm bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none w-32 cursor-pointer" onchange="this.form.submit()">
+                                <option value="" {% if selected_room_type == "" %}selected{% endif %}>All Types</option>
+                                <option value="lecture" {% if selected_room_type == "lecture" %}selected{% endif %}>Lecture</option>
+                                <option value="lab" {% if selected_room_type == "lab" %}selected{% endif %}>Laboratory</option>
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                        </div>
+
+                        {% if selectedRoomId and selected_semester %}
+                            <a href="{% url 'previewRoomSchedule' selectedRoomId selected_semester.semesterId %}" 
+                            target="_blank"
+                            class="flex items-center gap-1.5 px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded shadow-sm transition-colors whitespace-nowrap">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                                Preview
+                            </a>
+                        {% else %}
+                            <button disabled
+                            class="flex items-center gap-1.5 px-3 py-1 bg-gray-100 text-gray-400 border border-gray-200 text-sm font-semibold rounded cursor-not-allowed whitespace-nowrap">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                                Preview
+                            </button>
+                        {% endif %}
+                    </div>
                 </form>
-
-                {% if selectedRoomId %}
-                <a href="{% url 'exportRoomSchedule' selectedRoomId %}" 
-                class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded shadow-sm transition-colors">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                    </svg>
-                    Export Excel
-                </a>
-                {% endif %}
             </div>
 
-            <div class="grid grid-cols-7 border-b border-gray-200 bg-gray-50 flex-none">
+            <div class="grid grid-cols-8 border-b border-gray-200 bg-gray-50 flex-none">
                 <div class="py-2 text-center text-[10px] font-bold text-gray-400 uppercase tracking-wider border-r">Time</div>
                 {% for day in days %}
                     <div class="py-2 text-center text-xs font-bold text-gray-600 border-r uppercase">{{ day|slice:":3" }}</div>
@@ -69,12 +104,12 @@
                  ondragover="allowDrop(event)" 
                  ondrop="handleGridDrop(event)">
                 
-                <div class="grid grid-cols-7 min-h-[800px] relative">
+                <div class="grid grid-cols-8 min-h-[800px] relative">
                     
                     <div class="border-r border-gray-100 bg-gray-50/50 z-10 sticky left-0">
                         {% for t in times %}
                             <div class="h-12 border-b border-gray-100 text-[10px] text-gray-400 flex items-start justify-center pt-1 font-mono">
-                                {{ t|time:"g A" }}
+                                {{ t|time:"g:i A" }}
                             </div>
                         {% endfor %}
                     </div>
@@ -263,9 +298,20 @@
 
     // --- CONFLICTS ---
     async function fetchConflicts(instructorId, currentId) {
+        // 1. Clear existing red boxes
         document.querySelectorAll('.conflict-box').forEach(el => el.remove());
+
+        // Safety check: Don't fetch if no instructor is assigned
+        if(!instructorId || instructorId === "null" || instructorId === "TBA") return;
+
         try {
-            const url = `${API_URL_CONFLICTS}?instructorId=${instructorId}&scheduleId=${currentId}`;
+            // Get the Semester ID from the dropdown to ensure accurate checking
+            const semesterEl = document.querySelector('select[name="semester"]');
+            const semesterId = semesterEl ? semesterEl.value : '';
+
+            // --- UPDATED: Added &source=roomScheduler ---
+            const url = `${API_URL_CONFLICTS}?instructorId=${instructorId}&scheduleId=${currentId}&semesterId=${semesterId}&source=roomScheduler`;
+            
             const res = await fetch(url);
             if(!res.ok) throw new Error("API Error");
             const data = await res.json();

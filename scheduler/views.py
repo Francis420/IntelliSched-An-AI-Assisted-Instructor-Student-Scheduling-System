@@ -1292,7 +1292,7 @@ def sectionBlockScheduler(request):
         'selectedBlockLabel': selected_label,
         'schedules': schedules,
         'gen_eds': gen_eds,
-        'days': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+        'days': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
         'times': time_slots
     }
     
@@ -1401,7 +1401,7 @@ def roomScheduler(request):
         'selectedRoomLabel': selected_room_label,
         'schedules': schedules,
         'tba_schedules': tba_schedules,
-        'days': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+        'days': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
         'times': time_slots
     }
     
@@ -1412,70 +1412,119 @@ def roomScheduler(request):
 @has_role('deptHead')
 def getInstructorConflicts(request):
     """
-    Returns 'busySlots' for BOTH the Instructor AND the Section (Students).
-    Used to draw the red 'BUSY' boxes on the grid.
+    Returns 'busySlots' based on the view context (source) and selected semester.
+    
+    Logic:
+    - If source == 'instructorLoad': Checks conflicts for the SECTION (Students).
+      (Because you can visually see the Instructor's timeline, but not the students').
+      
+    - If source == 'sectionBlockScheduler': Checks conflicts for the INSTRUCTOR.
+      (Because you can visually see the Section's timeline, but not the instructor's).
+      
+    - If source == 'roomScheduler': Checks conflicts for BOTH.
     """
     instructorId = request.GET.get('instructorId')
     currentScheduleId = request.GET.get('scheduleId')
     
+    # New parameters for context and filtering
+    source_view = request.GET.get('source') # e.g. 'instructorLoad', 'sectionBlockScheduler', 'roomScheduler'
+    semester_id = request.GET.get('semester') 
+
     busySlots = []
-    
+
     try:
         # Get the schedule we are currently moving
         current_sched = Schedule.objects.get(scheduleId=currentScheduleId)
         
-        # --- A. INSTRUCTOR CONFLICTS ---
-        if instructorId:
-            inst_conflicts = Schedule.objects.filter(
-                instructor_id=instructorId,
-                status='finalized'
-            ).exclude(scheduleId=currentScheduleId).select_related('subject', 'section')
+        # 1. Determine the Semester Context
+        # We prioritize the 'semester' passed from the selector. 
+        # If missing, fallback to the schedule's existing semester.
+        target_semester = current_sched.semester
+        if semester_id:
+            try:
+                target_semester = Semester.objects.get(semesterId=semester_id)
+            except Semester.DoesNotExist:
+                pass
 
-            for c in inst_conflicts:
-                # Parse section name again for the error message
-                raw = str(c.section.sectionCode).strip()
-                letter = raw.split('-')[-1].strip() if '-' in raw else raw
-                short_sec = f"{c.subject.yearLevel}{letter}"
-                
+        # --- HELPER FUNCTIONS ---
+
+        def check_instructor_conflicts():
+            """Finds times when this Instructor is teaching elsewhere in this semester."""
+            if instructorId:
+                inst_conflicts = Schedule.objects.filter(
+                    instructor_id=instructorId,
+                    status='finalized',
+                    semester=target_semester 
+                ).exclude(scheduleId=currentScheduleId).select_related('subject', 'section')
+
+                for c in inst_conflicts:
+                    # Parse section name for the error message
+                    raw = str(c.section.sectionCode).strip()
+                    letter = raw.split('-')[-1].strip() if '-' in raw else raw
+                    short_sec = f"{c.subject.yearLevel}{letter}"
+                    
+                    busySlots.append({
+                        'day': c.dayOfWeek,
+                        'startTime': c.startTime.strftime("%H:%M"),
+                        'endTime': c.endTime.strftime("%H:%M"),
+                        'reason': f"Instructor is teaching {c.subject.code} - {short_sec}"
+                    })
+
+        def check_section_conflicts():
+            """Finds times when this Student Block is in another class in this semester."""
+            current_year = current_sched.section.subject.yearLevel
+            raw_code = str(current_sched.section.sectionCode).strip()
+            block_letter = raw_code.split('-')[-1].strip() if '-' in raw_code else raw_code
+
+            section_conflicts = Schedule.objects.filter(
+                status='finalized',
+                semester=target_semester,
+                section__subject__yearLevel=current_year,
+                dayOfWeek__in=['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+            ).filter(
+                # Match Block Letter (handles "B" or "Subject-B")
+                Q(section__sectionCode=block_letter) |
+                Q(section__sectionCode__endswith=f"-{block_letter}")
+            ).exclude(scheduleId=currentScheduleId).select_related('subject', 'room')
+
+            for s in section_conflicts:
+                room_name = s.room.roomCode if s.room else "TBA"
+                reason = f"Section {current_year}{block_letter} is taking {s.subject.code} in {room_name}"
+
                 busySlots.append({
-                    'day': c.dayOfWeek,
-                    'startTime': c.startTime.strftime("%H:%M"),
-                    'endTime': c.endTime.strftime("%H:%M"),
-                    'reason': f"Instructor teaching {c.subject.code} - {short_sec}"
+                    'day': s.dayOfWeek,
+                    'startTime': s.startTime.strftime("%H:%M"),
+                    'endTime': s.endTime.strftime("%H:%M"),
+                    'reason': reason
                 })
 
-        # --- B. SECTION (STUDENT) CONFLICTS ---
-        # Find where else this specific Block (e.g., 2B) is right now
-        current_year = current_sched.section.subject.yearLevel
-        raw_code = str(current_sched.section.sectionCode).strip()
-        block_letter = raw_code.split('-')[-1].strip() if '-' in raw_code else raw_code
+        # --- LOGIC SWITCHING BASED ON SOURCE ---
 
-        section_conflicts = Schedule.objects.filter(
-            status='finalized',
-            section__subject__yearLevel=current_year, # Same Year
-            dayOfWeek__in=['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] # Safety check
-        ).filter(
-            # Match Block Letter (handles "B" or "Subject-B")
-            Q(section__sectionCode=block_letter) |
-            Q(section__sectionCode__endswith=f"-{block_letter}")
-        ).exclude(scheduleId=currentScheduleId).select_related('subject', 'room')
-
-        for s in section_conflicts:
-            room_name = s.room.roomCode if s.room else "TBA"
-            reason = f"Section {current_year}{block_letter} is taking {s.subject.code} in {room_name}"
-
-            busySlots.append({
-                'day': s.dayOfWeek,
-                'startTime': s.startTime.strftime("%H:%M"),
-                'endTime': s.endTime.strftime("%H:%M"),
-                'reason': reason
-            })
+        if source_view == 'instructorLoad':
+            # View: Instructor Load -> User sees Instructor's row. 
+            # Need: Section Conflicts.
+            check_section_conflicts()
+            
+        elif source_view == 'sectionBlockScheduler':
+            # View: Section Scheduler -> User sees Section's row. 
+            # Need: Instructor Conflicts.
+            check_instructor_conflicts()
+            
+        elif source_view == 'roomScheduler':
+            # View: Room Scheduler -> User sees Room's row. 
+            # Need: Both.
+            check_instructor_conflicts()
+            check_section_conflicts()
+            
+        else:
+            # Fallback if source is not provided (Legacy behavior): Check Both
+            check_instructor_conflicts()
+            check_section_conflicts()
 
     except Exception as e:
         print(f"Error checking conflicts: {e}")
 
     return JsonResponse({'busySlots': busySlots})
-
 
 
 @login_required
@@ -1590,7 +1639,7 @@ def updateScheduleSlot(request):
             conflict_room = section_conflict.room.roomCode if section_conflict.room else "TBA"
             return JsonResponse({
                 'success': False,
-                'message': f"Student Conflict! Block {formatted_block} is already taking '{section_conflict.subject.code}' in {conflict_room}."
+                'message': f"Section Conflict! Section {formatted_block} is already taking '{section_conflict.subject.code}' in {conflict_room}."
             })
 
         # Check C: Room Conflict
@@ -1980,125 +2029,268 @@ def instructorLoad(request):
     
     return render(request, 'scheduler/instructorLoad.html', context)
 
-
-def setOuterBorder(ws, cellRange):
-    """Applies a thin outside border to a merged range."""
-    thin = Side(border_style="thin", color="000000")
-    border = Border(top=thin, left=thin, right=thin, bottom=thin)
-    for row in ws[cellRange]:
-        for cell in row:
-            cell.border = border
-
-def safe_write_room(ws, row, col, value):
-    """
-    Helper to write to a cell even if it's currently part of a merge.
-    Borrowed from the working exportWorkloadExcel logic.
-    """
-    cell = ws.cell(row=row, column=col)
-    target_cell = cell
-    if isinstance(cell, MergedCell):
-        for merged_range in ws.merged_cells.ranges:
-            if cell.coordinate in merged_range:
-                # Find the top-left cell of the merge to write the value
-                target_cell = ws.cell(row=merged_range.min_row, column=merged_range.min_col)
-                break
-    target_cell.value = value
-    target_cell.alignment = Alignment(wrap_text=True, horizontal='center', vertical='center')
-
 @login_required
 @has_role('deptHead')
-def exportRoomSchedule(request, room_id):
-    room = get_object_or_404(Room, roomId=room_id)
-    semester_id = request.GET.get("semester")
+def previewRoomSchedule(request, roomId, semesterId):
+    """
+    Generates the static, printable schedule matrix (A4 Landscape).
+    """
+    room = get_object_or_404(Room, pk=roomId)
+    semester = get_object_or_404(Semester, pk=semesterId)
     
-    # 1. Pull Semester
-    current_semester = Semester.objects.filter(semesterId=semester_id).first() if semester_id else Semester.objects.order_by('-createdAt').first()
-    
-    # 2. Pull Schedules - Match the query logic of exportWorkloadExcel
-    # Use iexact to handle 'finalized' vs 'Finalized'
-    schedules = Schedule.objects.filter(
-        room=room, 
-        status__iexact='finalized', 
-        semester=current_semester
-    ).select_related('subject', 'instructor', 'section')
-
-    # 3. Load Template
-    templatePath = os.path.join(settings.BASE_DIR, 'static/excel_templates/rooms_template.xlsx')
-    wb = openpyxl.load_workbook(templatePath)
-    ws = wb.active
-
-    # --- STEP 1: CLEAR EXISTING TEMPLATE MERGES (Crucial for Visualization) ---
-    # Your template has a merge at Row 13 for "code, header_faculty - section".
-    # We must destroy it so openpyxl doesn't see those cells as "Read Only".
-    for merge_range in list(ws.merged_cells.ranges):
-        if merge_range.min_row >= 11:
-            ws.unmerge_cells(str(merge_range))
-
-    # Clear the placeholder text manually
-    for r in range(11, 60):
-        for c in range(2, 9): # B to H
-            ws.cell(row=r, column=c).value = None
-
-    # --- STEP 2: PLOT DATA (Using row mapping logic) ---
-    day_map = {'Monday': 2, 'Tuesday': 3, 'Wednesday': 4, 'Thursday': 5, 'Friday': 6, 'Saturday': 7, 'Sunday': 8}
-
-    for sched in schedules:
-        col = day_map.get(sched.dayOfWeek)
-        if not col: continue
-
-        # Time Calculation
-        start_dec = sched.startTime.hour + (sched.startTime.minute / 60)
-        
-        # Row Logic: 7:00 AM (Row 11), 1:00 PM (Row 22)
-        if start_dec < 12.0:
-            curr_row = 11 + int((start_dec - 7) * 2)
-        elif start_dec >= 13.0:
-            curr_row = 22 + int((start_dec - 13) * 2)
-        else:
-            curr_row = 21 # Lunch row
-
-        duration_slots = int(sched.duration_minutes / 30)
-        end_row = curr_row + duration_slots - 1
-
-        # Data Formatting
-        instr = sched.instructor.full_name.upper() if sched.instructor else "TBA"
-        raw_sec = str(sched.section.sectionCode)
-        sec_suffix = raw_sec.split('-')[-1] if '-' in raw_sec else raw_sec
-        formatted_sec = f"{sched.subject.yearLevel}{sec_suffix}"
-
-        # Write to cell (Safe now because we unmerged)
-        target_cell = ws.cell(row=curr_row, column=col)
-        target_cell.value = f"{sched.subject.code}\n{instr}\n{formatted_sec}"
-        target_cell.alignment = Alignment(wrap_text=True, horizontal='center', vertical='center')
-
-        # Re-merge for the class duration
-        if end_row > curr_row:
-            ws.merge_cells(start_row=curr_row, start_column=col, end_row=end_row, end_column=col)
-        
-        setOuterBorder(ws, f"{get_column_letter(col)}{curr_row}:{get_column_letter(col)}{end_row}")
-
-    # --- STEP 3: HEADERS & SIGNATURE (Final Sweep) ---
-    dept_head = Instructor.objects.filter(
+    # Fetch Dept Head
+    deptHead = Instructor.objects.filter(
         userlogin__user__roles__name='deptHead', 
         userlogin__user__isActive=True
     ).order_by('userlogin__user__is_superuser').first()
+
+    days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    startHour = 7
+    endHour = 21
     
-    replacements = {
-        'header_semester': get_semester_text(current_semester.term) if current_semester else "",
-        'header_sy': current_semester.academicYear if current_semester else "",
-        'room': room.roomCode,
-        'sig_dept_head': dept_head.full_name.upper() if dept_head else "TBA"
+    schedules = Schedule.objects.filter(
+        room=room, 
+        semester=semester, 
+        status='finalized'
+    )
+    
+    scheduleMap = {}
+    for sched in schedules:
+        key = (sched.dayOfWeek, sched.startTime.strftime("%H:%M"))
+        scheduleMap[key] = sched
+
+    gridRows = []
+    skipCounts = {day: 0 for day in days}
+    
+    # Define time boundaries
+    today = datetime.today()
+    currentDt = datetime.combine(today, time(startHour, 0))
+    endDt = datetime.combine(today, time(endHour, 0))
+    lunchStart = datetime.combine(today, time(12, 0))
+
+    while currentDt < endDt:
+        currentTimeStr = currentDt.strftime("%H:%M")
+        
+        # --- LUNCH BREAK (12:00 - 1:00) ---
+        if currentDt.hour == 12:
+            # SAFETY RESET: Ensure no 'skip counts' carry over into/past lunch
+            # This fixes the issue where morning classes create ghost columns in the afternoon
+            for day in days:
+                skipCounts[day] = 0
+                
+            gridRows.append({'isLunch': True, 'label': '12:00-1:00', 'cells': []})
+            currentDt += timedelta(hours=1)
+            continue
+
+        # --- STANDARD ROW ---
+        slotEnd = currentDt + timedelta(minutes=30)
+        
+        # Windows-safe time formatting
+        startStr = currentDt.strftime('%I:%M').lstrip('0')
+        endStr = slotEnd.strftime('%I:%M').lstrip('0')
+        timeLabel = f"{startStr}-{endStr}"
+        
+        rowObj = {'isLunch': False, 'timeLabel': timeLabel, 'cells': []}
+
+        for day in days:
+            if skipCounts[day] > 0:
+                rowObj['cells'].append({'type': 'span'})
+                skipCounts[day] -= 1
+            else:
+                schedKey = (day, currentTimeStr)
+                if schedKey in scheduleMap:
+                    sched = scheduleMap[schedKey]
+                    
+                    sStart = datetime.combine(today, sched.startTime)
+                    sEnd = datetime.combine(today, sched.endTime)
+                    
+                    # --- CLAMPING LOGIC (The Fix) ---
+                    # 1. If class starts before lunch but ends after, cut it at 12:00
+                    if sStart < lunchStart and sEnd > lunchStart:
+                        sEnd = lunchStart
+                    
+                    # 2. If class goes beyond the grid end time (9 PM), cut it there
+                    if sEnd > endDt:
+                        sEnd = endDt
+
+                    durationMins = (sEnd - sStart).total_seconds() / 60
+                    rowSpan = int(durationMins / 30)
+                    
+                    # --- SECTION FORMATTING (3C) ---
+                    rawSection = str(sched.section.sectionCode).strip()
+                    if '-' in rawSection:
+                        sectionLetter = rawSection.split('-')[-1].strip()
+                    else:
+                        sectionLetter = rawSection
+                    
+                    formattedSection = f"{sched.subject.yearLevel}{sectionLetter}"
+
+                    rowObj['cells'].append({
+                        'type': 'event',
+                        'rowSpan': rowSpan,
+                        'subjectCode': sched.subject.code,
+                        'section': formattedSection,
+                        'schedType': sched.scheduleType.title(),
+                        'instructorName': sched.instructor.full_name
+                    })
+                    skipCounts[day] = rowSpan - 1
+                else:
+                    rowObj['cells'].append({'type': 'empty'})
+
+        gridRows.append(rowObj)
+        currentDt += timedelta(minutes=30)
+
+    context = {
+        'room': room,
+        'semester': semester,
+        'deptHead': deptHead,
+        'days': days,
+        'gridRows': gridRows,
     }
+    return render(request, 'scheduler/previewRoomSchedule.html', context)
 
-    # Iterate through ALL cells to ensure the footer signature is caught
-    for row in ws.iter_rows():
-        for cell in row:
-            if cell.value and isinstance(cell.value, str):
-                for key, val in replacements.items():
-                    if key in cell.value:
-                        cell.value = cell.value.replace(key, val)
 
-    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = f'attachment; filename="Room_{room.roomCode}_Schedule.xlsx"'
-    wb.save(response)
-    return response
+@login_required
+@has_role('deptHead')
+def previewSectionBlockSchedule(request, blockStr, semesterId):
+    """
+    Generates the printable schedule matrix for a specific Section Block.
+    (Matches the Logic of previewRoomSchedule)
+    """
+    # 1. Parse Block String (e.g., "1__A" -> Year=1, Letter=A)
+    try:
+        year, letter = blockStr.split('__', 1)
+        label = f"{year}-{letter}"
+    except ValueError:
+        return redirect('sectionBlockScheduler') 
+
+    semester = get_object_or_404(Semester, pk=semesterId)
+    
+    # 2. Fetch Dept Head
+    deptHead = Instructor.objects.filter(
+        userlogin__user__roles__name='deptHead', 
+        userlogin__user__isActive=True
+    ).order_by('userlogin__user__is_superuser').first()
+
+    # 3. Fetch Data (Majors + GenEds)
+    # A. Major Schedules
+    major_schedules = Schedule.objects.filter(
+        status='finalized',
+        section__subject__yearLevel=year,
+        semester=semester
+    ).filter(
+        Q(section__sectionCode=letter) |                 
+        Q(section__sectionCode__endswith=f"-{letter}")   
+    ).select_related('subject', 'instructor', 'room', 'section')
+
+    # B. GenEd Schedules
+    gen_eds = GenEdSchedule.objects.filter(
+        status='active',
+        yearLevel=year,
+        sectionCode=letter,
+        semester=semester
+    )
+
+    # 4. Build Unified Schedule Map
+    scheduleMap = {}
+    
+    # Map Majors
+    for sched in major_schedules:
+        key = (sched.dayOfWeek, sched.startTime.strftime("%H:%M"))
+        scheduleMap[key] = {
+            'startTime': sched.startTime,
+            'endTime': sched.endTime,
+            'subjectCode': sched.subject.code,
+            'roomName': sched.room.roomCode if sched.room else "TBA", # Important: Show Room
+            'schedType': sched.scheduleType.title(),
+            'instructorName': sched.instructor.full_name,
+            'isGenEd': False
+        }
+
+    # Map GenEds
+    for gen in gen_eds:
+        key = (gen.day, gen.startTime.strftime("%H:%M"))
+        scheduleMap[key] = {
+            'startTime': gen.startTime,
+            'endTime': gen.endTime,
+            'subjectCode': gen.subjectCode, 
+            'roomName': gen.room or "TBA",
+            'schedType': "Lecture",
+            'instructorName': gen.instructor or "TBA",
+            'isGenEd': True
+        }
+
+    # 5. Grid Generation (Exact Logic from previewRoomSchedule)
+    days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    gridRows = []
+    skipCounts = {day: 0 for day in days}
+    
+    startHour = 7
+    endHour = 21
+    
+    today = datetime.today()
+    currentDt = datetime.combine(today, time(startHour, 0))
+    endDt = datetime.combine(today, time(endHour, 0))
+    lunchStart = datetime.combine(today, time(12, 0))
+
+    while currentDt < endDt:
+        currentTimeStr = currentDt.strftime("%H:%M")
+        
+        # --- LUNCH BREAK (12:00 - 1:00) ---
+        if currentDt.hour == 12:
+            for day in days: skipCounts[day] = 0
+            gridRows.append({'isLunch': True, 'label': '12:00-1:00', 'cells': []})
+            currentDt += timedelta(hours=1)
+            continue
+
+        # --- STANDARD ROW ---
+        slotEnd = currentDt + timedelta(minutes=30)
+        startStr = currentDt.strftime('%I:%M').lstrip('0')
+        endStr = slotEnd.strftime('%I:%M').lstrip('0')
+        timeLabel = f"{startStr}-{endStr}"
+        
+        rowObj = {'isLunch': False, 'timeLabel': timeLabel, 'cells': []}
+
+        for day in days:
+            if skipCounts[day] > 0:
+                rowObj['cells'].append({'type': 'span'})
+                skipCounts[day] -= 1
+            else:
+                schedKey = (day, currentTimeStr)
+                if schedKey in scheduleMap:
+                    data = scheduleMap[schedKey]
+                    
+                    sStart = datetime.combine(today, data['startTime'])
+                    sEnd = datetime.combine(today, data['endTime'])
+                    
+                    # Clamping
+                    if sStart < lunchStart and sEnd > lunchStart: sEnd = lunchStart
+                    if sEnd > endDt: sEnd = endDt
+
+                    durationMins = (sEnd - sStart).total_seconds() / 60
+                    rowSpan = int(durationMins / 30)
+                    
+                    # Add Cell
+                    rowObj['cells'].append({
+                        'type': 'event',
+                        'rowSpan': rowSpan,
+                        'line1': data['subjectCode'],
+                        'line2': data['roomName'],  # ROOM NAME (Because this is a section view)
+                        'line3': data['instructorName'],
+                        'isGenEd': data['isGenEd']
+                    })
+                    skipCounts[day] = rowSpan - 1
+                else:
+                    rowObj['cells'].append({'type': 'empty'})
+
+        gridRows.append(rowObj)
+        currentDt += timedelta(minutes=30)
+
+    context = {
+        'blockLabel': label,  # Used in template title
+        'semester': semester,
+        'deptHead': deptHead,
+        'days': days,
+        'gridRows': gridRows,
+    }
+    return render(request, 'scheduler/previewSectionBlockSchedule.html', context)
