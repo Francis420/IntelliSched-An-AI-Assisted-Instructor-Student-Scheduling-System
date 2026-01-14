@@ -2197,25 +2197,32 @@ def previewSectionBlockSchedule(request, blockStr, semesterId):
     # Map Majors
     for sched in major_schedules:
         key = (sched.dayOfWeek, sched.startTime.strftime("%H:%M"))
+        
+        # --- UPDATE: Combine Subject and Type (e.g., "IT 101 - Lecture") ---
+        # Using .title() to convert 'lab' -> 'Lab' and 'lecture' -> 'Lecture'
+        subject_display = f"{sched.subject.code} - {sched.scheduleType.title()}"
+
         scheduleMap[key] = {
             'startTime': sched.startTime,
             'endTime': sched.endTime,
-            'subjectCode': sched.subject.code,
-            'roomName': sched.room.roomCode if sched.room else "TBA", # Important: Show Room
-            'schedType': sched.scheduleType.title(),
-            'instructorName': sched.instructor.full_name,
+            'subjectCode': subject_display, # Line 1
+            'roomName': sched.room.roomCode if sched.room else "TBA", # Line 2 (Room)
+            'instructorName': sched.instructor.full_name, # Line 3
             'isGenEd': False
         }
 
     # Map GenEds
     for gen in gen_eds:
         key = (gen.day, gen.startTime.strftime("%H:%M"))
+        
+        # --- UPDATE: GenEds are typically Lectures ---
+        subject_display = f"{gen.subjectCode} - Lecture"
+
         scheduleMap[key] = {
             'startTime': gen.startTime,
             'endTime': gen.endTime,
-            'subjectCode': gen.subjectCode, 
+            'subjectCode': subject_display, 
             'roomName': gen.room or "TBA",
-            'schedType': "Lecture",
             'instructorName': gen.instructor or "TBA",
             'isGenEd': True
         }
@@ -2274,9 +2281,9 @@ def previewSectionBlockSchedule(request, blockStr, semesterId):
                     rowObj['cells'].append({
                         'type': 'event',
                         'rowSpan': rowSpan,
-                        'line1': data['subjectCode'],
-                        'line2': data['roomName'],  # ROOM NAME (Because this is a section view)
-                        'line3': data['instructorName'],
+                        'line1': data['subjectCode'],     # "Subject - Type"
+                        'line2': data['roomName'],        # Room Name
+                        'line3': data['instructorName'],  # Instructor
                         'isGenEd': data['isGenEd']
                     })
                     skipCounts[day] = rowSpan - 1
