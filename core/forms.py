@@ -1,5 +1,7 @@
 from django import forms
 from .models import User, Instructor
+from django.contrib.auth.forms import PasswordResetForm
+from django.contrib.auth import get_user_model
 
 class InstructorProfileForm(forms.ModelForm):
     class Meta:
@@ -46,3 +48,15 @@ class DepartmentHeadAssignmentForm(forms.Form):
         label="Confirm Password",
         required=False
     )
+
+class CustomPasswordResetForm(PasswordResetForm):
+    def get_users(self, email):
+        UserModel = get_user_model()
+        email_field_name = UserModel.get_email_field_name()
+        
+        active_users = UserModel._default_manager.filter(**{
+            '%s__iexact' % email_field_name: email,
+            'isActive': True, 
+        })
+        
+        return (u for u in active_users if u.has_usable_password())
