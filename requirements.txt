@@ -158,6 +158,7 @@ pyphen==0.17.2
 python-bidi==0.6.7
 python-dateutil==2.9.0.post0
 python-decouple==3.8
+python-dotenv==1.2.1
 python-json-logger==3.3.0
 python-slugify==8.0.4
 pytz==2025.2
