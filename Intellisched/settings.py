@@ -11,7 +11,19 @@ SECRET_KEY = config('SECRET_KEY')  # now loaded from .env
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["72.61.112.93",
+ "srv1247444.hstgr.cloud",
+"intellisched.online",
+ "www.intellisched.online",
+ "localhost", "127.0.0.1"]
+
+CSRF_TRUSTED_ORIGINS = [
+ "http://72.61.112.93",
+ "http://srv1247444.hstgr.cloud",
+]
+
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
 
 
 # Application definition
@@ -162,7 +174,25 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+EMAIL_HOST_USER = 'francisjonel.balagusa@evsu.edu.ph'
+EMAIL_HOST_PASSWORD = 'zteg bvcv jxqb oiwi'
 DEFAULT_FROM_EMAIL = f"IntelliSched Support <{EMAIL_HOST_USER}>"
 
+LOGGING = {
+'version': 1,
+'disable_existing_loggers': False,
+'handlers': {
+'file': {
+'level': 'ERROR',
+'class': 'logging.FileHandler',
+'filename': os.path.join(BASE_DIR, 'logs', 'django-errors.log'),
+},
+},
+'loggers': {
+'django': {
+'handlers': ['file'],
+'level': 'ERROR',
+'propagate': True,
+},
+},
+}

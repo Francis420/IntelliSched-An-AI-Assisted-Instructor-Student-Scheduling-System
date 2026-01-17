@@ -117,10 +117,7 @@
     };
 
     // --- WebSocket ---
-    const socket = new WebSocket(
-        (window.location.protocol === "https:" ? "wss://" : "ws://") + 
-        window.location.host + "/ws/progress/" + batchId + "/"
-    );
+    const socket = new WebSocket(`ws://72.61.112.93:8000/ws/progress/${batchId}/`);
 
     socket.onmessage = function(e) {
         const data = JSON.parse(e.data);

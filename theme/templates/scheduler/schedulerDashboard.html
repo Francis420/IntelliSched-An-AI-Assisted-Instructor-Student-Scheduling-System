@@ -248,8 +248,7 @@
 
     // --- WebSocket Logic ---
     function connectWebSocket() {
-        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        const socket = new WebSocket(`${protocol}//${window.location.host}/ws/scheduler/${batchId}/`);
+        const socket = new WebSocket(`ws://72.61.112.93:8000/ws/scheduler/${batchId}/`);
 
         socket.onopen = () => {
             isConnected = true;
