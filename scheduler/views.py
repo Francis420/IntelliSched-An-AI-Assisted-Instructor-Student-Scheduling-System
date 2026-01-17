@@ -35,20 +35,18 @@ import json
 from django.db.models import Q
 
 
+
 @login_required
 @has_role('deptHead')
 def finalizeSchedule(request, semester_id): 
     if request.method == 'POST':
-        # Check if the currently active schedule is the one being finalized
         active_schedules = Schedule.objects.filter(semester__semesterId=semester_id, status='active')
         
         if active_schedules.exists():
             try:
                 with transaction.atomic():
-                    # Archive any previously finalized schedules for the same semester
                     Schedule.objects.filter(semester__semesterId=semester_id, status='finalized').update(status='archived')
                     
-                    # Set the current active schedules to finalized
                     active_schedules.update(status='finalized')
                     
                     messages.success(request, "Schedule successfully FINALIZED and locked.")
@@ -72,25 +70,21 @@ def revertFinalizedSchedule(request, semester_id):
 
         try:
             with transaction.atomic():
-                # Step 1: Find the schedules currently marked as 'finalized'
                 finalized_schedules = Schedule.objects.filter(
                     semester=semester, 
                     status='finalized'
                 )
 
                 if finalized_schedules.exists():
-                    # Step 2: Change status to 'active'
                     finalized_schedules.update(status='active')
                     messages.success(request, f"Schedule for {semester.name} has been **UNLOCKED**.")
                 else:
                     messages.warning(request, "No finalized schedule found to unlock.")
-
         except Exception as e:
             messages.error(request, f"An error occurred while unlocking the schedule: {e}")
-
         return redirect(reverse('scheduleOutput') + f'?semester={semester_id}&batch_key=active')
-    
     return redirect(reverse('scheduleOutput'))
+
 
 @login_required
 @has_role('deptHead')
@@ -103,7 +97,6 @@ def revertSchedule(request):
             messages.error(request, "Invalid request for schedule reversion.")
             return redirect(reverse('scheduleOutput'))
         
-        # 1. Check if a finalized run currently exists for this semester
         finalized_run_exists = Schedule.objects.filter(
             semester__semesterId=semester_id, 
             status='finalized'
@@ -116,11 +109,9 @@ def revertSchedule(request):
         try:
             dt_obj = datetime.fromisoformat(batch_key)
             
-            # Ensure the datetime object is timezone-aware
             if dt_obj.tzinfo is None:
                 dt_obj = timezone.make_aware(dt_obj)
             
-            # Fix: Use a range query to ignore microsecond differences
             schedules_to_promote = Schedule.objects.filter(
                 semester__semesterId=semester_id,
                 status='archived',
@@ -152,7 +143,6 @@ def revertSchedule(request):
 @login_required
 @has_role('deptHead')
 def scheduleOutput(request):
-    # 1. Retrieve or Default Semester ID
     semester_id = request.GET.get("semester")
     if not semester_id:
         latest_semester = Semester.objects.order_by("-createdAt").first()
@@ -161,7 +151,6 @@ def scheduleOutput(request):
         else:
             return render(request, "scheduler/scheduleOutput.html", {"error": "No semesters found."})
 
-    # --- NEW LOGIC: Check for Finalized Schedule ---
     finalized_exists = Schedule.objects.filter(
         semester__semesterId=semester_id, 
         status='finalized'
@@ -169,14 +158,11 @@ def scheduleOutput(request):
 
     raw_batch_key = request.GET.get("batch_key")
 
-    # AUTO-REDIRECT: If finalized exists, and user is viewing 'active' (or default), redirect to 'finalized'
     if finalized_exists and (raw_batch_key is None or raw_batch_key == 'active'):
         return redirect(reverse('scheduleOutput') + f'?semester={semester_id}&batch_key=finalized')
 
-    # Set default batch_key
     batch_key = raw_batch_key if raw_batch_key else 'active'
     
-    # 2. Get all unique creation timestamps for archived schedules
     raw_archived_datetimes = Schedule.objects.filter(
         semester__semesterId=semester_id, 
         status='archived'
@@ -195,7 +181,6 @@ def scheduleOutput(request):
         for batch_time in archived_batch_times
     ]
 
-    # --- BATCH SELECTION LOGIC ---
     schedules = Schedule.objects.none() 
     current_status = 'N/A'
     
@@ -207,7 +192,6 @@ def scheduleOutput(request):
         schedules = Schedule.objects.filter(semester__semesterId=semester_id, status='active')
         current_status = 'Active Draft'
 
-        # Fallback: If no active schedules, try to load latest archived
         if not schedules.exists() and archived_batches:
              try:
                  latest_batch_time_iso = archived_batches[0]['key']
@@ -230,7 +214,6 @@ def scheduleOutput(request):
                  batch_key = 'none'
 
     elif batch_key:
-        # Load specific archived batch
         try:
             selected_timestamp = datetime.fromisoformat(batch_key)
             if selected_timestamp.tzinfo is None:
@@ -243,7 +226,6 @@ def scheduleOutput(request):
                 createdAt__lt=selected_timestamp + timedelta(seconds=1),
                 status='archived'
             )
-            # Find label
             label = next((b['label'] for b in archived_batches if b['key'] == batch_key), f"Archived Run ({selected_timestamp.strftime('%b %d, %I:%M %p')})")
             current_status = label
 
@@ -251,14 +233,12 @@ def scheduleOutput(request):
             messages.error(request, "Invalid schedule batch key provided. Falling back to active draft.")
             return redirect(reverse('scheduleOutput') + f'?semester={semester_id}&batch_key=active')
     
-    # 3. Fetch Data
     schedules = schedules.select_related(
         'instructor', 'room'
     ).prefetch_related(
         'instructor__userlogin_set__user'
     ).order_by('dayOfWeek', 'startTime')
     
-    # --- Aggregation Logic ---
     DAYS_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     
     room_usage = defaultdict(lambda: {
@@ -274,13 +254,11 @@ def scheduleOutput(request):
     for schedule in schedules:
         duration_minutes = schedule.duration_minutes 
         
-        # Room
         room_name = schedule.room.roomCode if schedule.room else "TBA"
         room_usage[room_name]["room_code"] = room_name
         room_usage[room_name]["total_minutes"] += duration_minutes
         room_usage[room_name]["daily_spread"][schedule.dayOfWeek] += duration_minutes
         
-        # Instructor
         if schedule.instructor:
             instr_id = schedule.instructor.instructorId 
             instr_name = schedule.instructor.full_name
@@ -298,7 +276,6 @@ def scheduleOutput(request):
             
         instructor_load[instr_id]["daily_spread"][schedule.dayOfWeek] += duration_minutes
 
-    # Format Room Data
     formatted_room_data = [] 
     for room_code, data in room_usage.items():
         data["usage_hours"] = round(data["total_minutes"] / 60.0, 2)
@@ -309,7 +286,6 @@ def scheduleOutput(request):
         formatted_room_data.append(data)
     ordered_room_usage = sorted(formatted_room_data, key=lambda item: item["usage_hours"], reverse=True)
 
-    # Format Instructor Data
     formatted_instructor_data = []
     for instr_id, data in instructor_load.items(): 
         if instr_id == 'TBA_UNASSIGNED': 
@@ -324,7 +300,6 @@ def scheduleOutput(request):
         formatted_instructor_data.append(data)
     ordered_instructor_load = sorted(formatted_instructor_data, key=lambda item: item["total_hours"], reverse=True)
 
-    # Context
     semesters = Semester.objects.all().order_by("-createdAt")
     try:
         current_semester = Semester.objects.get(semesterId=semester_id)
@@ -352,14 +327,10 @@ def scheduleOutput(request):
 
 
 @login_required
+@has_role('instructor')
 def instructorScheduleView(request):
-    """
-    Displays the logged-in instructor's schedule in a timetable matrix format.
-    Shows Subject + Section (Year+Letter) + Room + Type (Lec/Lab).
-    """
     user = request.user
     
-    # 1. Identify the Instructor
     login_entry = UserLogin.objects.filter(user=user).select_related("instructor").first()
     if not login_entry or not login_entry.instructor:
         return render(request, "scheduler/instructorSchedule.html", {
@@ -368,20 +339,16 @@ def instructorScheduleView(request):
 
     instructor = login_entry.instructor
 
-    # 2. Semester Selection Logic
-    all_semesters = Semester.objects.order_by('-academicYear', '-term') # Sort Term descending too ideally
+    all_semesters = Semester.objects.order_by('-academicYear', '-term')
     semester_id = request.GET.get("semester")
     
     current_semester = None
     if semester_id:
-        # FIX 1: Use 'semesterId' instead of 'pk' to match your other views
         current_semester = all_semesters.filter(semesterId=semester_id).first()
     
-    # Default to latest if not selected or not found
     if not current_semester:
         current_semester = all_semesters.first()
         if current_semester:
-            # FIX 2: Ensure we pass the correct ID type back to the template
             semester_id = str(current_semester.semesterId)
 
     if not current_semester:
@@ -390,17 +357,14 @@ def instructorScheduleView(request):
             "instructor": instructor
         })
 
-    # 3. Fetch Schedules (Filter by Instructor + Semester + Finalized)
     schedules = Schedule.objects.filter(
         instructor=instructor,
         semester=current_semester,
         status='finalized' 
     ).select_related("subject", "section", "room")
 
-    # 4. Prepare Timetable Matrix
     schedule_list = list(schedules)
     
-    # Defaults: Standard School Hours
     start_hour_floor = 7 
     end_hour_ceiling = 19
 
@@ -435,12 +399,10 @@ def instructorScheduleView(request):
         time_slots_display.append(current_dt.strftime('%I:%M %p'))
         current_dt += timedelta(minutes=30)
     
-    # FIX 3: Added 'Sunday' to ensure weekend classes appear
     DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
     raw_data = defaultdict(lambda: defaultdict(list))
 
-    # --- COLOR PALETTE ---
     color_palette = [
         'bg-blue-600', 'bg-red-600', 'bg-emerald-600', 'bg-purple-600', 
         'bg-orange-600', 'bg-teal-600', 'bg-pink-600', 'bg-indigo-600', 
@@ -458,7 +420,6 @@ def instructorScheduleView(request):
         if sched_end_dt < sched_start_dt:
              sched_end_dt += timedelta(days=1)
         
-        # Section Label
         subject_code = s.subject.code
         year_level = ""
         match_year = re.search(r'\d', subject_code)
@@ -473,13 +434,13 @@ def instructorScheduleView(request):
             
         section_str = f"{year_level}{section_letter}" 
 
-        # Type Label
+
         raw_type = str(getattr(s, 'scheduleType', 'lecture')).lower() # Fixed attr name based on your model
         type_label = "Lec"
         if "lab" in raw_type:
             type_label = "Lab"
 
-        # Color Logic
+
         unique_key = f"{subject_code}_{section_str}"
         if unique_key not in section_color_map:
             section_color_map[unique_key] = color_palette[color_index % len(color_palette)]
@@ -510,7 +471,6 @@ def instructorScheduleView(request):
                     'end_time': s.endTime.strftime('%I:%M %p'),
                     'rowspan': rowspan,
                     'height_px': rowspan * 40,
-                    # Calculate if this specific matrix slot is where the block visually starts
                     'is_start_slot': (sched_start_dt >= current_slot_dt and sched_start_dt < slot_end_dt) or (current_slot_dt == start_dt and sched_start_dt < start_dt),
                     
                     'color_class': assigned_color_class,
@@ -567,14 +527,12 @@ def stop_scheduler(request):
     try:
         progress = SchedulerProgress.objects.get(batch_id=batch_id)
 
-        # Kill subprocess if still running
         if progress.process_pid:
             try:
                 os.kill(progress.process_pid, signal.SIGTERM)
             except ProcessLookupError:
-                pass  # Process already exited
+                pass  
 
-        # Also revoke Celery task to stop any background logic
         if progress.task_id:
             current_app.control.revoke(progress.task_id, terminate=True, signal="SIGTERM")
 
@@ -607,8 +565,6 @@ def scheduler_status(request):
     })
 
 
-# PDF export
-# Helper to merge multiple schedule blocks for the same subject/section
 def format_number(num):
     try:
         f_num = float(num)
@@ -625,15 +581,12 @@ def get_short_day(day_full):
     return mapping.get(day_full, day_full)
 
 def get_instructor_involvement(instructor):
-    """
-    Calculates involvement hours based on Designation (priority) or Rank.
-    """
     context = {
         'inv_admin': 0,
         'inv_research': 0,
         'inv_extension': 0,
-        'inv_consultation': 0, # Instruction + Consultation (+ Adviser)
-        'inv_others': 0,       # Production
+        'inv_consultation': 0,
+        'inv_others': 0,
     }
 
     if instructor.designation:
@@ -641,51 +594,33 @@ def get_instructor_involvement(instructor):
         context['inv_admin'] = d.adminSupervisionHours
         context['inv_research'] = d.researchHours
         context['inv_extension'] = d.extensionHours
-        # Designation: Instruction + Consultation
         context['inv_consultation'] = d.instructionHours + d.consultationHours
-        # Designation: Production -> Others
         context['inv_others'] = d.productionHours
     elif instructor.rank:
         r = instructor.rank
         context['inv_admin'] = 0 
         context['inv_research'] = r.researchHours
         context['inv_extension'] = r.extensionHours
-        # Rank: Instruction + Consultation + Class Adviser
         context['inv_consultation'] = r.instructionHours + r.consultationHours + r.classAdviserHours
-        # Rank: Production -> Others
         context['inv_others'] = r.productionHours
 
     return context
 
 def format_section_time(section):
-    """
-    Formats time string based on available schedules.
-    - Single Slot: "09:00-12:00" (Formal)
-    - Multiple Slots: "9-12 / 1-3" (Compact)
-    """
-    # Get all schedules for this section (Lec, Lab, etc.)
     schedules = list(section.schedule_set.all())
-    
-    # Sort by day and time to keep order consistent
-    # Assuming dayOfWeek uses full names, we might want a map, 
-    # but standard sort is usually fine for grouping. 
-    # Better to sort by startTime if days are equal.
     schedules.sort(key=lambda x: x.startTime)
 
     times = []
-    use_compact = len(schedules) > 1  # Logic: Use compact format if > 1 slot
+    use_compact = len(schedules) > 1 
 
     for s in schedules:
         if use_compact:
-            # Compact: "5" or "5:30" (No leading zero, no :00)
             def fmt(t):
                 h = t.hour % 12 or 12
-                # If minutes exist, show them. If 00, hide them.
                 return f"{h}:{t.minute:02d}" if t.minute > 0 else f"{h}"
             
             t_str = f"{fmt(s.start_time)}-{fmt(s.end_time)}"
         else:
-            # Standard: "05:00-08:00"
             def fmt_std(t):
                 return t.strftime("%I:%M")
             t_str = f"{fmt_std(s.start_time)}-{fmt_std(s.end_time)}"
@@ -696,38 +631,30 @@ def format_section_time(section):
 
 
 def process_schedule_group(s_list):
-    """Calculates Lec/Lab hours and formats row data with smart time formatting."""
     if not s_list: return None
     
     first = s_list[0]
     subject = first.subject
     
-    # 1. Calculate Minutes/Hours
     lec_minutes = getattr(subject, 'durationMinutes', 0)
     lab_minutes = getattr(subject, 'labDurationMinutes', 0) if getattr(subject, 'hasLab', False) else 0
     
     total_lec_hours = lec_minutes / 60
     total_lab_hours = lab_minutes / 60
 
-    # 2. Sort and Format Time/Days
     sorted_list = sorted(s_list, key=lambda x: (x.dayOfWeek, x.startTime))
     times, days = [], []
     
-    # Check if we have multiple slots (e.g. Lec + Lab)
     use_compact = len(sorted_list) > 1
 
     for s in sorted_list:
-        # --- TIME FORMATTING LOGIC ---
         if use_compact:
-            # Compact: 5-8
             def fmt(t):
                 h = t.hour % 12 or 12
                 return f"{h}:{t.minute:02d}" if t.minute > 0 else f"{h}"
             t_str = f"{fmt(s.startTime)}-{fmt(s.endTime)}"
         else:
-            # Formal: 05:00-08:00
             t_str = f"{s.startTime.strftime('%I:%M')}-{s.endTime.strftime('%I:%M')}"
-        # -----------------------------
 
         times.append(t_str)
         days.append(get_short_day(s.dayOfWeek))
@@ -735,7 +662,6 @@ def process_schedule_group(s_list):
     time_str = " / ".join(times) 
     day_str = " / ".join(days)
 
-    # 3. Section Formatting
     sec_obj = getattr(first, 'section', None)
     year_val = getattr(subject, 'yearLevel', '')
     if year_val is None: year_val = ""
@@ -763,29 +689,19 @@ def process_schedule_group(s_list):
         'section': formatted_section
     }
 
-# ==========================================
-# 2. EXCEL UTILS
-# ==========================================
 
 def safe_write(ws, row, col, value, align_center=False):
-    """
-    Safely writes to a cell. If the cell is merged, writes to the top-left cell.
-    Optionally centers the text.
-    """
     cell = ws.cell(row=row, column=col)
     target_cell = cell
 
-    # Handle merged cells
     if isinstance(cell, MergedCell):
         for merged_range in ws.merged_cells.ranges:
             if cell.coordinate in merged_range:
                 target_cell = ws.cell(row=merged_range.min_row, column=merged_range.min_col)
                 break
     
-    # Write Value
     target_cell.value = value
     
-    # Apply Alignment if requested
     if align_center:
         target_cell.alignment = Alignment(horizontal='center', vertical='center')
 
@@ -803,15 +719,9 @@ def copy_row_style(ws, source_row_idx, target_row_idx):
             tgt_cell.alignment = copy(src_cell.alignment)
 
 def write_section_totals(ws, total_row_idx, data_rows, col_map):
-    """
-    Calculates sums for Units, Lec, Lab, and Students.
-    Writes standard totals to the TOTAL row.
-    Writes the GRAND TOTAL (Lec + Lab) to the row BELOW the Total row.
-    """
     if not data_rows or not col_map:
         return
 
-    # 1. Calculate Sums
     t_units = 0
     t_lec = 0
     t_lab = 0
@@ -831,7 +741,6 @@ def write_section_totals(ws, total_row_idx, data_rows, col_map):
         t_lab += val('lab')
         t_students += val('students')
 
-    # 2. Write STANDARD TOTALS to the "TOTAL" Row (total_row_idx)
     if 'units' in col_map:
         safe_write(ws, total_row_idx, col_map['units'], t_units, align_center=True)
 
@@ -844,19 +753,12 @@ def write_section_totals(ws, total_row_idx, data_rows, col_map):
     if 'students' in col_map:
         safe_write(ws, total_row_idx, col_map['students'], t_students, align_center=True)
 
-    # 3. Write GRAND TOTAL (Lec + Lab) to the NEXT ROW (total_row_idx + 1)
     if 'lec' in col_map:
         grand_total = t_lec + t_lab
-        # We write this into the 'lec' column on the row BELOW the totals
         safe_write(ws, total_row_idx + 1, col_map['lec'], grand_total, align_center=True)
 
 
 def fill_list_section(ws, data_rows, start_search_row=1):
-    """
-    Fills data and finds the correct TOTAL row index.
-    Returns: (total_row_idx, col_map)
-    """
-    # 1. Find the Template/Placeholder Row
     template_row_idx = None
     col_map = {} 
 
@@ -874,22 +776,16 @@ def fill_list_section(ws, data_rows, start_search_row=1):
             col_map = possible_map
             break
     
-    # If no placeholder found, return inputs so we don't crash
     if not template_row_idx:
         return start_search_row, {}
 
-    # If no data, we still need to find the Total row to return its position
     if not data_rows:
-        # Scan down to find "TOTAL"
         for r_idx in range(template_row_idx + 1, template_row_idx + 20):
-            # Check first few columns for "TOTAL"
-            # Assuming TOTAL is in column B (index 2) based on your template
             cell_val = ws.cell(row=r_idx, column=2).value
             if cell_val and "TOTAL" in str(cell_val).upper():
                 return r_idx, col_map
         return template_row_idx, col_map
 
-    # 2. Prepare for Insertion
     num_to_insert = len(data_rows) - 1
     
     if num_to_insert > 0:
@@ -921,7 +817,6 @@ def fill_list_section(ws, data_rows, start_search_row=1):
                 ws.merge_cells(start_row=target_row, start_column=min_col, 
                                end_row=target_row, end_column=max_col)
 
-    # 3. Write Data
     for i, row_data in enumerate(data_rows):
         current_row = template_row_idx + i
         for key, val in row_data.items():
@@ -933,21 +828,15 @@ def fill_list_section(ws, data_rows, start_search_row=1):
                 col_idx = col_map[key_lower]
                 safe_write(ws, current_row, col_idx, val)
 
-    # 4. Find the TOTAL Row
-    # Start searching immediately after the last data row
     last_data_row = template_row_idx + len(data_rows) - 1
     total_row_idx = None
 
-    # Scan next 10 rows to find the word "TOTAL"
     for r_idx in range(last_data_row + 1, last_data_row + 10):
-        # We check column 2 (B) or 1 (A) or search the row
-        # Based on your template, "TOTAL" is in Column B
         val = ws.cell(row=r_idx, column=2).value 
         if val and "TOTAL" in str(val).upper():
             total_row_idx = r_idx
             break
     
-    # If we couldn't find "TOTAL", default to the next row (fallback)
     if not total_row_idx:
         total_row_idx = last_data_row + 1
 
@@ -963,7 +852,7 @@ def previewWorkload(request):
     if login_entry:
         instructor = login_entry.instructor
 
-    # Semester & Curriculum logic (Keep as is)
+
     semester_id = request.GET.get("semester")
     if semester_id:
         current_semester = Semester.objects.filter(pk=semester_id).first()
@@ -980,7 +869,6 @@ def previewWorkload(request):
     dept_head_obj = candidates.order_by('userlogin__user__is_superuser').first()
     dept_head_name = dept_head_obj.full_name.upper() if dept_head_obj else "TBA"
 
-    # --- INVOLVEMENT LOGIC ---
     inv_context = get_instructor_involvement(instructor)
     
     admin_h = float(inv_context['inv_admin'] or 0)
@@ -988,7 +876,6 @@ def previewWorkload(request):
     extension_h = float(inv_context['inv_extension'] or 0)
     instructional_h = float(inv_context['inv_consultation'] or 0)
     
-    # --- SCHEDULES ---
     all_schedules = Schedule.objects.filter(
         instructor=instructor,
         semester=current_semester,
@@ -998,13 +885,12 @@ def previewWorkload(request):
     reg_schedules_list = []
     over_schedules_list = []
     
-    # COUNTING LOGIC
     unique_sections = set()
-    unique_subjects = set()  # For Preparations
+    unique_subjects = set()
 
     for s in all_schedules:
         unique_sections.add(s.section.sectionId)
-        unique_subjects.add(s.subject.subjectId) # distinct subjects = no. of preparations
+        unique_subjects.add(s.subject.subjectId)
         
         if s.isOvertime:
             over_schedules_list.append(s)
@@ -1012,7 +898,7 @@ def previewWorkload(request):
             reg_schedules_list.append(s)
             
     no_of_classes = len(unique_sections)
-    no_of_preps = len(unique_subjects) # New Variable
+    no_of_preps = len(unique_subjects)
 
     def group_and_process(s_list):
         grouped = defaultdict(list)
@@ -1038,7 +924,6 @@ def previewWorkload(request):
                 except ValueError: pass
         return total
 
-    # Totals
     reg_lec = sum_prop(regular_rows, 'lec')
     reg_lab = sum_prop(regular_rows, 'lab')
     
@@ -1055,7 +940,7 @@ def previewWorkload(request):
         'total': format_number(total_involvement),
         'note_text': "COE GAD Coordinator" if float(admin_h) > 0 else "", 
         'no_of_classes': no_of_classes,
-        'no_of_preps': no_of_preps  # Pass to template
+        'no_of_preps': no_of_preps
     }
 
     context = {
@@ -1085,6 +970,7 @@ def previewWorkload(request):
     }
 
     return render(request, 'scheduler/workload_preview.html', context)
+
 
 @login_required
 def exportWorkloadExcel(request):
@@ -1146,7 +1032,6 @@ def exportWorkloadExcel(request):
             'header_college': request.POST.get('header_college'),
             'header_date': request.POST.get('header_date'),
             
-            # INVOLVEMENT VARIABLES
             'inv_admin': to_number(request.POST.get('inv_admin', '')),
             'inv_research': to_number(request.POST.get('inv_research', '')),
             'inv_extension': to_number(request.POST.get('inv_extension', '')),
@@ -1155,11 +1040,9 @@ def exportWorkloadExcel(request):
             'inv_total': to_number(request.POST.get('inv_total', '')),
             'inv_note': request.POST.get('inv_note', ''),
 
-            # NEW: Split Classes and Preps
             'inv_classes': to_number(request.POST.get('inv_classes', '')),
             'inv_preps': to_number(request.POST.get('inv_preps', '')),
 
-            # SIGNATORIES
             'sig_faculty': request.POST.get('sig_faculty'),
             'sig_dept_head': request.POST.get('sig_dept_head'),
             'sig_dean': request.POST.get('sig_dean'),
@@ -1167,18 +1050,15 @@ def exportWorkloadExcel(request):
             'sig_president': request.POST.get('sig_president'),
         }
 
-        # 1. Map Variables to Single Cells
         for row in ws.iter_rows():
             for cell in row:
                 if cell.value in variables:
                     safe_write(ws, cell.row, cell.column, variables[cell.value])
 
-        # 2. Fill Regular Section
         reg_total_row_idx, reg_col_map = fill_list_section(ws, regular_rows, start_search_row=1)
         if regular_rows and reg_col_map:
             write_section_totals(ws, reg_total_row_idx, regular_rows, reg_col_map)
 
-        # 3. Fill Overload Section
         over_total_row_idx, over_col_map = fill_list_section(ws, overload_rows, start_search_row=reg_total_row_idx + 2)
         if overload_rows and over_col_map:
             write_section_totals(ws, over_total_row_idx, overload_rows, over_col_map)
@@ -1197,7 +1077,6 @@ def exportWorkloadExcel(request):
 @login_required
 @has_role('deptHead')
 def sectionBlockScheduler(request):
-    # --- 1. SEMESTER SELECTION LOGIC ---
     semesters = Semester.objects.all().order_by('-academicYear', '-term')
     active_semester = Semester.objects.filter(isActive=True).first()
     
@@ -1211,12 +1090,9 @@ def sectionBlockScheduler(request):
             current_semester = active_semester
     else:
         current_semester = active_semester
-    # -----------------------------------
-
-    # 2. Fetch Finalized Schedules (Filtered by Semester) to build Block List
     finalized = Schedule.objects.filter(
         status='finalized',
-        semester=current_semester  # <--- Filter blocks by semester
+        semester=current_semester
     ).select_related('section', 'section__subject')
     
     unique_blocks = set()
@@ -1225,7 +1101,6 @@ def sectionBlockScheduler(request):
         raw_year = str(sched.section.subject.yearLevel)
         raw_code = str(sched.section.sectionCode).strip()
 
-        # Logic to extract "A" from "IT 123-A"
         if '-' in raw_code:
             block_letter = raw_code.split('-')[-1].strip()
         else:
@@ -1240,10 +1115,8 @@ def sectionBlockScheduler(request):
             'value': f"{year}__{letter}"
         })
 
-    # 3. Handle Block Selection
     selected_val = request.GET.get('block')
     
-    # Validation: If no block selected or selected block is invalid for this semester, default to first
     valid_values = [b['value'] for b in blocks]
     if (not selected_val or selected_val not in valid_values) and blocks:
         selected_val = blocks[0]['value']
@@ -1259,34 +1132,30 @@ def sectionBlockScheduler(request):
             year, letter = selected_val.split('__', 1)
             selected_label = f"{year}-{letter}"
 
-            # A. Fetch Normal IT/Major Schedules (Filtered by Semester)
             schedules = Schedule.objects.filter(
                 status='finalized',
                 section__subject__yearLevel=year,
-                semester=current_semester # <--- Filter IT schedules
+                semester=current_semester
             ).filter(
                 Q(section__sectionCode=letter) |                 
                 Q(section__sectionCode__endswith=f"-{letter}")   
             ).select_related('subject', 'instructor', 'room', 'section')
 
-            # B. Fetch GenEd Schedules (Filtered by Semester)
-            # Using the model definition you provided
             gen_eds = GenEdSchedule.objects.filter(
                 status='active',
                 yearLevel=year,
                 sectionCode=letter,
-                semester=current_semester # <--- Filter GenEd schedules
+                semester=current_semester
             )
 
         except ValueError:
             pass
 
-    # Generate Time Objects
     time_slots = [time(h, 0) for h in range(7, 21)]
 
     context = {
-        'semesters': semesters,                # New
-        'selected_semester': current_semester, # New
+        'semesters': semesters,
+        'selected_semester': current_semester,
         'blocks': blocks,
         'selectedBlock': selected_val,
         'selectedBlockLabel': selected_label,
@@ -1299,14 +1168,11 @@ def sectionBlockScheduler(request):
     return render(request, 'scheduler/sectionBlockScheduler.html', context)
 
 
-
 @login_required
 @has_role('deptHead')
 def roomScheduler(request):
-    # 1. Fetch ALL Rooms
     rooms = Room.objects.filter(isActive=True).order_by('building', 'roomCode')
     
-    # --- SEMESTER SELECTION ---
     semesters = Semester.objects.all().order_by('-academicYear', '-term')
     active_semester = Semester.objects.filter(isActive=True).first()
     
@@ -1321,25 +1187,20 @@ def roomScheduler(request):
     else:
         current_semester = active_semester
 
-    # --- SCHEDULE TYPE FILTER (Sidebar Only) ---
     selected_room_type = request.GET.get('room_type', '') # 'lab', 'lecture', or ''
 
     selected_room_id = request.GET.get('room')
     selected_room_label = ""
     schedules = []
 
-    # A. Fetch Selected Room Data
     if selected_room_id:
         try:
             current_room = rooms.get(roomId=selected_room_id)
             selected_room_label = f"{current_room.roomCode} - {current_room.building}"
             
-            # Use 'type' field instead of 'isLab'
             if current_room.type == 'laboratory':
                 selected_room_label += " (Lab)"
 
-            # Filter by Room AND Semester
-            # GRID: SHOW ALL SCHEDULES (No Type Filtering here)
             schedules_qs = Schedule.objects.filter(
                 status='finalized',
                 room=current_room,
@@ -1361,7 +1222,6 @@ def roomScheduler(request):
         except Room.DoesNotExist:
             pass
 
-    # B. POPULATE SIDEBAR (TBA or NULL rooms)
     tba_schedules = []
     
     if current_semester:
@@ -1372,7 +1232,6 @@ def roomScheduler(request):
             Q(room__roomCode='TBA') | Q(room__isnull=True)
         ).select_related('subject', 'instructor', 'section').order_by('subject__code')
 
-        # --- APPLY SCHEDULE TYPE FILTER (SIDEBAR ONLY) ---
         if selected_room_type == 'lab':
             tba_qs = tba_qs.filter(scheduleType='lab')
         elif selected_room_type == 'lecture':
@@ -1411,34 +1270,17 @@ def roomScheduler(request):
 @login_required
 @has_role('deptHead')
 def getInstructorConflicts(request):
-    """
-    Returns 'busySlots' based on the view context (source) and selected semester.
-    
-    Logic:
-    - If source == 'instructorLoad': Checks conflicts for the SECTION (Students).
-      (Because you can visually see the Instructor's timeline, but not the students').
-      
-    - If source == 'sectionBlockScheduler': Checks conflicts for the INSTRUCTOR.
-      (Because you can visually see the Section's timeline, but not the instructor's).
-      
-    - If source == 'roomScheduler': Checks conflicts for BOTH.
-    """
     instructorId = request.GET.get('instructorId')
     currentScheduleId = request.GET.get('scheduleId')
     
-    # New parameters for context and filtering
-    source_view = request.GET.get('source') # e.g. 'instructorLoad', 'sectionBlockScheduler', 'roomScheduler'
+    source_view = request.GET.get('source')
     semester_id = request.GET.get('semester') 
 
     busySlots = []
 
     try:
-        # Get the schedule we are currently moving
         current_sched = Schedule.objects.get(scheduleId=currentScheduleId)
         
-        # 1. Determine the Semester Context
-        # We prioritize the 'semester' passed from the selector. 
-        # If missing, fallback to the schedule's existing semester.
         target_semester = current_sched.semester
         if semester_id:
             try:
@@ -1446,10 +1288,8 @@ def getInstructorConflicts(request):
             except Semester.DoesNotExist:
                 pass
 
-        # --- HELPER FUNCTIONS ---
 
         def check_instructor_conflicts():
-            """Finds times when this Instructor is teaching elsewhere in this semester."""
             if instructorId:
                 inst_conflicts = Schedule.objects.filter(
                     instructor_id=instructorId,
@@ -1458,7 +1298,6 @@ def getInstructorConflicts(request):
                 ).exclude(scheduleId=currentScheduleId).select_related('subject', 'section')
 
                 for c in inst_conflicts:
-                    # Parse section name for the error message
                     raw = str(c.section.sectionCode).strip()
                     letter = raw.split('-')[-1].strip() if '-' in raw else raw
                     short_sec = f"{c.subject.yearLevel}{letter}"
@@ -1471,7 +1310,6 @@ def getInstructorConflicts(request):
                     })
 
         def check_section_conflicts():
-            """Finds times when this Student Block is in another class in this semester."""
             current_year = current_sched.section.subject.yearLevel
             raw_code = str(current_sched.section.sectionCode).strip()
             block_letter = raw_code.split('-')[-1].strip() if '-' in raw_code else raw_code
@@ -1482,7 +1320,6 @@ def getInstructorConflicts(request):
                 section__subject__yearLevel=current_year,
                 dayOfWeek__in=['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
             ).filter(
-                # Match Block Letter (handles "B" or "Subject-B")
                 Q(section__sectionCode=block_letter) |
                 Q(section__sectionCode__endswith=f"-{block_letter}")
             ).exclude(scheduleId=currentScheduleId).select_related('subject', 'room')
@@ -1498,26 +1335,17 @@ def getInstructorConflicts(request):
                     'reason': reason
                 })
 
-        # --- LOGIC SWITCHING BASED ON SOURCE ---
-
         if source_view == 'instructorLoad':
-            # View: Instructor Load -> User sees Instructor's row. 
-            # Need: Section Conflicts.
             check_section_conflicts()
             
         elif source_view == 'sectionBlockScheduler':
-            # View: Section Scheduler -> User sees Section's row. 
-            # Need: Instructor Conflicts.
             check_instructor_conflicts()
             
         elif source_view == 'roomScheduler':
-            # View: Room Scheduler -> User sees Room's row. 
-            # Need: Both.
             check_instructor_conflicts()
             check_section_conflicts()
             
         else:
-            # Fallback if source is not provided (Legacy behavior): Check Both
             check_instructor_conflicts()
             check_section_conflicts()
 
@@ -1542,9 +1370,6 @@ def updateScheduleSlot(request):
 
         sched = Schedule.objects.get(scheduleId=scheduleId)
         
-        # --- 1. DETERMINE TARGETS ---
-        
-        # A. INSTRUCTOR
         if newInstructorId == 'UNASSIGN':
             target_instructor = None
         elif newInstructorId:
@@ -1552,24 +1377,20 @@ def updateScheduleSlot(request):
         else:
             target_instructor = sched.instructor 
 
-        # B. ROOM
         if newRoomId == 'TBA':
              try: target_room = Room.objects.get(roomCode='TBA')
              except: target_room = None
         elif newRoomId:
              target_room = Room.objects.get(roomId=newRoomId)
         else:
-             # CHECK: Are we moving the time?
              is_time_change = (newDay is not None) or (newStartTime is not None)
              
              if is_time_change:
-                 # Auto-drop to TBA if moving time in Instructor View to avoid ghost conflicts
                  try: target_room = Room.objects.get(roomCode='TBA')
                  except: target_room = None
              else:
                  target_room = sched.room
 
-        # --- 2. TBA BYPASS ---
         is_tba = (target_room is None) or (target_room.roomCode == 'TBA')
 
         if is_tba:
@@ -1578,12 +1399,9 @@ def updateScheduleSlot(request):
              if newDay: sched.dayOfWeek = newDay
              if newEndTime: sched.endTime = newEndTime
              
-             # Time & Overtime Update Logic
              if newStartTime: 
                  sched.startTime = newStartTime
                  
-                 # AUTO-UPDATE OVERTIME FLAG (Ends > 5pm OR Weekend)
-                 # We check the END time. If it goes past 17:00, the whole block is Overtime.
                  end_dt = datetime.strptime(newEndTime, "%H:%M").time()
                  is_weekend = newDay in ['Saturday', 'Sunday']
                  is_past_5pm = end_dt > time(17, 0)
@@ -1596,15 +1414,12 @@ def updateScheduleSlot(request):
              sched.save()
              return JsonResponse({'success': True})
 
-        # --- 3. CONFLICT CHECKS (Only runs if Room is NOT TBA) ---
-        
-        # Check A: Instructor Conflict
         if target_instructor:
             instructor_conflict = Schedule.objects.filter(
                 instructor=target_instructor,
                 dayOfWeek=newDay,
                 status='finalized',
-                semester=sched.semester  # <--- FIXED: Added Semester Check
+                semester=sched.semester 
             ).exclude(scheduleId=scheduleId).filter(
                 startTime__lt=newEndTime,
                 endTime__gt=newStartTime
@@ -1618,7 +1433,6 @@ def updateScheduleSlot(request):
                     'message': f"Instructor Conflict! {target_instructor.full_name} is already teaching {instructor_conflict.subject.code} ({instructor_conflict.subject.yearLevel}{c_letter})."
                 })
 
-        # Check B: Section Conflict
         current_year = sched.section.subject.yearLevel
         raw_code = str(sched.section.sectionCode).strip()
         block_letter = raw_code.split('-')[-1].strip() if '-' in raw_code else raw_code
@@ -1628,7 +1442,7 @@ def updateScheduleSlot(request):
             status='finalized',
             dayOfWeek=newDay,
             section__subject__yearLevel=current_year,
-            semester=sched.semester  # <--- FIXED: Added Semester Check
+            semester=sched.semester
         ).filter(
             Q(section__sectionCode=block_letter) |
             Q(section__sectionCode__endswith=f"-{block_letter}")
@@ -1644,13 +1458,12 @@ def updateScheduleSlot(request):
                 'message': f"Section Conflict! Section {formatted_block} is already taking '{section_conflict.subject.code}' in {conflict_room}."
             })
 
-        # Check C: Room Conflict
         if target_room: 
             room_conflict = Schedule.objects.filter(
                 room=target_room,
                 dayOfWeek=newDay,
                 status='finalized',
-                semester=sched.semester  # <--- FIXED: Added Semester Check
+                semester=sched.semester
             ).exclude(scheduleId=scheduleId).filter(
                 startTime__lt=newEndTime,
                 endTime__gt=newStartTime
@@ -1671,20 +1484,16 @@ def updateScheduleSlot(request):
                         'message': f"Slot occupied by {room_conflict.subject.code} - {room_conflict.subject.yearLevel}{c_letter}. Swap and move them to TBA?"
                     })
 
-        # --- 4. SAVE (WITH AUTO-OVERTIME UPDATE) ---
         if newInstructorId is not None: sched.instructor = target_instructor
         sched.room = target_room
         sched.dayOfWeek = newDay
         sched.startTime = newStartTime
         sched.endTime = newEndTime
 
-        # AUTO-UPDATE OVERTIME FLAG
-        # Parse end time to check if it exceeds 17:00
         end_dt = datetime.strptime(newEndTime, "%H:%M").time()
         is_weekend = newDay in ['Saturday', 'Sunday']
         is_past_5pm = end_dt > time(17, 0)
         
-        # Set Overtime if Ends after 5pm OR is Weekend
         if is_past_5pm or is_weekend:
             sched.isOvertime = True
         else:
@@ -1700,10 +1509,6 @@ def updateScheduleSlot(request):
 
 @login_required
 def getInstructorLoadStats(request):
-    """
-    API Endpoint for live updates.
-    Calculates load based on 5:00 PM cutoff OR Weekend (Sat/Sun).
-    """
     instructor_id = request.GET.get('instructorId')
     semester_id = request.GET.get('semesterId')
 
@@ -1718,7 +1523,6 @@ def getInstructorLoadStats(request):
         overload_cap = 0.0    
         emp_type = instructor.employmentType 
 
-        # --- LIMITS LOGIC ---
         if emp_type == 'permanent':
             if instructor.designation:
                 reg_limit = float(instructor.designation.instructionHours)
@@ -1738,7 +1542,6 @@ def getInstructorLoadStats(request):
 
         max_total_limit = reg_limit + overload_cap
 
-        # --- SEMESTER & SCHEDULES ---
         if semester_id:
             try:
                 target_semester = Semester.objects.get(semesterId=semester_id)
@@ -1768,14 +1571,12 @@ def getInstructorLoadStats(request):
             load_key = (s.section.sectionId, s.scheduleType)
             
             if load_key not in processed_load_keys:
-                # RULE: Overtime if (>= 5PM) OR (Weekend)
                 is_evening = False
                 if s.startTime and s.startTime >= evening_cutoff:
                     is_evening = True
                 
                 is_weekend = s.dayOfWeek in ['Saturday', 'Sunday']
 
-                # STRICT CHECK: We calculate based on properties, ignoring stale DB flags
                 if is_evening or is_weekend:
                     current_overload_load += units
                 else:
@@ -1783,7 +1584,6 @@ def getInstructorLoadStats(request):
                 
                 processed_load_keys.add(load_key)
 
-        # Spillover Rule
         if current_normal_load > reg_limit:
             excess = current_normal_load - reg_limit
             current_overload_load += excess
@@ -1818,7 +1618,6 @@ def getInstructorLoadStats(request):
 @login_required
 @has_role('deptHead')
 def instructorLoad(request):
-    # 1. Fetch Instructors
     instructors = Instructor.objects.filter(
         userlogin__user__isActive=True
     ).distinct().order_by('instructorId')
@@ -1837,7 +1636,6 @@ def instructorLoad(request):
         })
     instructor_list.sort(key=lambda x: x['full_name'])
 
-    # --- SEMESTER SELECTION ---
     semesters = Semester.objects.all().order_by('-academicYear', '-term')
     active_semester = Semester.objects.filter(isActive=True).first()
     
@@ -1856,7 +1654,6 @@ def instructorLoad(request):
     selected_instructor_label = ""
     schedules = []
     
-    # Defaults
     current_load = 0.0
     current_normal_load = 0.0  
     current_overload_load = 0.0
@@ -1868,7 +1665,6 @@ def instructorLoad(request):
     match_scores = {}
     top_matches = [] 
 
-    # 2. CONFIGURATION
     config = InstructorSchedulingConfiguration.objects.filter(is_active=True).first()
 
     if selected_instructor_id and current_semester:
@@ -1876,7 +1672,6 @@ def instructorLoad(request):
             current_instructor = instructors.get(instructorId=selected_instructor_id)
             selected_instructor_label = get_instructor_name(current_instructor)
             
-            # Match Scores Logic
             raw_matches = InstructorSubjectMatch.objects.filter(
                 instructor=current_instructor
             ).select_related('subject', 'latestHistory').order_by('-generatedAt')
@@ -1901,7 +1696,6 @@ def instructorLoad(request):
                     })
             top_matches.sort(key=lambda x: x['score'], reverse=True)
 
-            # 3. CALCULATE LIMITS
             emp_type = current_instructor.employmentType 
 
             if emp_type == 'permanent':
@@ -1923,7 +1717,6 @@ def instructorLoad(request):
 
             max_total_limit = reg_limit + overload_cap
 
-            # 4. FETCH ASSIGNED SCHEDULES
             schedules_qs = Schedule.objects.filter(
                 status='finalized',
                 instructor=current_instructor,
@@ -1965,7 +1758,6 @@ def instructorLoad(request):
                 sched.match_score = match_scores.get(sched.subject.subjectId, 0)
                 schedules.append(sched)
 
-            # Spillover Rule
             if current_normal_load > reg_limit:
                 excess = current_normal_load - reg_limit
                 current_overload_load += excess
@@ -1983,7 +1775,6 @@ def instructorLoad(request):
         except Instructor.DoesNotExist:
             pass
 
-    # Unassigned Sections
     unassigned_schedules = []
     if current_semester:
         unassigned_qs = Schedule.objects.filter(
@@ -2035,13 +1826,9 @@ def instructorLoad(request):
 @login_required
 @has_role('deptHead')
 def previewRoomSchedule(request, roomId, semesterId):
-    """
-    Generates the static, printable schedule matrix (A4 Landscape).
-    """
     room = get_object_or_404(Room, pk=roomId)
     semester = get_object_or_404(Semester, pk=semesterId)
     
-    # Fetch Dept Head
     deptHead = Instructor.objects.filter(
         userlogin__user__roles__name='deptHead', 
         userlogin__user__isActive=True
@@ -2065,7 +1852,6 @@ def previewRoomSchedule(request, roomId, semesterId):
     gridRows = []
     skipCounts = {day: 0 for day in days}
     
-    # Define time boundaries
     today = datetime.today()
     currentDt = datetime.combine(today, time(startHour, 0))
     endDt = datetime.combine(today, time(endHour, 0))
@@ -2074,10 +1860,7 @@ def previewRoomSchedule(request, roomId, semesterId):
     while currentDt < endDt:
         currentTimeStr = currentDt.strftime("%H:%M")
         
-        # --- LUNCH BREAK (12:00 - 1:00) ---
         if currentDt.hour == 12:
-            # SAFETY RESET: Ensure no 'skip counts' carry over into/past lunch
-            # This fixes the issue where morning classes create ghost columns in the afternoon
             for day in days:
                 skipCounts[day] = 0
                 
@@ -2085,10 +1868,8 @@ def previewRoomSchedule(request, roomId, semesterId):
             currentDt += timedelta(hours=1)
             continue
 
-        # --- STANDARD ROW ---
         slotEnd = currentDt + timedelta(minutes=30)
         
-        # Windows-safe time formatting
         startStr = currentDt.strftime('%I:%M').lstrip('0')
         endStr = slotEnd.strftime('%I:%M').lstrip('0')
         timeLabel = f"{startStr}-{endStr}"
@@ -2107,19 +1888,15 @@ def previewRoomSchedule(request, roomId, semesterId):
                     sStart = datetime.combine(today, sched.startTime)
                     sEnd = datetime.combine(today, sched.endTime)
                     
-                    # --- CLAMPING LOGIC (The Fix) ---
-                    # 1. If class starts before lunch but ends after, cut it at 12:00
                     if sStart < lunchStart and sEnd > lunchStart:
                         sEnd = lunchStart
                     
-                    # 2. If class goes beyond the grid end time (9 PM), cut it there
                     if sEnd > endDt:
                         sEnd = endDt
 
                     durationMins = (sEnd - sStart).total_seconds() / 60
                     rowSpan = int(durationMins / 30)
                     
-                    # --- SECTION FORMATTING (3C) ---
                     rawSection = str(sched.section.sectionCode).strip()
                     if '-' in rawSection:
                         sectionLetter = rawSection.split('-')[-1].strip()
@@ -2156,11 +1933,6 @@ def previewRoomSchedule(request, roomId, semesterId):
 @login_required
 @has_role('deptHead')
 def previewSectionBlockSchedule(request, blockStr, semesterId):
-    """
-    Generates the printable schedule matrix for a specific Section Block.
-    (Matches the Logic of previewRoomSchedule)
-    """
-    # 1. Parse Block String (e.g., "1__A" -> Year=1, Letter=A)
     try:
         year, letter = blockStr.split('__', 1)
         label = f"{year}-{letter}"
@@ -2169,14 +1941,11 @@ def previewSectionBlockSchedule(request, blockStr, semesterId):
 
     semester = get_object_or_404(Semester, pk=semesterId)
     
-    # 2. Fetch Dept Head
     deptHead = Instructor.objects.filter(
         userlogin__user__roles__name='deptHead', 
         userlogin__user__isActive=True
     ).order_by('userlogin__user__is_superuser').first()
 
-    # 3. Fetch Data (Majors + GenEds)
-    # A. Major Schedules
     major_schedules = Schedule.objects.filter(
         status='finalized',
         section__subject__yearLevel=year,
@@ -2186,7 +1955,6 @@ def previewSectionBlockSchedule(request, blockStr, semesterId):
         Q(section__sectionCode__endswith=f"-{letter}")   
     ).select_related('subject', 'instructor', 'room', 'section')
 
-    # B. GenEd Schedules
     gen_eds = GenEdSchedule.objects.filter(
         status='active',
         yearLevel=year,
@@ -2194,15 +1962,11 @@ def previewSectionBlockSchedule(request, blockStr, semesterId):
         semester=semester
     )
 
-    # 4. Build Unified Schedule Map
     scheduleMap = {}
     
-    # Map Majors
     for sched in major_schedules:
         key = (sched.dayOfWeek, sched.startTime.strftime("%H:%M"))
         
-        # --- UPDATE: Combine Subject and Type (e.g., "IT 101 - Lecture") ---
-        # Using .title() to convert 'lab' -> 'Lab' and 'lecture' -> 'Lecture'
         subject_display = f"{sched.subject.code} - {sched.scheduleType.title()}"
 
         scheduleMap[key] = {
@@ -2214,11 +1978,9 @@ def previewSectionBlockSchedule(request, blockStr, semesterId):
             'isGenEd': False
         }
 
-    # Map GenEds
     for gen in gen_eds:
         key = (gen.day, gen.startTime.strftime("%H:%M"))
         
-        # --- UPDATE: GenEds are typically Lectures ---
         subject_display = f"{gen.subjectCode} - Lecture"
 
         scheduleMap[key] = {
@@ -2230,7 +1992,6 @@ def previewSectionBlockSchedule(request, blockStr, semesterId):
             'isGenEd': True
         }
 
-    # 5. Grid Generation (Exact Logic from previewRoomSchedule)
     days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
     gridRows = []
     skipCounts = {day: 0 for day in days}
@@ -2246,14 +2007,12 @@ def previewSectionBlockSchedule(request, blockStr, semesterId):
     while currentDt < endDt:
         currentTimeStr = currentDt.strftime("%H:%M")
         
-        # --- LUNCH BREAK (12:00 - 1:00) ---
         if currentDt.hour == 12:
             for day in days: skipCounts[day] = 0
             gridRows.append({'isLunch': True, 'label': '12:00-1:00', 'cells': []})
             currentDt += timedelta(hours=1)
             continue
 
-        # --- STANDARD ROW ---
         slotEnd = currentDt + timedelta(minutes=30)
         startStr = currentDt.strftime('%I:%M').lstrip('0')
         endStr = slotEnd.strftime('%I:%M').lstrip('0')
@@ -2273,20 +2032,18 @@ def previewSectionBlockSchedule(request, blockStr, semesterId):
                     sStart = datetime.combine(today, data['startTime'])
                     sEnd = datetime.combine(today, data['endTime'])
                     
-                    # Clamping
                     if sStart < lunchStart and sEnd > lunchStart: sEnd = lunchStart
                     if sEnd > endDt: sEnd = endDt
 
                     durationMins = (sEnd - sStart).total_seconds() / 60
                     rowSpan = int(durationMins / 30)
                     
-                    # Add Cell
                     rowObj['cells'].append({
                         'type': 'event',
                         'rowSpan': rowSpan,
-                        'line1': data['subjectCode'],     # "Subject - Type"
-                        'line2': data['roomName'],        # Room Name
-                        'line3': data['instructorName'],  # Instructor
+                        'line1': data['subjectCode'],  
+                        'line2': data['roomName'],
+                        'line3': data['instructorName'],
                         'isGenEd': data['isGenEd']
                     })
                     skipCounts[day] = rowSpan - 1
@@ -2297,7 +2054,7 @@ def previewSectionBlockSchedule(request, blockStr, semesterId):
         currentDt += timedelta(minutes=30)
 
     context = {
-        'blockLabel': label,  # Used in template title
+        'blockLabel': label,
         'semester': semester,
         'deptHead': deptHead,
         'days': days,

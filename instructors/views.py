@@ -30,7 +30,7 @@ def instructorDashboard(request):
 # ---------- Instructor Experience ----------
 
 @login_required
-# @has_role('instructor') 
+@has_role('instructor') 
 def experienceList(request):
     login = UserLogin.objects.filter(user=request.user).first()
     if not login or not login.instructor:
@@ -49,10 +49,10 @@ def experienceList(request):
         experiences = experiences.filter(
             Q(title__icontains=query) |
             Q(organization__icontains=query) |
-            Q(location__icontains=query) | # Added search by location
+            Q(location__icontains=query) |
             Q(description__icontains=query) |
             Q(experienceType__icontains=query) |
-            Q(employmentType__icontains=query) | # Added search by employment type
+            Q(employmentType__icontains=query) |
             Q(relatedSubjects__name__icontains=query) |
             Q(relatedSubjects__code__icontains=query)
         ).distinct()
@@ -67,7 +67,7 @@ def experienceList(request):
 
 
 @login_required
-# @has_role('instructor')
+@has_role('instructor')
 def experienceListLive(request):
     login = UserLogin.objects.filter(user=request.user).first()
     if not login or not login.instructor:
@@ -85,10 +85,10 @@ def experienceListLive(request):
         experiences = experiences.filter(
             Q(title__icontains=query) |
             Q(organization__icontains=query) |
-            Q(location__icontains=query) | # Added search by location
+            Q(location__icontains=query) |
             Q(description__icontains=query) |
             Q(experienceType__icontains=query) |
-            Q(employmentType__icontains=query) | # Added search by employment type
+            Q(employmentType__icontains=query) |
             Q(relatedSubjects__name__icontains=query) |
             Q(relatedSubjects__code__icontains=query)
         ).distinct()
@@ -110,7 +110,7 @@ def experienceListLive(request):
 
 
 @login_required
-# @has_role('instructor')
+@has_role('instructor')
 def experienceCreate(request):
     login = UserLogin.objects.filter(user=request.user).first()
     if not login or not login.instructor:
@@ -122,13 +122,13 @@ def experienceCreate(request):
     if request.method == 'POST':
         title = request.POST.get('title')
         organization = request.POST.get('organization')
-        location = request.POST.get('location') # New field
+        location = request.POST.get('location')
         startDate = request.POST.get('startDate')
         endDate = request.POST.get('endDate')
         description = request.POST.get('description')
         experienceType = request.POST.get('experienceType')
-        employmentType = request.POST.get('employmentType') # New field
-        relatedSubjectIds = request.POST.getlist('relatedSubjects') # Use standard list retrieval
+        employmentType = request.POST.get('employmentType')
+        relatedSubjectIds = request.POST.getlist('relatedSubjects')
         
         # Handle current job checkbox
         isCurrent = request.POST.get('isCurrent') == 'on'
@@ -167,7 +167,7 @@ def experienceCreate(request):
 
 
 @login_required
-# @has_role('instructor')
+@has_role('instructor')
 def experienceUpdate(request, experienceId):
     login = UserLogin.objects.filter(user=request.user).first()
     if not login or not login.instructor:
@@ -180,10 +180,9 @@ def experienceUpdate(request, experienceId):
     if request.method == 'POST':
         experience.title = request.POST.get('title')
         experience.organization = request.POST.get('organization')
-        experience.location = request.POST.get('location') # New field
+        experience.location = request.POST.get('location')
         experience.startDate = request.POST.get('startDate')
         
-        # Handle current job logic
         isCurrent = request.POST.get('isCurrent') == 'on'
         experience.isCurrent = isCurrent
         
@@ -195,7 +194,7 @@ def experienceUpdate(request, experienceId):
 
         experience.description = request.POST.get('description')
         experience.experienceType = request.POST.get('experienceType')
-        experience.employmentType = request.POST.get('employmentType') # New field
+        experience.employmentType = request.POST.get('employmentType')
         
         relatedSubjectIds = request.POST.getlist('relatedSubjects')
 
@@ -256,8 +255,8 @@ def credentialList(request):
     if query:
         credentials = credentials.filter(
             Q(title__icontains=query) |
-            Q(credentialType__icontains=query) | # Updated field name
-            Q(issuer__icontains=query) |         # Updated field name
+            Q(credentialType__icontains=query) |
+            Q(issuer__icontains=query) |
             Q(relatedSubjects__code__icontains=query) |
             Q(relatedSubjects__name__icontains=query)
         ).distinct()
@@ -272,7 +271,7 @@ def credentialList(request):
 
 
 @login_required
-# @has_role('instructor')
+@has_role('instructor')
 def credentialListLive(request):
     login = UserLogin.objects.filter(user=request.user).first()
     if not login or not login.instructor:
@@ -289,8 +288,8 @@ def credentialListLive(request):
     if query:
         credentials = credentials.filter(
             Q(title__icontains=query) |
-            Q(credentialType__icontains=query) | # Updated field name
-            Q(issuer__icontains=query) |         # Updated field name
+            Q(credentialType__icontains=query) |
+            Q(issuer__icontains=query) |
             Q(relatedSubjects__code__icontains=query) |
             Q(relatedSubjects__name__icontains=query)
         ).distinct()
@@ -312,7 +311,7 @@ def credentialListLive(request):
 
 
 @login_required
-# @has_role('instructor')
+@has_role('instructor')
 def credentialCreate(request):
     login = UserLogin.objects.filter(user=request.user).first()
     if not login or not login.instructor:
@@ -321,34 +320,30 @@ def credentialCreate(request):
 
     instructor = login.instructor
     subjects = Subject.objects.all()
-    # Use choices from model
+
     types = InstructorCredentials.CREDENTIAL_TYPE_CHOICES 
 
     if request.method == 'POST':
-        # Retrieve fields based on NEW model definition
         credentialType = request.POST.get('credentialType')
         title = request.POST.get('title')
         issuer = request.POST.get('issuer')
         dateEarned = request.POST.get('dateEarned')
         expirationDate = request.POST.get('expirationDate')
         
-        # Handle empty expiration date
         if not expirationDate:
             expirationDate = None
             
         relatedSubjectIds = request.POST.getlist('relatedSubjects')
 
-        # Create object
         credential = InstructorCredentials.objects.create(
             instructor=instructor,
-            credentialType=credentialType, # Updated field
+            credentialType=credentialType,
             title=title,
-            issuer=issuer,                 # New field
+            issuer=issuer,
             dateEarned=dateEarned,
-            expirationDate=expirationDate  # New field
+            expirationDate=expirationDate
         )
         
-        # Set Many-to-Many relationship
         if relatedSubjectIds:
             credential.relatedSubjects.set(relatedSubjectIds)
 
@@ -362,7 +357,7 @@ def credentialCreate(request):
 
 
 @login_required
-# @has_role('instructor')
+@has_role('instructor')
 def credentialUpdate(request, credentialId):
     login = UserLogin.objects.filter(user=request.user).first()
     if not login or not login.instructor:
@@ -374,7 +369,6 @@ def credentialUpdate(request, credentialId):
     types = InstructorCredentials.CREDENTIAL_TYPE_CHOICES
 
     if request.method == 'POST':
-        # Update fields based on NEW model definition
         credential.credentialType = request.POST.get('credentialType')
         credential.title = request.POST.get('title')
         credential.issuer = request.POST.get('issuer')
@@ -386,7 +380,6 @@ def credentialUpdate(request, credentialId):
         else:
             credential.expirationDate = expirationDate
             
-        # Update Many-to-Many relationship
         credential.relatedSubjects.set(request.POST.getlist('relatedSubjects'))
         
         credential.save()
@@ -507,11 +500,9 @@ def legacyExperienceCreate(request):
 
             subject = get_object_or_404(Subject, pk=subjectId)
             
-            # Handle empty lastTaughtYear
             if not lastTaughtYear:
                 lastTaughtYear = None
 
-            # Check for duplicates manually or rely on get_or_create
             obj, created = InstructorLegacyExperience.objects.get_or_create(
                 instructor=login.instructor,
                 subject=subject,
@@ -549,7 +540,6 @@ def legacyExperienceUpdate(request, experienceId):
 
     if request.method == 'POST':
         try:
-            # We allow changing the subject, but must catch unique constraint errors if the new subject already exists
             new_subject_id = request.POST.get('subject')
             
             experience.subject_id = new_subject_id
@@ -566,7 +556,6 @@ def legacyExperienceUpdate(request, experienceId):
             return redirect('instructorDashboard')
 
         except Exception as e:
-            # Likely an IntegrityError if changing subject to one that already exists
             messages.error(request, f"Error updating record. Ensure this subject doesn't already have a legacy entry.")
 
     subjects = Subject.objects.all().order_by('code')
@@ -575,6 +564,7 @@ def legacyExperienceUpdate(request, experienceId):
         'experience': experience,
         'subjects': subjects,
     })
+
 
 @login_required
 @has_role('instructor')
@@ -599,6 +589,7 @@ def instructorRankList(request):
     ranks = InstructorRank.objects.all()
     
     return render(request, "instructors/ranks/list.html", {"ranks": ranks})
+
 
 @login_required
 @has_role('deptHead')
@@ -639,6 +630,7 @@ def instructorRankCreate(request):
             messages.error(request, f"An error occurred: {e}")
 
     return render(request, "instructors/ranks/create.html")
+
 
 @login_required
 @has_role('deptHead')
@@ -686,6 +678,7 @@ def instructorDesignationList(request):
         "designations": designations,
     })
 
+
 @login_required
 @has_role('deptHead')
 def instructorDesignationCreate(request):
@@ -693,7 +686,6 @@ def instructorDesignationCreate(request):
         try:
             name = request.POST.get('name').strip()
             
-            # Retrieve all hour fields
             data = {
                 'adminSupervisionHours': int(request.POST.get('adminSupervisionHours', 0)),
                 'instructionHours': int(request.POST.get('instructionHours', 0)),
@@ -703,7 +695,6 @@ def instructorDesignationCreate(request):
                 'consultationHours': int(request.POST.get('consultationHours', 0)),
             }
             
-            # Input validation
             if not name:
                 messages.error(request, "Designation name cannot be empty.")
                 return redirect('instructorDesignationCreate')
@@ -713,7 +704,6 @@ def instructorDesignationCreate(request):
                     messages.error(request, f"Hours for {key} must be non-negative.")
                     return redirect('instructorDesignationCreate')
             
-            # Create the object
             InstructorDesignation.objects.create(
                 name=name,
                 **data
@@ -739,7 +729,6 @@ def instructorDesignationUpdate(request, designationId):
         try:
             designation.name = request.POST.get('name').strip()
             
-            # Retrieve and update all hour fields
             designation.adminSupervisionHours = int(request.POST.get('adminSupervisionHours', designation.adminSupervisionHours))
             designation.instructionHours = int(request.POST.get('instructionHours', designation.instructionHours))
             designation.researchHours = int(request.POST.get('researchHours', designation.researchHours))
@@ -747,7 +736,6 @@ def instructorDesignationUpdate(request, designationId):
             designation.productionHours = int(request.POST.get('productionHours', designation.productionHours))
             designation.consultationHours = int(request.POST.get('consultationHours', designation.consultationHours))
 
-            # Basic Validation
             if not designation.name:
                 messages.error(request, "Designation name cannot be empty.")
             elif any(h < 0 for h in [designation.adminSupervisionHours, designation.instructionHours, designation.researchHours, designation.extensionHours, designation.productionHours, designation.consultationHours]):

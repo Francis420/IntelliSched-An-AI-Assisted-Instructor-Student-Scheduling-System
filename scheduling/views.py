@@ -214,7 +214,7 @@ def genedScheduleListLive(request):
 @login_required
 @has_role('deptHead')
 def genedScheduleCreate(request):
-    semesters = Semester.objects.all().order_by('semesterId')  # assign the queryset
+    semesters = Semester.objects.all().order_by('semesterId')
 
     if request.method == 'POST':
         semesterId = request.POST.get('semester')
@@ -226,7 +226,7 @@ def genedScheduleCreate(request):
         startTime = request.POST.get('startTime')
         endTime = request.POST.get('endTime')
 
-        semester = get_object_or_404(Semester, semesterId=semesterId) if semesterId else None  # use semesterId instead of id
+        semester = get_object_or_404(Semester, semesterId=semesterId) if semesterId else None
 
         GenEdSchedule.objects.create(
             semester=semester,
@@ -365,6 +365,7 @@ def semesterCreate(request):
 
     return render(request, 'scheduling/semesters/create.html')
 
+
 @login_required
 @has_role('deptHead')
 def semesterUpdate(request, semesterId):
@@ -373,7 +374,7 @@ def semesterUpdate(request, semesterId):
     if request.method == 'POST':
         academicYear = request.POST.get('academicYear')
         term = request.POST.get('term')
-        isActive = request.POST.get('isActive') == 'on'  # ✅ checkbox logic
+        isActive = request.POST.get('isActive') == 'on'
         name = f"{term} Semester {academicYear}"
 
         # Prevent duplicate (same term + year)
@@ -382,7 +383,6 @@ def semesterUpdate(request, semesterId):
         ).exists():
             messages.error(request, 'Another semester with this academic year and term already exists.')
         else:
-            # ✅ If this semester is being activated, deactivate others
             if isActive:
                 Semester.objects.exclude(semesterId=semester.semesterId).update(isActive=False)
 
@@ -415,7 +415,6 @@ def semesterDelete(request, semesterId):
         messages.error(request, 'Cannot delete this semester because it is linked to other records (e.g., schedules, enrollments).')
 
     return redirect('semesterList')
-
 
 
 
@@ -484,11 +483,9 @@ def curriculumCreate(request):
         effectiveSy = request.POST.get('effectiveSy')
         description = request.POST.get('description')
         
-        # --- NEW SIGNATURE FIELDS ---
         dean = request.POST.get('dean')
         vicePresidentForAcademicAffairs = request.POST.get('vicePresidentForAcademicAffairs')
         universityPresident = request.POST.get('universityPresident')
-        # ----------------------------
 
         if Curriculum.objects.filter(name=name).exists():
             messages.error(request, 'A curriculum with this name already exists.')
@@ -562,15 +559,14 @@ def curriculumDetail(request, curriculumId):
     })
 
 
-# ---------- Semesters ----------
 
+# ---------- Semesters ----------
 @login_required
 @has_role('deptHead')
 def semesterList(request):
     query = request.GET.get("q", "").strip()
     page = int(request.GET.get("page", 1))
 
-    # Optimize query with select_related since we will show curriculum name
     semesters = Semester.objects.select_related('curriculum').all().order_by("-createdAt")
 
     if query:
@@ -578,7 +574,7 @@ def semesterList(request):
             Q(name__icontains=query) |
             Q(term__icontains=query) |
             Q(academicYear__icontains=query) |
-            Q(curriculum__name__icontains=query) # Added search by curriculum
+            Q(curriculum__name__icontains=query)
         )
 
     paginator = Paginator(semesters, 10)
@@ -625,7 +621,6 @@ def semesterListLive(request):
 @login_required
 @has_role('deptHead')
 def semesterCreate(request):
-    # Fetch active curriculums for the dropdown
     curriculums = Curriculum.objects.filter(isActive=True).order_by('-createdAt')
 
     if request.method == 'POST':
@@ -634,13 +629,10 @@ def semesterCreate(request):
         term = request.POST.get('term')
         isActive = request.POST.get('isActive') == 'on'
         
-        # Get Curriculum Instance
         curriculum = get_object_or_404(Curriculum, pk=curriculum_id)
 
-        # Name format: "1st Semester 2025-2026 (Curriculum Name)"
         name = f"{term} Semester {academicYear}"
 
-        # Validation: Check if this specific combo exists
         if Semester.objects.filter(academicYear=academicYear, term=term, curriculum=curriculum).exists():
             messages.error(request, 'A semester for this curriculum, academic year, and term already exists.')
         else:
@@ -674,7 +666,6 @@ def semesterUpdate(request, semesterId):
         curriculum = get_object_or_404(Curriculum, pk=curriculum_id)
         name = f"{term} Semester {academicYear}"
 
-        # Validation: Exclude current self, check if combo exists
         if Semester.objects.exclude(semesterId=semester.semesterId).filter(
             academicYear=academicYear, term=term, curriculum=curriculum
         ).exists():
@@ -718,11 +709,9 @@ def semesterDelete(request, semesterId):
 @login_required
 @has_role('deptHead')
 def subjectOfferingList(request):
-    # Dropdown data (only active)
     curricula = Curriculum.objects.filter(isActive=True).order_by("-createdAt")
     semesters = Semester.objects.filter(isActive=True).order_by("-createdAt")
 
-    # Get selected curriculum & semester
     selected_curriculum_id = request.GET.get("curriculum")
     selected_semester_id = request.GET.get("semester")
 
@@ -735,13 +724,11 @@ def subjectOfferingList(request):
         if selected_semester_id else semesters.first()
     )
 
-    # Get offerings for this semester & curriculum
     offerings = SubjectOffering.objects.filter(
         semester=selected_semester,
         subject__curriculum=selected_curriculum
     ).select_related("subject", "semester")
 
-    # 🔹 Fallback: Auto-create offerings if none exist yet
     if not offerings.exists():
         subjects_for_sem = Subject.objects.filter(
             curriculum=selected_curriculum,
@@ -755,7 +742,6 @@ def subjectOfferingList(request):
             SubjectOffering.objects.get_or_create(
                 subject=subj,
                 semester=selected_semester,
-                # UPDATED: Set a default for numberOfSections and the new student count
                 defaults={"numberOfSections": 6, "defaultStudentsPerSection": 40} 
             )
         offerings = SubjectOffering.objects.filter(
@@ -763,7 +749,6 @@ def subjectOfferingList(request):
             subject__curriculum=selected_curriculum
         ).select_related("subject", "semester")
 
-    # Group offerings by year level
     grouped_offerings = []
     for year in [1, 2, 3, 4]:
         year_offerings = [o for o in offerings if o.subject.yearLevel == year]
@@ -849,10 +834,9 @@ def generateSections(request, semesterId, curriculumId):
         status="active"
     ).select_related('subject')
     
-    # Default capacity for newly created sections
     DEFAULT_STUDENT_COUNT = 40
 
-    added, removed, updated_units = 0, 0, 0 # Renamed 'updated_students' to 'updated_units' as we only force save()
+    added, removed, updated_units = 0, 0, 0
     letters = list(string.ascii_uppercase)
 
     for offering in offerings:
@@ -861,7 +845,6 @@ def generateSections(request, semesterId, curriculumId):
             Section.objects.filter(subject=offering.subject, semester=semester).order_by("sectionId")
         )
 
-        # 1. Create missing sections
         if len(existing_sections) < required_sections:
             for i in range(len(existing_sections), required_sections):
                 section_code = f"{offering.subject.code}-{letters[i]}"
@@ -869,27 +852,23 @@ def generateSections(request, semesterId, curriculumId):
                     subject=offering.subject,
                     semester=semester,
                     sectionCode=section_code,
-                    numberOfStudents=DEFAULT_STUDENT_COUNT, # <-- NEW: Set default student count
+                    numberOfStudents=DEFAULT_STUDENT_COUNT,
                     status="active",
                 )
                 added += 1
 
-        # 2. Remove excess sections
         elif len(existing_sections) > required_sections:
             to_remove = existing_sections[required_sections:]
             for section in to_remove:
                 section.delete()
                 removed += 1
         
-        # 3. Update existing sections (to ensure units/minutes are synced from Subject model)
         for section in existing_sections[:required_sections]:
-            # If a section was created with default=0 (before this change), update it to a standard default
             if section.numberOfStudents == 0:
                  section.numberOfStudents = DEFAULT_STUDENT_COUNT
                  section.save()
-                 updated_units += 1 # Use this counter for general updates
+                 updated_units += 1
             else:
-                 # Call save() to ensure units/minutes/lab status are updated from the Subject's save() hook
                  section.save()
                  updated_units += 1
 
@@ -907,7 +886,6 @@ def generateSections(request, semesterId, curriculumId):
 
     return redirect("subjectOfferingList")
 
-# Add this new function to your views.py
 from django.db import transaction
 
 @login_required
@@ -923,9 +901,7 @@ def sectionConfigList(request, offeringId):
 
     if request.method == 'POST':
         with transaction.atomic():
-            # Iterate through POST data and update sections
             for section in sections:
-                # The input field names in the template will be 'students_SECTION_ID'
                 field_name = f'students_{section.sectionId}'
                 
                 try:
@@ -941,7 +917,6 @@ def sectionConfigList(request, offeringId):
                             
                 except ValueError as e:
                     messages.error(request, f"Invalid capacity entered for section {section.sectionCode}.")
-                    # Render the page again to show the error
                     return render(request, "scheduling/sections/config_list.html", {
                         "offering": offering,
                         "sections": sections,
@@ -950,7 +925,6 @@ def sectionConfigList(request, offeringId):
             messages.success(request, f"Section capacities for {offering.subject.code} updated successfully.")
             return redirect('subjectOfferingList')
 
-    # GET request
     return render(request, "scheduling/sections/config_list.html", {
         "offering": offering,
         "sections": sections,
@@ -960,7 +934,6 @@ def sectionConfigList(request, offeringId):
 @login_required
 @has_role('deptHead')
 def instructorSchedulingConfig(request):
-    # Fetch the active config or create a default one if it doesn't exist
     config = InstructorSchedulingConfiguration.objects.filter(is_active=True).first()
     if not config:
         config = InstructorSchedulingConfiguration.objects.create(is_active=True)
@@ -988,24 +961,17 @@ def instructorSchedulingConfig(request):
 @login_required
 @has_role('deptHead')
 def preSchedulingDetailedAnalysis(request):
-    """
-    Detailed view for Supply vs Demand analysis with Semester Selector.
-    """
-    # 1. Handle Semester Selection
     semester_id = request.GET.get('semester')
     
     if semester_id:
         selected_semester = get_object_or_404(Semester, pk=semester_id)
     else:
-        # Default to active, or last created if no active exists
         selected_semester = Semester.objects.filter(isActive=True).first()
         if not selected_semester:
             selected_semester = Semester.objects.last()
 
-    # 2. Get list of all semesters for the dropdown
     all_semesters = Semester.objects.all().order_by('-academicYear', '-term')
 
-    # 3. Calculate Analysis
     analysis_data = None
     if selected_semester:
         analysis_data = getPreSchedulingAnalysis(selected_semester)

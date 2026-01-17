@@ -65,13 +65,14 @@ def checkInstructorIdAvailability(request):
         'message': 'Instructor ID available.' if not exists else 'Instructor ID already taken.'
     })
 
+
 @login_required
+@has_role('deptHead')
 def manageDeptHead(request):
     user = request.user
     isAdmin = user.is_superuser
     isCurrentHead = user.roles.filter(name='deptHead').exists()
 
-    # SECURITY: Only Admin or the Current Dept Head can enter
     if not (isAdmin or isCurrentHead):
         raise PermissionDenied("You are not authorized to manage Department Leadership.")
 
@@ -81,7 +82,6 @@ def manageDeptHead(request):
         messages.error(request, "Critical: 'deptHead' role missing.")
         return redirect('admin:index')
 
-    # Find the current leader (exclude admin from display logic)
     currentHeadInstructor = Instructor.objects.filter(
         userlogin__user__roles__name='deptHead',
         userlogin__user__isActive=True
@@ -93,7 +93,6 @@ def manageDeptHead(request):
             newInstructor = form.cleaned_data['newHead']
             password = form.cleaned_data['confirmPassword']
 
-            # --- VERIFICATION LOGIC ---
             isAuthorized = False
             
             if isAdmin:
@@ -106,11 +105,9 @@ def manageDeptHead(request):
                 else:
                     isAuthorized = True
             
-            # --- TRANSFER LOGIC ---
             if isAuthorized:
                 try:
                     with transaction.atomic():
-                        # 1. REMOVE role from ALL old heads
                         oldLeads = UserLogin.objects.filter(
                             user__roles__name='deptHead'
                         ).select_related('user')
@@ -120,7 +117,6 @@ def manageDeptHead(request):
                                 login.user.roles.remove(deptHeadRole)
                                 login.user.save()
 
-                        # 2. ADD role to New Head
                         newLogin = UserLogin.objects.filter(instructor=newInstructor).first()
                         if newLogin and newLogin.user:
                             newLogin.user.roles.add(deptHeadRole)
@@ -281,7 +277,6 @@ def subjectUpdate(request, subjectCode):
     if request.method == 'POST':
         newCode = request.POST.get('code')
         if newCode and newCode != subject.code:
-            # Optional: check if new code already exists
             if Subject.objects.filter(code=newCode).exclude(subjectId=subject.subjectId).exists():
                 messages.error(request, f'Subject code "{newCode}" is already taken.')
                 return redirect('subjectUpdate', subjectCode=subject.code)
@@ -395,6 +390,7 @@ def instructorAccountListLive(request):
         "has_previous": page_obj.has_previous(),
     })
 
+
 @login_required
 @has_role('deptHead')
 @transaction.atomic
@@ -413,13 +409,11 @@ def instructorAccountCreate(request):
         designation_id = request.POST.get('designation')
         attainment_id = request.POST.get('academicAttainment')
 
-        # Validation checks
         if User.objects.filter(username=username).exists():
             messages.error(request, 'Username already exists.')
         elif Instructor.objects.filter(instructorId=instructorId).exists():
             messages.error(request, 'Instructor ID already exists.')
         else:
-            # Create user
             user = User.objects.create_user(
                 username=username,
                 email=email,
@@ -429,11 +423,9 @@ def instructorAccountCreate(request):
                 isActive=True
             )
 
-            # Assign role
             instructorRole = Role.objects.get(name='instructor')
             user.roles.add(instructorRole)
 
-            # Create instructor with proper FK relations
             instructor = Instructor.objects.create(
                 instructorId=instructorId,
                 employmentType=employmentType,
@@ -442,7 +434,6 @@ def instructorAccountCreate(request):
                 academicAttainment=InstructorAcademicAttainment.objects.filter(pk=attainment_id).first() if attainment_id else None,
             )
 
-            # Link UserLogin
             UserLogin.objects.create(user=user, instructor=instructor)
 
             messages.success(request, 'Instructor account successfully created.')
@@ -472,13 +463,11 @@ def instructorAccountUpdate(request, userId):
     instructor = user_login.instructor
 
     if request.method == 'POST':
-        # Update User info
         user.firstName = request.POST.get('firstName')
         user.lastName = request.POST.get('lastName')
         user.email = request.POST.get('email')
         user.save()
 
-        # Update Instructor info
         newInstructorId = request.POST.get('instructorId')
         employmentType = request.POST.get('employmentType')
         rank_id = request.POST.get('rank')
@@ -511,7 +500,6 @@ def instructorAccountUpdate(request, userId):
     return render(request, 'core/instructors/update.html', context)
 
 
-
 @login_required
 @has_role('deptHead')
 @transaction.atomic
@@ -530,35 +518,26 @@ def instructorAccountDelete(request, userId):
     return render(request, 'core/instructors/delete.html', {'user': user})
 
 
-
 @login_required
 @has_role('deptHead')
 def recommendInstructors(request):
-    """
-    Generates professional development recommendations using:
-    1. REAL Profile Data (Academic Attainment, Rank, Max Years)
-    2. Accurate Experience Calculation (Max of Legacy + System Years)
-    """
-    
-    # --- GET FILTER PARAMETERS ---
     search_query = request.GET.get('q', '')
     filter_type = request.GET.get('type', '')
 
-    # --- 1. DB QUERY ---
     matches_query = InstructorSubjectMatch.objects.filter(
         isLatest=True,
         isRecommended=True
     ).select_related(
         'instructor', 
         'subject',
-        'instructor__rank',               # e.g., "Instructor I"
-        'instructor__academicAttainment'  # e.g., "Doctorate Degree"
+        'instructor__rank',               
+        'instructor__academicAttainment'  
     ).prefetch_related(
         'instructor__userlogin_set__user',
-        'instructor__credentials',        # Secondary check
-        'instructor__experiences',        # Industry jobs
-        'instructor__legacy_experiences', # Manual History
-        'instructor__system_assignments__semester' # For accurate system counting
+        'instructor__credentials',
+        'instructor__experiences',
+        'instructor__legacy_experiences',
+        'instructor__system_assignments__semester'
     )
 
     if search_query:
@@ -571,7 +550,6 @@ def recommendInstructors(request):
 
     training_programs = []
     
-    # --- HELPER: SUBJECT CATEGORY ---
     def get_category(subject):
         name = (subject.description or subject.name or "").lower()
         if any(x in name for x in ['security', 'cyber', 'forensic']): return 'Security'
@@ -585,49 +563,35 @@ def recommendInstructors(request):
         subject = match.subject
         category = get_category(subject)
         
-        # --- A. ACCURATE DEGREE CHECK ---
-        # 1. Primary Source: Academic Attainment (The main dropdown in profile)
         attainment_name = (instructor.academicAttainment.name if instructor.academicAttainment else "").lower()
         
         has_phd = 'doctor' in attainment_name or 'phd' in attainment_name
         has_masters = 'master' in attainment_name
         
-        # 2. Secondary Source: Credentials List (Backup if Attainment is N/A)
         if not has_phd and not has_masters:
             cred_types = [c.credentialType for c in instructor.credentials.all()]
             has_phd = 'PhD' in cred_types
             has_masters = 'Masters' in cred_types
 
-        # --- B. ACCURATE EXPERIENCE CALCULATION ---
-        
-        # 1. Legacy Years: Use MAX, not Sum. 
-        # (If I taught 3 subjects for 1 year in 2024, my experience is 1 year, not 3).
         legacy_years_list = [l.priorYearsExperience for l in instructor.legacy_experiences.all()]
         legacy_years = max(legacy_years_list) if legacy_years_list else 0
         
-        # 2. System Years: Count Unique Semesters / 2
         unique_semesters = set(
             a.semester.semesterId for a in instructor.system_assignments.all()
         )
         system_years = len(unique_semesters) / 2.0 
         
-        # Total
         total_teaching_years = float(legacy_years) + system_years
         
-        # 3. Industry Experience
         industry_jobs = [e for e in instructor.experiences.all() if e.experienceType == 'Industry']
         industry_count = len(industry_jobs)
         
-        # 4. Rank
         rank_name = (instructor.rank.name if instructor.rank else "").lower()
         is_senior = 'associate' in rank_name or 'professor' in rank_name
         is_instructor_rank = 'instructor' in rank_name
 
         rec = None 
 
-        # --- C. DETERMINE RECOMMENDATION ---
-
-        # SCENARIO 1: PRACTITIONER (Needs Master's)
         if industry_count >= 2 and not has_masters and not has_phd:
             rec = {
                 'type': 'Formal Education',
@@ -638,7 +602,6 @@ def recommendInstructors(request):
                 'color': 'red'
             }
 
-        # SCENARIO 2: ACADEMIC (Has Degree, Needs Tech Skills)
         elif (has_masters or has_phd) and industry_count == 0 and category in ['Dev', 'Security']:
              rec = {
                 'type': 'Technical Workshop',
@@ -649,7 +612,6 @@ def recommendInstructors(request):
                 'color': 'orange'
             }
 
-        # SCENARIO 3: VETERAN (Senior or >10 Years)
         elif is_senior or total_teaching_years > 10:
             if category == 'Emerging':
                 rec = {
@@ -679,7 +641,6 @@ def recommendInstructors(request):
                     'color': 'emerald'
                 }
 
-        # SCENARIO 4: STAGNANT (Long Service, Low Rank)
         elif total_teaching_years > 5 and is_instructor_rank and has_masters:
              rec = {
                 'type': 'Career Development',
@@ -690,7 +651,6 @@ def recommendInstructors(request):
                 'color': 'blue'
             }
 
-        # SCENARIO 5: GENERAL UPGRADING
         elif category in ['Dev', 'Core_IT']:
             rec = {
                 'type': 'Skill Upgrading',
@@ -701,12 +661,10 @@ def recommendInstructors(request):
                 'color': 'teal'
             }
 
-        # --- APPEND ---
         if rec:
             rec['instructor'] = instructor
             rec['subject'] = subject
             
-            # Display Logic
             if has_phd: degree_display = "PhD"
             elif has_masters: degree_display = "Masters"
             else: degree_display = "Bachelors"
@@ -719,7 +677,6 @@ def recommendInstructors(request):
             }
             training_programs.append(rec)
 
-    # --- FILTERING ---
     if filter_type:
         training_programs = [t for t in training_programs if t['type'] == filter_type]
 
@@ -772,6 +729,5 @@ def instructorProfile(request):
     
     return render(request, 'core/profile.html', context)
 
-@login_required
 def userManual(request):
     return render(request, 'core/userManual.html')

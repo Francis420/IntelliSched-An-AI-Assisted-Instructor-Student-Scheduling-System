@@ -213,6 +213,8 @@ def matchingProgressPage(request, batchId):
     })
     
 
+@login_required
+@has_role('deptHead')
 def cancelMatching(request, batch_id):
     if request.method == "POST":
         try:
@@ -240,6 +242,8 @@ def matchingResults(request, batchId):
 
 from django.utils.timezone import localtime
 
+@login_required
+@has_role('deptHead')
 def _matching_results_common(request, batchId, live=False):
     subject_query = request.GET.get('subject', '').strip()
     instructor_query = request.GET.get('instructor', '').strip()
