@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+{% block title %}Detailed Pre-Scheduling Analysis{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 pb-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+
+        <div class="md:flex md:items-center md:justify-between mb-8">
+            <div>
+                <nav class="flex mb-1" aria-label="Breadcrumb">
+                    <ol class="flex items-center space-x-2">
+                        <li><a href="{% url 'deptHeadDashboard' %}" class="text-sm font-medium text-gray-500 hover:text-gray-700">Dashboard</a></li>
+                        <li>
+                            <svg class="flex-shrink-0 h-5 w-5 text-gray-300" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                <path d="M5.555 17.776l8-16 .894.448-8 16-.894-.448z" />
+                            </svg>
+                        </li>
+                        <li><a href="#" class="text-sm font-medium text-gray-900" aria-current="page">Analysis</a></li>
+                    </ol>
+                </nav>
+                <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl">Pre-Scheduling Analysis</h2>
+                <p class="mt-1 text-sm text-gray-500">Compare instructor capacity vs curriculum needs before generating schedules.</p>
+            </div>
+            
+            <div class="mt-4 flex md:mt-0 md:ml-4 bg-white p-1 rounded-lg shadow-sm border border-gray-300">
+                <form method="get" class="flex items-center">
+                    <label for="semester" class="sr-only">Choose Semester</label>
+                    <select id="semester" name="semester" onchange="this.form.submit()" 
+                            class="block w-64 pl-3 pr-10 py-2 text-base border-none focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm rounded-md bg-transparent cursor-pointer hover:bg-gray-50">
+                        {% for sem in semesters %}
+                            <option value="{{ sem.semesterId }}" {% if sem.semesterId == selected_semester.semesterId %}selected{% endif %}>
+                                {{ sem.name }} {{ sem.academicYear }} {% if sem.isActive %}(Active){% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </form>
+            </div>
+        </div>
+
+        {% if analysis %}
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+            <div class="bg-white overflow-hidden shadow rounded-lg border-t-4 border-indigo-500">
+                <div class="px-4 py-5 sm:p-6">
+                    <dt class="text-sm font-medium text-gray-500 truncate">Total Instructor Supply</dt>
+                    <dd class="mt-1 text-3xl font-bold text-gray-900">{{ analysis.summary.total_supply|floatformat:1 }} <span class="text-lg font-normal text-gray-400">hrs</span></dd>
+                    <dd class="mt-4 text-xs text-gray-500 flex justify-between border-t pt-2">
+                        <span>Regular: <b>{{ analysis.details.total_regular|floatformat:1 }}</b></span>
+                        <span>Overload: <b>{{ analysis.details.total_overload|floatformat:1 }}</b></span>
+                    </dd>
+                </div>
+            </div>
+
+            <div class="bg-white overflow-hidden shadow rounded-lg border-t-4 border-gray-600">
+                <div class="px-4 py-5 sm:p-6">
+                    <dt class="text-sm font-medium text-gray-500 truncate">Total Department Demand</dt>
+                    <dd class="mt-1 text-3xl font-bold text-gray-900">{{ analysis.summary.total_demand|floatformat:1 }} <span class="text-lg font-normal text-gray-400">hrs</span></dd>
+                    <dd class="mt-4 text-xs text-gray-500 flex justify-between border-t pt-2">
+                        <span>Sections: <b>{{ analysis.summary.section_count }}</b></span>
+                        <span>Instructors: <b>{{ analysis.summary.instructor_count }}</b></span>
+                    </dd>
+                </div>
+            </div>
+
+            <div class="bg-white overflow-hidden shadow rounded-lg border-t-4 {% if analysis.summary.status == 'deficit' %}border-red-500 bg-red-50{% else %}border-green-500 bg-green-50{% endif %}">
+                <div class="px-4 py-5 sm:p-6">
+                    <dt class="text-sm font-medium text-gray-500 truncate">Net Balance</dt>
+                    <dd class="mt-1 text-3xl font-bold {% if analysis.summary.status == 'deficit' %}text-red-700{% else %}text-green-700{% endif %}">
+                        {% if analysis.summary.status == 'deficit' %}
+                            -{{ analysis.summary.gap }} <span class="text-lg font-normal">hrs</span>
+                        {% else %}
+                            +{{ analysis.summary.gap }} <span class="text-lg font-normal">hrs</span>
+                        {% endif %}
+                    </dd>
+                    <dd class="mt-4 text-xs font-semibold {% if analysis.summary.status == 'deficit' %}text-red-600{% else %}text-green-600{% endif %} border-t {% if analysis.summary.status == 'deficit' %}border-red-200{% else %}border-green-200{% endif %} pt-2">
+                        {% if analysis.summary.status == 'deficit' %}
+                            ⚠️ Instructor shortage detected.
+                        {% else %}
+                            ✅ Capacity sufficient for demand.
+                        {% endif %}
+                    </dd>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            <div class="bg-white shadow rounded-lg flex flex-col h-full border border-gray-200">
+                <div class="px-5 py-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+                    <h3 class="text-lg leading-6 font-bold text-gray-800">Demand Breakdown</h3>
+                    <p class="text-xs text-gray-500 mt-1">Required hours by student year level</p>
+                </div>
+                <div class="flex-1 overflow-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year Level</th>
+                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Sections</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Hours Needed</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for level in analysis.details.demand_by_year %}
+                            <tr class="hover:bg-gray-50 transition">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                    {{ level.label }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                        {{ level.sections }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-bold">
+                                    {{ level.hours|floatformat:1 }}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="px-6 py-8 text-center text-gray-500 text-sm italic">
+                                    No section data found for this semester.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        {% if analysis.details.demand_by_year %}
+                        <tfoot class="bg-gray-50 font-semibold text-gray-900">
+                            <tr>
+                                <td class="px-6 py-3 text-sm">TOTAL</td>
+                                <td class="px-6 py-3 text-sm text-center">{{ analysis.summary.section_count }}</td>
+                                <td class="px-6 py-3 text-sm text-right">{{ analysis.summary.total_demand|floatformat:1 }}</td>
+                            </tr>
+                        </tfoot>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white shadow rounded-lg flex flex-col h-[600px] border border-gray-200">
+                <div class="px-5 py-4 border-b border-gray-200 bg-gray-50 rounded-t-lg flex justify-between items-center">
+                    <div>
+                        <h3 class="text-lg leading-6 font-bold text-gray-800">Instructor Supply</h3>
+                        <p class="text-xs text-gray-500 mt-1">Capacity breakdown per instructor</p>
+                    </div>
+                    <span class="text-xs text-indigo-600 bg-indigo-50 px-2 py-1 rounded border border-indigo-100">
+                        Top Capacity First
+                    </span>
+                </div>
+                <div class="flex-1 overflow-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50 sticky top-0 shadow-sm z-10">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Instructor</th>
+                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <span class="hidden sm:inline">Regular + Overload</span>
+                                    <span class="sm:hidden">Load</span>
+                                </th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for instr in analysis.details.instructor_supply %}
+                            <tr class="hover:bg-gray-50 transition">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm font-bold text-gray-900">{{ instr.name }}</div>
+                                    <div class="text-xs flex items-center mt-1">
+                                        {% if instr.type == 'Permanent' %}
+                                            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 uppercase tracking-wide mr-2">
+                                                Permanent
+                                            </span>
+                                        {% elif instr.type == 'Part-Time' %}
+                                            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-800 uppercase tracking-wide mr-2">
+                                                Part-Time
+                                            </span>
+                                        {% else %}
+                                            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-800 uppercase tracking-wide mr-2">
+                                                {{ instr.type }}
+                                            </span>
+                                        {% endif %}
+                                        
+                                        <span class="text-gray-500 font-medium">
+                                            {{ instr.role_title }}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
+                                    <span class="text-indigo-600 font-medium" title="Regular Load">{{ instr.regular }}</span>
+                                    <span class="text-gray-300 mx-1">+</span>
+                                    <span class="text-orange-500 font-medium" title="Max Overload">{{ instr.overload }}</span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-gray-900">
+                                    {{ instr.total }}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="px-6 py-8 text-center text-gray-500 text-sm italic">
+                                    No active instructors found.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        {% else %}
+            <div class="text-center py-20 bg-white rounded-lg shadow-sm border border-gray-200">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-gray-900">No Analysis Available</h3>
+                <p class="mt-1 text-sm text-gray-500">Please select an active semester to view the workload analysis.</p>
+            </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

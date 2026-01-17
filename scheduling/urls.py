@@ -40,4 +40,6 @@ urlpatterns = [
 
     # Instructor Scheduling Configuration
     path('instructor-scheduling-config/', views.instructorSchedulingConfig, name='instructorSchedulingConfig'),
+
+    path('scheduling/analysis/', views.preSchedulingDetailedAnalysis, name='preSchedulingDetailedAnalysis'),
 ]
