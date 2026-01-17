@@ -60,7 +60,7 @@
                 <svg class="h-6 w-6 text-indigo-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                 <div>
                     <h3 class="text-sm font-medium text-indigo-900">Bulk Generation</h3>
-                    <p class="text-xs text-indigo-700">Auto-generate default sections for all subjects in this curriculum/semester.</p>
+                    <p class="text-xs text-indigo-700">Don't forget to click "Generate Sections" after setting the number of sections per subject and students per section</p>
                 </div>
             </div>
             <form id="generateForm" method="post" action="{% url 'generateSections' selected_semester.semesterId selected_curriculum.curriculumId %}">

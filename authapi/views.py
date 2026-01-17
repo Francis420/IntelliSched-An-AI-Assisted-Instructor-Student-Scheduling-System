@@ -14,6 +14,7 @@ from operator import attrgetter
 from scheduling.models import Curriculum, Semester, Subject, Room
 from aimatching.models import MatchingRun
 from operator import itemgetter
+from scheduling.services import getPreSchedulingAnalysis
 
 
 def has_role(required_role):
@@ -96,7 +97,22 @@ def deptHeadDashboard(request):
     room_count = Room.objects.count()
     matching_runs = MatchingRun.objects.count()
 
-    # Recent activities: normalize timestamp key
+    # --- NEW: WORKLOAD ANALYSIS WIDGET LOGIC ---
+    # Fetch the active semester (or the most recent one created if none are active)
+    active_semester = Semester.objects.filter(isActive=True).first()
+    if not active_semester:
+        active_semester = Semester.objects.order_by('-createdAt').first()
+        
+    workload_analysis = None
+    if active_semester:
+        # --- FIX: IMPORT HERE TO AVOID CIRCULAR ERROR ---
+        from scheduling.services import getPreSchedulingAnalysis
+        
+        # Call our service to get the math
+        workload_analysis = getPreSchedulingAnalysis(active_semester)
+    # -------------------------------------------
+
+    # Recent activities logic
     activities = []
 
     for obj in Curriculum.objects.order_by('-createdAt')[:3]:
@@ -139,7 +155,6 @@ def deptHeadDashboard(request):
             "link": reverse("matchingResults", args=[obj.batchId]),
         })
 
-    # Sort everything by timestamp desc
     recent_activities = sorted(activities, key=itemgetter("timestamp"), reverse=True)[:5]
 
     context = {
@@ -150,6 +165,9 @@ def deptHeadDashboard(request):
         "room_count": room_count,
         "matching_runs": matching_runs,
         "recent_activities": recent_activities,
+        
+        # Add the new data to context
+        "workload_analysis": workload_analysis, 
     }
     return render(request, "dashboards/deptHeadDashboard.html", context)
 

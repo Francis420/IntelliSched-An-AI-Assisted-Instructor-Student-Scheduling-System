@@ -15,6 +15,7 @@ from scheduling.models import (
 )
 from core.models import (
     UserLogin,
+    Instructor,
 )
 from django.db import transaction
 from django.http import JsonResponse
@@ -23,6 +24,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 import string
 from django.urls import reverse
+from scheduling.services import getPreSchedulingAnalysis
 
 
 
@@ -981,3 +983,37 @@ def instructorSchedulingConfig(request):
     return render(request, 'scheduling/instructorConfig.html', {
         'config': config,
     })
+
+
+@login_required
+@has_role('deptHead')
+def preSchedulingDetailedAnalysis(request):
+    """
+    Detailed view for Supply vs Demand analysis with Semester Selector.
+    """
+    # 1. Handle Semester Selection
+    semester_id = request.GET.get('semester')
+    
+    if semester_id:
+        selected_semester = get_object_or_404(Semester, pk=semester_id)
+    else:
+        # Default to active, or last created if no active exists
+        selected_semester = Semester.objects.filter(isActive=True).first()
+        if not selected_semester:
+            selected_semester = Semester.objects.last()
+
+    # 2. Get list of all semesters for the dropdown
+    all_semesters = Semester.objects.all().order_by('-academicYear', '-term')
+
+    # 3. Calculate Analysis
+    analysis_data = None
+    if selected_semester:
+        analysis_data = getPreSchedulingAnalysis(selected_semester)
+
+    context = {
+        'semesters': all_semesters,
+        'selected_semester': selected_semester,
+        'analysis': analysis_data
+    }
+    
+    return render(request, 'scheduling/preSchedulingDetailedAnalysis.html', context)
