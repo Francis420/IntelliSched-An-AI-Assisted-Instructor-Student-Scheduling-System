@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% block title %}Department Head Dashboard{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 pb-10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+        
+        <div class="md:flex md:items-center md:justify-between mb-8">
+            <div class="flex-1 min-w-0">
+                <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
+                    Department Head Dashboard
+                </h2>
+                <p class="mt-1 text-sm text-gray-500">
+                    Welcome back, {{ request.user.firstName|default:"Department Head" }}. Here's what's happening today.
+                </p>
+            </div>
+            <div class="mt-4 flex md:mt-0 md:ml-4">
+                <span class="text-sm text-gray-500 bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm">
+                    📅 {{ "now"|date:"l, F j, Y" }}
+                </span>
+            </div>
+        </div>
+
+        {% if workload_analysis %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8 relative overflow-hidden">
+            <div class="absolute top-0 right-0 -mr-4 -mt-4 w-24 h-24 rounded-full bg-indigo-50 opacity-50 blur-xl"></div>
+
+            <div class="flex items-center justify-between mb-6 relative z-10">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-800">Scheduling Readiness</h3>
+                    <p class="text-xs text-gray-500 mt-0.5">
+                        For {{ workload_analysis.semester.name }}
+                    </p>
+                </div>
+                <a href="{% url 'preSchedulingDetailedAnalysis' %}?semester={{ workload_analysis.semester.semesterId }}" 
+                   class="text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 px-3 py-1 rounded-md transition">
+                    View Full Analysis &rarr;
+                </a>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center divide-y md:divide-y-0 md:divide-x divide-gray-100 relative z-10">
+                <div class="px-4">
+                    <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Faculty Supply</p>
+                    <p class="text-3xl font-extrabold text-indigo-600 mt-2">{{ workload_analysis.summary.total_supply|floatformat:1 }}</p>
+                    <p class="text-xs text-gray-400 mt-1">Available Hours</p>
+                </div>
+                
+                <div class="px-4">
+                    <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Curriculum Demand</p>
+                    <p class="text-3xl font-extrabold text-gray-700 mt-2">{{ workload_analysis.summary.total_demand|floatformat:1 }}</p>
+                    <p class="text-xs text-gray-400 mt-1">Required Hours</p>
+                </div>
+
+                <div class="px-4">
+                    <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Net Status</p>
+                    {% if workload_analysis.summary.status == 'deficit' %}
+                        <p class="text-3xl font-extrabold text-red-500 mt-2">-{{ workload_analysis.summary.gap|floatformat:1 }}</p>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 mt-1">
+                            ⚠️ Shortage
+                        </span>
+                    {% else %}
+                        <p class="text-3xl font-extrabold text-green-500 mt-2">+{{ workload_analysis.summary.gap|floatformat:1 }}</p>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mt-1">
+                            ✅ Sufficient
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <div class="lg:col-span-2 space-y-8">
+                
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                        <p class="text-sm font-medium text-gray-500">Curriculums</p>
+                        <p class="text-2xl font-semibold text-gray-900 mt-1">{{ curriculum_count }}</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                        <p class="text-sm font-medium text-gray-500">Instructors</p>
+                        <p class="text-2xl font-semibold text-gray-900 mt-1">{{ instructor_count }}</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                        <p class="text-sm font-medium text-gray-500">Subjects</p>
+                        <p class="text-2xl font-semibold text-gray-900 mt-1">{{ subject_count }}</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                        <p class="text-sm font-medium text-gray-500">Semesters</p>
+                        <p class="text-2xl font-semibold text-gray-900 mt-1">{{ semester_count }}</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                        <p class="text-sm font-medium text-gray-500">Rooms</p>
+                        <p class="text-2xl font-semibold text-gray-900 mt-1">{{ room_count }}</p>
+                    </div>
+                     <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                        <p class="text-sm font-medium text-gray-500">Matching Runs</p>
+                        <p class="text-2xl font-semibold text-gray-900 mt-1">{{ matching_runs }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-full">
+                <div class="p-6 border-b border-gray-100">
+                    <h3 class="text-lg font-bold text-gray-900">Recent Activities</h3>
+                </div>
+                <div class="p-6 flex-1 overflow-y-auto max-h-[500px]">
+                    {% if recent_activities %}
+                        <ul class="space-y-6">
+                            {% for activity in recent_activities %}
+                            <li class="relative pl-6 border-l-2 border-gray-200 last:border-0 pb-6 last:pb-0">
+                                <div class="absolute -left-[9px] top-0 h-4 w-4 rounded-full bg-white border-2 border-indigo-500"></div>
+                                <div>
+                                    <div class="flex justify-between items-start">
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-900">
+                                                <a href="{{ activity.link }}" class="hover:underline hover:text-indigo-600 transition">
+                                                    {{ activity.title }}
+                                                </a>
+                                            </p>
+                                            <p class="text-xs text-gray-500 mt-1">{{ activity.description }}</p>
+                                        </div>
+                                        <span class="text-xs text-gray-400 whitespace-nowrap ml-2">
+                                            {{ activity.timestamp|timesince }} ago
+                                        </span>
+                                    </div>
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <div class="text-center py-10">
+                            <p class="text-sm text-gray-500 italic">No recent activities.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
