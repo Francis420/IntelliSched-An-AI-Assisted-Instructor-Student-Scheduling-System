@@ -808,13 +808,31 @@ def subjectOfferingUpdate(request, offeringId):
 
     if request.method == "POST":
         try:
+            # 1. Get Number of Sections
             numberOfSections = int(request.POST.get("numberOfSections", offering.numberOfSections))
+            
+            # 2. Get Students Per Section (New Logic)
+            studentsPerSection = int(request.POST.get("studentsPerSection", offering.defaultStudentsPerSection))
+
+            # 3. Update Model
             offering.numberOfSections = numberOfSections
+            offering.defaultStudentsPerSection = studentsPerSection
             offering.save()
-            messages.success(request, f"Updated {offering.subject.code} to {numberOfSections} sections.")
-            return redirect("subjectOfferingList")
+            
+            messages.success(request, f"Updated {offering.subject.code}: {numberOfSections} sections, {studentsPerSection} students/section.")
+            
+            # --- REDIRECT LOGIC ---
+            next_url = request.POST.get('next')
+            anchor = f"#offering-{offering.pk}"
+            
+            if next_url:
+                return redirect(f"{next_url}{anchor}")
+            else:
+                base_url = reverse("subjectOfferingList")
+                return redirect(f"{base_url}{anchor}")
+
         except ValueError:
-            messages.error(request, "Invalid number of sections entered.")
+            messages.error(request, "Invalid input. Please enter valid numbers.")
 
     return render(request, "scheduling/offerings/update.html", {
         "offering": offering,

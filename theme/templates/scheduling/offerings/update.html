@@ -8,6 +8,9 @@
 
     <form method="POST">
         {% csrf_token %}
+        
+        <input type="hidden" name="next" value="{{ request.GET.next }}">
+
         <div class="mb-4">
             <label class="block font-semibold mb-2">Subject</label>
             <input type="text" value="{{ offering.subject.code }} - {{ offering.subject.name }}" disabled
@@ -40,11 +43,16 @@
                    class="w-full p-2 border rounded-lg">
         </div>
 
-        <div class="flex justify-end">
-            <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg shadow">
+        <div class="flex justify-end gap-3">
+            <a href="{% if request.GET.next %}{{ request.GET.next }}{% else %}{% url 'subjectOfferingList' %}{% endif %}#offering-{{ offering.id }}" 
+            class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg shadow">
+                Cancel
+            </a>
+            
+            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow">
                 Save Changes
             </button>
-        </div>
+        </div>>
     </form>
 </div>
 {% endblock %}

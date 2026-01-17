@@ -18,7 +18,7 @@
         </thead>
         <tbody>
           {% for offering in offerings_in_year %}
-            <tr class="hover:bg-gray-50">
+            <tr class="hover:bg-gray-50" id="offering-{{ offering.id }}">
               <td class="px-4 py-3 border-b">{{ offering.subject.code }}</td>
               <td class="px-4 py-3 border-b">{{ offering.subject.name }}</td>
               <td class="px-4 py-3 border-b">{{ offering.subject.units }}</td>
@@ -27,12 +27,12 @@
               
               <td class="px-4 py-3 border-b">
                 <div class="flex flex-wrap justify-center gap-2">
-                  <a href="{% url 'subjectOfferingUpdate' offering.id %}"
-                     class="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded-md text-xs whitespace-nowrap">
+                  <a href="{% url 'subjectOfferingUpdate' offering.id %}?next={{ request.get_full_path|urlencode }}"
+                    class="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded-md text-xs whitespace-nowrap">
                     Set Sections
                   </a>
                   <a href="{% url 'sectionConfigList' offering.id %}"
-                     class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-md text-xs whitespace-nowrap">
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-md text-xs whitespace-nowrap">
                     Set Students
                   </a>
                 </div>
