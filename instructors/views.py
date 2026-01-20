@@ -20,11 +20,11 @@ from django.template.loader import render_to_string
 from django.core.paginator import Paginator
 from django.db.models import Q
 
-# ---------- Instructor Dashboard ----------
+# ---------- Instructor Portfolio ----------
 @login_required
 @has_role('instructor')
-def instructorDashboard(request):
-    return render(request, 'instructors/dashboard.html')
+def instructorPortfolio(request):
+    return render(request, 'instructors/portfolio.html')
 
 
 # ---------- Instructor Experience ----------

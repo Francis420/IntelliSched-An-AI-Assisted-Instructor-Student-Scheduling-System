@@ -1,11 +1,10 @@
 {% extends 'base.html' %}
-{% block title %}Update Academic Attainment{% endblock %}
-{% block header %}Update Academic Attainment{% endblock %}
+
+{% block title %}Update Academic Attainment: {{ attainment.name }}{% endblock %}
+{% block header %}Update Academic Attainment: {{ attainment.name }}{% endblock %}
 
 {% block content %}
 <div class="max-w-3xl mx-auto mt-10 p-6 bg-white rounded-xl shadow-xl">
-    <h2 class="text-2xl font-bold text-gray-900 mb-6">{{ attainment.name }}</h2>
-
     <form method="post" class="space-y-6">
         {% csrf_token %}
         

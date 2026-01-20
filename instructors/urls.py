@@ -3,7 +3,7 @@ from . import views
 
 urlpatterns = [
     # Instructor Dashboard
-    path('', views.instructorDashboard, name='instructorDashboard'),
+    path('instructorPortfolio/', views.instructorPortfolio, name='instructorPortfolio'),
 
     # Instructor Experience
     path('experiences/', views.experienceList, name='experienceList'),

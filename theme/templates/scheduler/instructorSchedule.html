@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}My Schedule | {{ instructor.full_name }}{% endblock %}
+{% block title %}Instructor Schedule {% endblock %}
+{% block header %}Instructor Schedule {% endblock %}
 
 {% block content %}
 <div class="min-h-screen bg-gray-50 pb-12">
@@ -14,7 +15,6 @@
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold text-gray-900">Class Schedule</h1>
                     <p class="text-sm text-gray-500">Instructor: <span class="font-medium text-gray-900">{{ instructor.full_name }}</span></p>
                 </div>
             </div>
@@ -112,12 +112,9 @@
                                                             <div>
                                                                 <div class="flex items-start justify-between">
                                                                     <span class="font-bold text-xs text-white leading-tight truncate block w-full" title="{{ s.subject }}">
-                                                                        {{ s.subject }}
+                                                                        {{ s.subject }} - {{ s.section }}
                                                                     </span>
                                                                 </div>
-                                                                <span class="text-[10px] text-white/90 font-medium block mt-0.5 truncate">
-                                                                    Section {{ s.section }}
-                                                                </span>
                                                             </div>
 
                                                             <div class="space-y-0.5">
