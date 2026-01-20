@@ -231,6 +231,7 @@ class GenEdSchedule(models.Model):
     yearLevel = models.IntegerField(default=1)
     sectionCode = models.CharField(max_length=10)
     instructorName = models.CharField(max_length=100, null=True, blank=True)
+    room = models.CharField(max_length=100, null=True, blank=True)
     dayOfWeek = models.CharField(max_length=10)
     startTime = models.TimeField()
     endTime = models.TimeField()

@@ -845,13 +845,19 @@ def fill_list_section(ws, data_rows, start_search_row=1):
 
 @login_required
 def previewWorkload(request):
-    user = request.user
-    instructor = None
+    target_instructor_id = request.GET.get('instructor')
     
-    login_entry = UserLogin.objects.filter(user=user).select_related("instructor").first()
-    if login_entry:
-        instructor = login_entry.instructor
-
+    if target_instructor_id:
+        instructor = get_object_or_404(Instructor, instructorId=target_instructor_id)
+    else:
+        user = request.user
+        instructor = None
+        login_entry = UserLogin.objects.filter(user=user).select_related("instructor").first()
+        if login_entry:
+            instructor = login_entry.instructor
+    
+    if not instructor:
+        return redirect('instructorLoad')
 
     semester_id = request.GET.get("semester")
     if semester_id:
@@ -1979,16 +1985,16 @@ def previewSectionBlockSchedule(request, blockStr, semesterId):
         }
 
     for gen in gen_eds:
-        key = (gen.day, gen.startTime.strftime("%H:%M"))
+        key = (gen.dayOfWeek, gen.startTime.strftime("%H:%M"))
         
-        subject_display = f"{gen.subjectCode} - Lecture"
+        subject_display = f"{gen.code} - Lecture"
 
         scheduleMap[key] = {
             'startTime': gen.startTime,
             'endTime': gen.endTime,
             'subjectCode': subject_display, 
             'roomName': gen.room or "TBA",
-            'instructorName': gen.instructor or "TBA",
+            'instructorName': gen.instructorName or "TBA",
             'isGenEd': True
         }
 

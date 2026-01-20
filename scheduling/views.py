@@ -165,6 +165,7 @@ def genedScheduleList(request):
             Q(subjectName__icontains=query) |
             Q(sectionCode__icontains=query) |
             Q(instructorName__icontains=query) |
+            Q(room__icontains=query) |
             Q(dayOfWeek__icontains=query)
         )
 
@@ -194,6 +195,7 @@ def genedScheduleListLive(request):
             Q(subjectName__icontains=query) |
             Q(sectionCode__icontains=query) |
             Q(instructorName__icontains=query) |
+            Q(room__icontains=query) |
             Q(dayOfWeek__icontains=query)
         )
 
@@ -222,6 +224,7 @@ def genedScheduleCreate(request):
         subjectName = request.POST.get('subjectName')
         sectionCode = request.POST.get('sectionCode')
         instructorName = request.POST.get('instructorName') or None
+        room = request.POST.get('room') or None 
         dayOfWeek = request.POST.get('dayOfWeek')
         startTime = request.POST.get('startTime')
         endTime = request.POST.get('endTime')
@@ -234,6 +237,7 @@ def genedScheduleCreate(request):
             subjectName=subjectName,
             sectionCode=sectionCode,
             instructorName=instructorName,
+            room=room,  # Save Room
             dayOfWeek=dayOfWeek,
             startTime=startTime,
             endTime=endTime,
@@ -257,6 +261,7 @@ def genedScheduleUpdate(request, scheduleId):
         schedule.subjectName = request.POST.get('subjectName')
         schedule.sectionCode = request.POST.get('sectionCode')
         schedule.instructorName = request.POST.get('instructorName') or None
+        schedule.room = request.POST.get('room') or None 
         schedule.dayOfWeek = request.POST.get('dayOfWeek')
         schedule.startTime = request.POST.get('startTime')
         schedule.endTime = request.POST.get('endTime')

@@ -11,7 +11,7 @@ urlpatterns = [
 
     # GenEd Schedules
     path('genEdSchedules/', views.genedScheduleList, name='genedScheduleList'),
-    path("gened-schedules/live/", views.genedScheduleListLive, name="genedScheduleListLive"),
+    path("genedSchedules/live/", views.genedScheduleListLive, name="genedScheduleListLive"),
     path('genEdSchedules/create/', views.genedScheduleCreate, name='genedScheduleCreate'),
     path('genEdSchedules/update/<int:scheduleId>/', views.genedScheduleUpdate, name='genedScheduleUpdate'),
     path('genEdSchedules/delete/<int:scheduleId>/', views.genedScheduleDelete, name='genedScheduleDelete'),
@@ -32,14 +32,14 @@ urlpatterns = [
     path('curriculums/<int:curriculumId>/', views.curriculumDetail, name='curriculumDetail'),
 
     # Number of Sections per Subject
-    path('subject-offerings/', views.subjectOfferingList, name='subjectOfferingList'),
-    path('subject-offerings/live/', views.subjectOfferingListLive, name='subjectOfferingListLive'),
-    path('subject-offerings/update/<int:offeringId>/', views.subjectOfferingUpdate, name='subjectOfferingUpdate'),
-    path("subject-offerings/generate-sections/<int:semesterId>/<int:curriculumId>/", views.generateSections, name="generateSections",),
-    path('offerings/<int:offeringId>/sections/config/', views.sectionConfigList, name='sectionConfigList'),
+    path('subjectOfferings/', views.subjectOfferingList, name='subjectOfferingList'),
+    path('subjectOfferings/live/', views.subjectOfferingListLive, name='subjectOfferingListLive'),
+    path('subjectOfferings/update/<int:offeringId>/', views.subjectOfferingUpdate, name='subjectOfferingUpdate'),
+    path("subjectOfferings/generate-sections/<int:semesterId>/<int:curriculumId>/", views.generateSections, name="generateSections",),
+    path('subjectOfferings/<int:offeringId>/sections/config/', views.sectionConfigList, name='sectionConfigList'),
 
     # Instructor Scheduling Configuration
-    path('instructor-scheduling-config/', views.instructorSchedulingConfig, name='instructorSchedulingConfig'),
+    path('instructorSchedulingConfiguartion/', views.instructorSchedulingConfig, name='instructorSchedulingConfig'),
 
     path('scheduling/analysis/', views.preSchedulingDetailedAnalysis, name='preSchedulingDetailedAnalysis'),
 ]

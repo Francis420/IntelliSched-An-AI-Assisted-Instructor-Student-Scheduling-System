@@ -60,10 +60,17 @@
             </div>
 
             <div class="p-8 space-y-6">
-                <div>
-                    <label for="instructorName" class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Instructor Name</label>
-                    <input type="text" name="instructorName" id="instructorName" placeholder="Leave blank if TBA" 
-                           class="w-full border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="instructorName" class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Instructor Name</label>
+                        <input type="text" name="instructorName" id="instructorName" placeholder="Leave blank if TBA" 
+                            class="w-full border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm">
+                    </div>
+                    <div>
+                        <label for="room" class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">RoomCode</label>
+                        <input type="text" name="room" id="room" placeholder="e.g., EB 101 or TBA" 
+                            class="w-full border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm">
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -80,17 +87,15 @@
                             <option value="Sunday">Sunday</option>
                         </select>
                     </div>
-
                     <div>
                         <label for="startTime" class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Start Time</label>
                         <input type="time" name="startTime" id="startTime" 
-                               class="w-full border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm" required>
+                            class="w-full border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm" required>
                     </div>
-
                     <div>
                         <label for="endTime" class="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">End Time</label>
                         <input type="time" name="endTime" id="endTime" 
-                               class="w-full border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm" required>
+                            class="w-full border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all shadow-sm" required>
                     </div>
                 </div>
             </div>

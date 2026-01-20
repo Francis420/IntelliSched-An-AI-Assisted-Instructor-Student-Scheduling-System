@@ -8,6 +8,7 @@
         <th class="px-4 py-3 border-b">Subject Name</th>
         <th class="px-4 py-3 border-b">Section</th>
         <th class="px-4 py-3 border-b">Instructor</th>
+        <th class="px-4 py-3 border-b">RoomCode</th> 
         <th class="px-4 py-3 border-b">Day</th>
         <th class="px-4 py-3 border-b">Time</th>
         <th class="px-4 py-3 border-b text-center">Actions</th>
@@ -21,7 +22,7 @@
           <td class="px-4 py-3 border-b">{{ schedule.subjectName }}</td>
           <td class="px-4 py-3 border-b">{{ schedule.sectionCode }}</td>
           <td class="px-4 py-3 border-b">{{ schedule.instructorName|default:"—" }}</td>
-          <td class="px-4 py-3 border-b">{{ schedule.dayOfWeek }}</td>
+          <td class="px-4 py-3 border-b">{{ schedule.room|default:"TBA" }}</td> <td class="px-4 py-3 border-b">{{ schedule.dayOfWeek }}</td>
           <td class="px-4 py-3 border-b">{{ schedule.startTime }} - {{ schedule.endTime }}</td>
           <td class="px-4 py-3 border-b text-center space-x-2">
             <a href="{% url 'genedScheduleUpdate' schedule.genedScheduleId %}"
