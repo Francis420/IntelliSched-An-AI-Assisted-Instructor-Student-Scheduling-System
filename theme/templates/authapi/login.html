@@ -1,7 +1,16 @@
 {% extends 'base.html' %}
 
 {% block title %}Login to IntelliSched{% endblock %}
-{% block header %}Login to IntelliSched{% endblock %}
+{% block header %}
+<div class="flex items-center gap-2">
+    <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-xl shrink-0">
+        I
+    </div>
+    <span class="text-xl font-bold text-gray-800 tracking-tight sidebar-text">
+        Login to IntelliSched
+    </span>
+</div>
+{% endblock %}
 
 {% block content %}
 <div class="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -14,7 +23,7 @@
             IntelliSched
         </h2>
         <p class="mt-2 text-center text-sm text-gray-600">
-            An AI Assisted Instructor/Student Scheduling System 
+            An AI Assisted Instructor Scheduling System 
         </p>
     </div>
 
