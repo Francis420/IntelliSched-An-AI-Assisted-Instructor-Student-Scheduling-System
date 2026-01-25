@@ -3,43 +3,76 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from aimatching.matcher.run_matching import run_matching
 from aimatching.models import MatchingProgress
-from core.models import User  # ✅ Import your custom User
+from core.models import User
+from django.core.cache import cache
 
 @shared_task
 def run_matching_task(semester_id, batch_id, user_id):
     channel_layer = get_channel_layer()
+    
+    lock_id = f"matching_lock_semester_{semester_id}"
 
-    # ✅ Get the User object instead of passing raw id
+    if not cache.add(lock_id, "true", timeout=60*60):
+        async_to_sync(channel_layer.group_send)(
+            f"progress_{batch_id}",
+            {
+                "type": "progress_update",
+                "data": {
+                    "status": "error",
+                    "message": "⚠️ A matching process is already running for this semester. Please wait for it to complete before starting a new one or stop the currently running process."
+                }
+            }
+        )
+        return "Locked"
+
     try:
-        user = User.objects.get(pk=user_id)
-    except User.DoesNotExist:
-        user = None  # fallback if user was deleted
+        try:
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            user = None
 
-    progress, created = MatchingProgress.objects.get_or_create(
-        batchId=batch_id,
-        defaults={
-            "semester_id": semester_id,
-            "totalTasks": 0,
-            "completedTasks": 0,
-            "status": "running",
-            "generated_by": user,  # ✅ assign object, not ID
+        progress, created = MatchingProgress.objects.get_or_create(
+            batchId=batch_id,
+            defaults={
+                "semester_id": semester_id,
+                "totalTasks": 0,
+                "completedTasks": 0,
+                "status": "running",
+                "generated_by": user,
+            }
+        )
+
+        run_matching(semester_id, batch_id, generated_by=user)
+
+        progress.refresh_from_db()
+        data = {
+            "totalTasks": progress.totalTasks,
+            "completedTasks": progress.completedTasks,
+            "status": progress.status,
+            "percentage": (progress.completedTasks / progress.totalTasks) * 100 if progress.totalTasks > 0 else 0,
+            "message": "✅ Semantic AI Matching Completed!"
         }
-    )
+        
+        async_to_sync(channel_layer.group_send)(
+            f"progress_{batch_id}",
+            {"type": "progress_update", "data": data}
+        )
 
-    run_matching(semester_id, batch_id, generated_by=user)
+    except Exception as e:
+        async_to_sync(channel_layer.group_send)(
+            f"progress_{batch_id}",
+            {
+                "type": "progress_update",
+                "data": {
+                    "status": "error",
+                    "message": f"❌ Task Failed: {str(e)}"
+                }
+            }
+        )
+        raise e
 
-    progress.refresh_from_db()
-    data = {
-        "totalTasks": progress.totalTasks,
-        "completedTasks": progress.completedTasks,
-        "status": progress.status,
-        "percentage": (progress.completedTasks / progress.totalTasks) * 100 if progress.totalTasks > 0 else 0,
-    }
-
-    async_to_sync(channel_layer.group_send)(
-        f"progress_{batch_id}",
-        {"type": "progress_update", "data": data}
-    )
+    finally:
+        cache.delete(lock_id)
 
 
 
