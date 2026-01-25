@@ -442,13 +442,12 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
              underload = model.NewIntVar(0, WEEK_MINUTES, f"underload_{i_idx}")
              model.Add(underload == n_lim - sum_norm_time)
              
-             # Square the underload to make large gaps (like 3 hours) UNACCEPTABLE.
-             sq_underload = model.NewIntVar(0, WEEK_MINUTES * WEEK_MINUTES, f"sq_underload_{i_idx}")
-             model.AddMultiplicationEquality(sq_underload, [underload, underload])
-             
-             # WEIGHT: High enough to beat "convenience" factors.
-             FILL_PRIORITY_WEIGHT = 20  
-             objective_terms.append(sq_underload * -FILL_PRIORITY_WEIGHT)
+             # Weight: 
+             # 50 points per minute empty. 
+             # If you are empty for 2 hours (120 mins), penalty is 6,000.
+             # This is enough to beat "convenience" but won't break the solver.
+             FILL_PRIORITY_WEIGHT = 50  
+             objective_terms.append(underload * -FILL_PRIORITY_WEIGHT)
 
         # 2. Sum up Overload Time (Weekends/Eve)
         sum_ot_time = model.NewIntVar(0, WEEK_MINUTES, f"sum_ot_time_{i_idx}")
