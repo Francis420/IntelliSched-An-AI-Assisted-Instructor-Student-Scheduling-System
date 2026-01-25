@@ -42,7 +42,7 @@ def run_scheduler_task(self, batch_id=None):
     lock_id = f"scheduler_lock_{semester.semesterId}"
     
     if cache.get(lock_id):
-        msg = "⚠️ Scheduler is ALREADY running for this semester. Duplicate run blocked."
+        msg = "⚠️ Scheduler is ALREADY running for this semester! Duplicate run is blocked."
         print(f"[Task] {msg}")
         
         progress.status = "error"
@@ -54,35 +54,40 @@ def run_scheduler_task(self, batch_id=None):
             f"scheduler_{batch_id}",
             {"type": "progress.update", "data": {"status": "error", "message": msg}},
         )
-        return 
+        return  # STOP HERE
 
     cache.set(lock_id, "running", timeout=1200)
     print(f"[Task] Lock ACQUIRED for semester {semester.semesterId}")
 
     try:
-        cmd = [sys.executable, "manage.py", "run_solver_script", str(semester.semesterId)]
+        cmd = [sys.executable, "manage.py", "test_scheduler", str(semester.semesterId)]
         
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1)
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+            bufsize=1,
+        )
+
+        progress.process_pid = process.pid
+        progress.save()
 
         for line in iter(process.stdout.readline, ''):
-            if not line:
-                break
-            
             line = line.strip()
-            print(f"[Solver Script] {line}")
+            if not line:
+                continue
 
             refreshed = SchedulerProgress.objects.get(batch_id=batch_id)
             if refreshed.status == "stopped":
                 process.terminate()
-                msg = "⏹ Scheduler stopped by user."
-                refreshed.add_log(msg)
+                refreshed.add_log("⏹ Scheduler stopped by user.")
                 async_to_sync(channel_layer.group_send)(
                     f"scheduler_{batch_id}",
-                    {"type": "progress.update", "data": {"status": "stopped", "message": msg}},
+                    {"type": "progress.update", "data": {"status": "stopped", "message": "Scheduler stopped by user."}},
                 )
                 return
 
-            # Log normal progress
             refreshed.add_log(line)
             async_to_sync(channel_layer.group_send)(
                 f"scheduler_{batch_id}",
@@ -92,8 +97,7 @@ def run_scheduler_task(self, batch_id=None):
         process.wait()
         
         if process.returncode != 0:
-            stderr_output = process.stderr.read()
-            raise Exception(f"Script failed with error code {process.returncode}: {stderr_output}")
+            raise Exception("Scheduler script failed (check logs above).")
 
         progress.status = "done"
         progress.message = "✅ Scheduling completed!"
@@ -106,14 +110,13 @@ def run_scheduler_task(self, batch_id=None):
         )
 
     except Exception as e:
-        msg = f"❌ Error: {str(e)}"
         progress.status = "error"
-        progress.message = msg
-        progress.add_log(msg)
+        progress.message = f"❌ Error: {str(e)}"
+        progress.add_log(progress.message)
         progress.save()
         async_to_sync(channel_layer.group_send)(
             f"scheduler_{batch_id}",
-            {"type": "progress.update", "data": {"status": "error", "message": msg}},
+            {"type": "progress.update", "data": {"status": "error", "message": str(e)}},
         )
     
     finally:
