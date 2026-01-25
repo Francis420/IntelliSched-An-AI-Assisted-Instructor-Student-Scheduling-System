@@ -16,7 +16,7 @@
                     <svg id="status-icon-x" class="w-6 h-6 text-red-600 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </div>
                 <div>
-                    <h2 class="text-xl font-bold text-gray-900" id="main-heading">Running Algorithm</h2>
+                    <h2 class="text-xl font-bold text-gray-900" id="main-heading">Running Semantic Matching</h2>
                     <p class="text-sm text-gray-500" id="sub-heading">Calculating semantic compatibility scores...</p>
                 </div>
             </div>
@@ -66,8 +66,8 @@
                     Cancel Matching
                 </button>
                 
-                <a href="{% url 'configList' %}" id="finish-btn" class="hidden inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    Return to Configurations
+                <a href="{% url 'matchingDashboard' %}" id="finish-btn" class="hidden inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Show Matching Results
                 </a>
             </div>
         </div>
@@ -77,7 +77,6 @@
 <script>
     const batchId = "{{ batchId }}";
 
-    // --- Cookie Helper ---
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -94,7 +93,6 @@
     }
     const csrftoken = getCookie('csrftoken');
 
-    // --- UI Elements ---
     const ui = {
         fill: document.getElementById("progress-fill"),
         percent: document.getElementById("percentage-text"),

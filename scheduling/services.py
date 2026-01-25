@@ -3,11 +3,6 @@ from instructors.models import Instructor
 from scheduling.models import Section, InstructorSchedulingConfiguration
 
 def getPreSchedulingAnalysis(semester):
-    """
-    Returns a dictionary with 'summary' (for dashboards) and 'details' (for the full report).
-    """
-    
-    # --- 1. DEMAND (Required Hours from Sections) ---
     sections = Section.objects.filter(semester=semester).select_related('subject')
     
     year_levels = {
@@ -42,7 +37,6 @@ def getPreSchedulingAnalysis(semester):
     demand_details.sort(key=lambda x: x['label'])
 
 
-    # --- 2. SUPPLY (Available Faculty Hours) ---
     instructors = Instructor.objects.filter(
         userlogin__user__isActive=True
     ).select_related('rank', 'designation')
@@ -60,32 +54,25 @@ def getPreSchedulingAnalysis(semester):
         reg_load = 0
         max_overload = 0
         
-        # --- NEW: DETERMINE DISPLAY TITLE (Rank vs Designation) ---
         role_title = "" 
         
-        # -- PERMANENT --
         if instr.employmentType == 'permanent':
-            # Check for valid Designation first (Not None, Not 'N/A')
             has_designation = (instr.designation and instr.designation.name != 'N/A')
             
             if has_designation:
-                # Use Designation limits
                 reg_load = instr.designation.instructionHours
                 max_overload = config.overload_limit_with_designation
-                role_title = instr.designation.name  # e.g., "Dean", "Chairperson"
+                role_title = instr.designation.name  
             else:
-                # Fallback to Rank limits
                 reg_load = instr.rank.instructionHours if instr.rank else 0
                 max_overload = config.overload_limit_no_designation
-                role_title = instr.rank.name if instr.rank else "Unranked" # e.g., "Instructor I"
+                role_title = instr.rank.name if instr.rank else "Unranked"
         
-        # -- PART-TIME --
         elif instr.employmentType == 'part-time':
             reg_load = config.part_time_normal_limit
             max_overload = config.part_time_overload_limit
             role_title = "Part-Time Instructor"
             
-        # -- PURE OVERLOAD --
         elif instr.employmentType == 'overload':
             reg_load = config.pure_overload_normal_limit 
             max_overload = config.pure_overload_max_limit
@@ -99,8 +86,8 @@ def getPreSchedulingAnalysis(semester):
 
         instructor_details.append({
             'name': instr.full_name, 
-            'type': instr.get_employmentType_display(), # Still useful for badges (Permanent/Part-Time)
-            'role_title': role_title,                   # The specific title (Dean/Instructor I)
+            'type': instr.get_employmentType_display(),
+            'role_title': role_title,
             'regular': reg_load,
             'overload': max_overload,
             'total': capacity

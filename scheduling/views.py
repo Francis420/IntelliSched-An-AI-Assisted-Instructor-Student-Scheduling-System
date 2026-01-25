@@ -805,7 +805,6 @@ def subjectOfferingListLive(request):
     })
 
 
-
 @login_required
 @has_role('deptHead')
 def subjectOfferingUpdate(request, offeringId):
@@ -858,7 +857,6 @@ def generateSections(request, semesterId, curriculumId):
     ).select_related('subject')
     
     DEFAULT_STUDENT_COUNT = 40
-
     added, removed, updated_units = 0, 0, 0
     letters = list(string.ascii_uppercase)
 
@@ -867,50 +865,49 @@ def generateSections(request, semesterId, curriculumId):
         existing_sections = list(
             Section.objects.filter(subject=offering.subject, semester=semester).order_by("sectionId")
         )
-
+        
         if len(existing_sections) < required_sections:
             for i in range(len(existing_sections), required_sections):
-                section_code = f"{offering.subject.code}-{letters[i]}"
+                suffix = letters[i] if i < len(letters) else str(i)
+                section_code = f"{offering.subject.code}-{suffix}"
+                
                 Section.objects.create(
                     subject=offering.subject,
                     semester=semester,
                     sectionCode=section_code,
                     numberOfStudents=DEFAULT_STUDENT_COUNT,
                     status="active",
+                    lectureMinutes=offering.subject.durationMinutes or 0,
+                    labMinutes=offering.subject.labDurationMinutes or 0,
+                    units=offering.subject.units or 0,
+                    hasLab=offering.subject.hasLab
                 )
                 added += 1
 
         elif len(existing_sections) > required_sections:
-            to_remove = existing_sections[required_sections:]
-            for section in to_remove:
+            for section in existing_sections[required_sections:]:
                 section.delete()
                 removed += 1
         
         for section in existing_sections[:required_sections]:
-            if section.numberOfStudents == 0:
-                 section.numberOfStudents = DEFAULT_STUDENT_COUNT
-                 section.save()
-                 updated_units += 1
-            else:
-                 section.save()
-                 updated_units += 1
+            should_save = False
+            
+            if section.lectureMinutes != offering.subject.durationMinutes:
+                should_save = True
+            if section.hasLab != offering.subject.hasLab:
+                should_save = True
+            if section.units != offering.subject.units:
+                should_save = True
+            
+            if should_save:
+                section.save() 
+                updated_units += 1
 
-
-    if added or removed or updated_units:
-        messages.success(
-            request,
-            f"Sections successfully updated for {semester.name} ({curriculum.name}): {added} added, {removed} removed."
-        )
-    else:
-        messages.info(
-            request,
-            f"All sections already match the required count for {semester.name} ({curriculum.name})."
-        )
-
+    messages.success(request, f"Generated/Synced Sections: {added} added, {removed} removed, {updated_units} fixed/synced.")
     return redirect("subjectOfferingList")
 
-from django.db import transaction
 
+from django.db import transaction
 @login_required
 @has_role('deptHead')
 def sectionConfigList(request, offeringId):
@@ -954,6 +951,8 @@ def sectionConfigList(request, offeringId):
     })
 
 
+
+# ---------- Instructor Scheduling Configuration ----------
 @login_required
 @has_role('deptHead')
 def instructorSchedulingConfig(request):
@@ -981,6 +980,8 @@ def instructorSchedulingConfig(request):
     })
 
 
+
+# ---------- Pre-Scheduling Detailed Analysis ----------
 @login_required
 @has_role('deptHead')
 def preSchedulingDetailedAnalysis(request):

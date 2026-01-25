@@ -333,7 +333,6 @@ def instructorAccountList(request):
         .filter(user__roles__name='instructor', instructor__isnull=False) \
         .distinct()
 
-    # Attach readable names
     for login in instructor_logins:
         login.instructor_display_name = login.instructor.full_name
 
