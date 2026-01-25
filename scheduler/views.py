@@ -33,6 +33,8 @@ from openpyxl.utils import get_column_letter
 from openpyxl import load_workbook
 import json
 from django.db.models import Q
+from django.core.cache import cache
+from scheduling.models import Semester
 
 
 
@@ -501,7 +503,7 @@ def instructorScheduleView(request):
     return render(request, "scheduler/instructorSchedule.html", context)
 
 
-# Scdeduler Dashboard View
+# Scheduler Dashboard View
 @login_required
 @has_role('deptHead')
 def scheduler_dashboard(request):
@@ -512,11 +514,29 @@ def scheduler_dashboard(request):
 @has_role('deptHead')
 def start_scheduler(request):
     batch_id = request.GET.get("batch_id")
+    
+    semester = Semester.objects.filter(isActive=True).first()
+    if not semester:
+        return JsonResponse({"status": "error", "message": "No active semester found."}, status=400)
+
+    lock_id = f"scheduler_lock_{semester.semesterId}"
+    if cache.get(lock_id):
+        # 🚨 BLOCK IT HERE
+        return JsonResponse({
+            "status": "error", 
+            "message": "⚠️ The Scheduler is already running in another tab or device! Please wait for it to finish."
+        }, status=423) # 423 = Locked
+
+    # 3. Proceed as normal if no lock
     progress, _ = SchedulerProgress.objects.get_or_create(batch_id=batch_id)
+    
+    cache.set(lock_id, "starting", timeout=30) 
+
     task = run_scheduler_task.delay(batch_id=batch_id)
     progress.task_id = task.id
     progress.status = "running"
     progress.save()
+    
     return JsonResponse({"message": "Scheduling started.", "batch_id": batch_id, "task_id": task.id})
 
 

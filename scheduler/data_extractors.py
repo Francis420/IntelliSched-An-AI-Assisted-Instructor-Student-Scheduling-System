@@ -3,6 +3,7 @@ from collections import defaultdict
 from scheduling.models import Section, Room, GenEdSchedule, InstructorSchedulingConfiguration
 from core.models import Instructor
 from aimatching.models import InstructorSubjectMatch
+import re
 
 
 def get_solver_data(semester):
@@ -28,6 +29,28 @@ def get_solver_data(semester):
 
     section_priority_map = {s.sectionId: s.isPriorityForRooms for s in sections_qs}
     section_num_students = {s.sectionId: (s.numberOfStudents or 0) for s in sections_qs}
+
+    def get_block_name(section):
+        # 1. Get the authoritative Year Level from the Subject model
+        # The choices are integers: 1, 2, 3, 4
+        year = section.subject.yearLevel 
+        
+        # 2. Get the Section Letter from the code (e.g. "IT 323-A" -> "A")
+        # We look for a hyphen followed by a single letter at the end
+        match = re.search(r'-([A-Z])$', section.sectionCode)
+        
+        if match:
+            letter = match.group(1)
+            return f"{year}{letter}" # Result: "3A", "1C", "2B"
+        
+        # Fallback: If code format is weird (e.g. "Practicum"), return code as-is
+        return section.sectionCode
+
+    # Create the map
+    section_to_group = {
+        s.sectionId: get_block_name(s) 
+        for s in sections_qs
+    }
 
     # -------------------- Section Hours --------------------
     section_hours = {
@@ -81,13 +104,13 @@ def get_solver_data(semester):
                 if i.rank:
                     norm_hrs = i.rank.instructionHours
                 else:
-                    norm_hrs = 18 # Fallback if no Rank and no Designation
+                    norm_hrs = 18
             
             # Step 3: Determine Overload Limit
             if is_designated:
-                over_hrs = overload_has_designation  # Designated gets less overload
+                over_hrs = overload_has_designation
             else:
-                over_hrs = overload_has_no_designation # Regular gets standard overload
+                over_hrs = overload_has_no_designation
 
         elif emp_type == 'part-time':
             # Part-Timers get fixed hours
@@ -99,7 +122,6 @@ def get_solver_data(semester):
             norm_hrs = PURE_OVERLOAD_NORMAL_HRS
             over_hrs = PURE_OVERLOAD_LIMIT_HRS
 
-        # Save to map (Convert to minutes)
         instructor_caps[i.instructorId] = {
             "normal_limit_min": int(norm_hrs * 60),
             "overload_limit_min": int(over_hrs * 60)
@@ -108,7 +130,6 @@ def get_solver_data(semester):
     # -------------------- Matches --------------------
     subject_ids = {s.subject_id for s in sections_qs}
 
-    # UPDATED: Added "latestHistory" to select_related
     match_qs = InstructorSubjectMatch.objects.filter(
         subject_id__in=subject_ids
     ).select_related("instructor", "subject", "latestHistory")
@@ -205,7 +226,7 @@ def get_solver_data(semester):
         "instructors": tuple(instructors),
         "sections": tuple(sections),
         "gened_blocks": tuple(gened_blocks),
-        "section_to_group": {s.sectionId: s.student_group for s in sections_qs},
+        "section_to_group": section_to_group,
         "rooms": tuple(rooms_list),
         "room_types": room_types,
         "room_capacities": room_capacities,
