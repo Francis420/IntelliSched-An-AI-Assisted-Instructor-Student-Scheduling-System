@@ -372,64 +372,101 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
         model.AddBoolAnd([is_weekend.Not(), is_evening.Not()]).OnlyEnforceIf(is_ot.Not())
         task_is_overtime[tid] = is_ot
 
+    # -------------------- CORRECTED INSTRUCTOR TOTALS (STRICT LIMITS) --------------------
     # Instructor Totals
     all_instructor_total_mins = []
     
-    # NEW: Create a list to track ONLY permanent instructors for fairness balancing
+    # Track permanent load just for reference if needed
     permanent_load_vars = [] 
     permanent_ids = set(data.get("permanent_instructors", []))
 
     for i_idx, instr_id in enumerate(instructors):
         caps = instructor_caps.get(instr_id, {})
-        n_lim = caps.get("normal_limit_min", 1080) 
-        o_lim = caps.get("overload_limit_min", 720)  
+        n_lim = caps.get("normal_limit_min", 1080) # e.g., 18 hours
+        o_lim = caps.get("overload_limit_min", 720) # e.g., 12 hours
         
-        # 1. Calculate TOTAL minutes (Day + Night combined)
+        # New variables to track accumulated time separately
+        normal_time_contribs = []   # Mon-Fri 8am-5pm
+        overload_time_contribs = [] # Mon-Fri 5pm+ OR Weekends
+        
+        # Calculate TOTAL minutes (for general stats)
         total_instr_minutes_list = []
+
         for t in tasks:
             tid = t["task_id"]
             if tid not in task_vars: continue 
             
-            # Using the assigned_instr dictionary you created earlier
-            # Note: Ensure assigned_instr was populated correctly in the main loop
+            # Check if assigned to this instructor
             if (tid, i_idx) in assigned_instr:
-                assigned = assigned_instr[(tid, i_idx)]
+                is_assigned = assigned_instr[(tid, i_idx)]
                 dur = t["dur"]
                 
-                # Duration IF assigned to this instructor, else 0
-                task_contribution = model.NewIntVar(0, dur, f"contrib_{tid}_{i_idx}")
-                model.Add(task_contribution == assigned * dur)
-                total_instr_minutes_list.append(task_contribution)
+                # Get the Pre-calculated Time Status (Day vs Evening/Weekend)
+                is_ot_slot = task_is_overtime[tid]
 
-        # Create the variable for Total Minutes
+                # --- 1. Contribution to "Overload Time" (Weekend/Evening) ---
+                is_assigned_and_ot = model.NewBoolVar(f"assign_ot_{tid}_{i_idx}")
+                model.AddBoolAnd([is_assigned, is_ot_slot]).OnlyEnforceIf(is_assigned_and_ot)
+                model.AddBoolOr([is_assigned.Not(), is_ot_slot.Not()]).OnlyEnforceIf(is_assigned_and_ot.Not())
+                
+                ot_contrib = model.NewIntVar(0, dur, f"contrib_ot_{tid}_{i_idx}")
+                model.Add(ot_contrib == is_assigned_and_ot * dur)
+                overload_time_contribs.append(ot_contrib)
+
+                # --- 2. Contribution to "Normal Time" (Weekday Day) ---
+                is_assigned_and_norm = model.NewBoolVar(f"assign_norm_{tid}_{i_idx}")
+                model.AddBoolAnd([is_assigned, is_ot_slot.Not()]).OnlyEnforceIf(is_assigned_and_norm)
+                model.AddBoolOr([is_assigned.Not(), is_ot_slot]).OnlyEnforceIf(is_assigned_and_norm.Not())
+                
+                norm_contrib = model.NewIntVar(0, dur, f"contrib_norm_{tid}_{i_idx}")
+                model.Add(norm_contrib == is_assigned_and_norm * dur)
+                normal_time_contribs.append(norm_contrib)
+
+                # Track simple total
+                task_total = model.NewIntVar(0, dur, f"contrib_total_{tid}_{i_idx}")
+                model.Add(task_total == is_assigned * dur)
+                total_instr_minutes_list.append(task_total)
+
+        # -------------------- THE FIX IS HERE --------------------
+        
+        # 1. Sum up Normal Time (Mon-Fri 8-5)
+        sum_norm_time = model.NewIntVar(0, WEEK_MINUTES, f"sum_norm_time_{i_idx}")
+        model.Add(sum_norm_time == sum(normal_time_contribs))
+        
+        # STRICT CONSTRAINT: You cannot teach more Normal Hours than the Normal Limit.
+        # This forces extra classes to be moved to Overload Hours.
+        model.Add(sum_norm_time <= n_lim)
+
+        # 2. Sum up Overload Time (Weekends/Eve)
+        sum_ot_time = model.NewIntVar(0, WEEK_MINUTES, f"sum_ot_time_{i_idx}")
+        model.Add(sum_ot_time == sum(overload_time_contribs))
+        
+        # STRICT CONSTRAINT: You cannot teach more Overload Hours than the Overload Limit.
+        model.Add(sum_ot_time <= o_lim)
+
+        # ---------------------------------------------------------
+
+        # Total Calculation
         total_minutes = model.NewIntVar(0, WEEK_MINUTES, f"total_mins_{i_idx}")
         model.Add(total_minutes == sum(total_instr_minutes_list))
         all_instructor_total_mins.append(total_minutes)
 
-        # --- NEW LOGIC INSERTION ---
-        # If this is a Permanent Instructor, add their total to our fairness list
         if instr_id in permanent_ids:
             permanent_load_vars.append(total_minutes)
 
-        # 2. Fill Normal Bucket FIRST
-        tot_norm = model.NewIntVar(0, n_lim, f"load_n_{i_idx}")
-        model.AddMinEquality(tot_norm, [total_minutes, n_lim])
+        # Apply Objectives (Rewards/Penalties)
+        # Reward filling the Normal Load (Primary Goal)
+        objective_terms.append(sum_norm_time * NORMAL_LOAD_REWARD_PER_MIN)
+        
+        # Penalize Overload (Cost) - Lower priority than filling normal load
+        objective_terms.append(sum_ot_time * -GLOBAL_OVERLOAD_COST_PER_MIN)
 
-        # 3. Overload is ONLY what's left over
-        tot_over = model.NewIntVar(0, o_lim, f"load_o_{i_idx}")
-        model.Add(tot_over == total_minutes - tot_norm)
-
-        # 4. Individual Objectives
-        objective_terms.append(tot_norm * NORMAL_LOAD_REWARD_PER_MIN)
-        objective_terms.append(tot_over * -GLOBAL_OVERLOAD_COST_PER_MIN)
-
-        # Square penalty keeps individual overloads small (prevents dumping overload on one person)
+        # Fairness penalty (optional, keeps overload distributed)
         sq_over = model.NewIntVar(0, o_lim * o_lim, f"sq_over_{i_idx}")
-        model.AddMultiplicationEquality(sq_over, [tot_over, tot_over])
+        model.AddMultiplicationEquality(sq_over, [sum_ot_time, sum_ot_time])
         objective_terms.append(sq_over * -OVERLOAD_FAIRNESS_PENALTY)
 
-        # 5. Daily Spread Protection (Kept from your old code)
-        # This prevents the solver from giving someone 10 hours in one day
+        # 5. Daily Spread Protection (Same as before)
         for d in range(7):
             d_terms = []
             for t in tasks:
