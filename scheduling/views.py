@@ -893,20 +893,28 @@ def generateSections(request, semesterId, curriculumId):
         for section in existing_sections[:required_sections]:
             should_save = False
             
+            if section.status != 'active':
+                section.status = 'active'
+                should_save = True
+
             new_lecture = offering.subject.durationMinutes or 0
             if section.lectureMinutes != new_lecture:
                 section.lectureMinutes = new_lecture
                 should_save = True  
+            
             new_lab = offering.subject.labDurationMinutes or 0
             if section.labMinutes != new_lab:
                 section.labMinutes = new_lab
                 should_save = True
+            
             if section.hasLab != offering.subject.hasLab:
                 section.hasLab = offering.subject.hasLab
                 should_save = True
+            
             if section.units != offering.subject.units:
                 section.units = offering.subject.units
                 should_save = True
+            
             if section.numberOfStudents != current_default_students:
                 section.numberOfStudents = current_default_students
                 should_save = True
@@ -955,7 +963,7 @@ def sectionConfigList(request, offeringId):
                     })
         
             messages.success(request, f"Section capacities for {offering.subject.code} updated successfully.")
-            return redirect('subjectOfferingList')
+            return redirect(f"{reverse('subjectOfferingList')}?semester={offering.semester.id}&curriculum={offering.subject.curriculum.id}#offering-{offering.id}")
 
     return render(request, "scheduling/sections/config_list.html", {
         "offering": offering,
