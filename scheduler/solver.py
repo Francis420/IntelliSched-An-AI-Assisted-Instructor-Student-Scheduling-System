@@ -361,18 +361,21 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
         model.Add(tv["day"] >= 5).OnlyEnforceIf(is_weekend)
         model.Add(tv["day"] < 5).OnlyEnforceIf(is_weekend.Not())
         
-        start_mod = model.NewIntVar(0, 1440, f"{tid}_st_mod_ot")
-        model.AddModuloEquality(start_mod, tv["start"], 1440)
+        # --- Check End Time instead of Start Time ---
+        end_mod = model.NewIntVar(0, 1440, f"{tid}_end_mod_ot")
+        model.AddModuloEquality(end_mod, tv["end"], 1440)
+        
         is_evening = model.NewBoolVar(f"{tid}_is_eve")
-        model.Add(start_mod >= 1020).OnlyEnforceIf(is_evening)
-        model.Add(start_mod < 1020).OnlyEnforceIf(is_evening.Not())
+        # If End Time > 17:00 (1020 mins), it counts as Evening/Overload
+        model.Add(end_mod > 1020).OnlyEnforceIf(is_evening) 
+        model.Add(end_mod <= 1020).OnlyEnforceIf(is_evening.Not())
         
         is_ot = model.NewBoolVar(f"{tid}_is_ot")
         model.AddBoolOr([is_weekend, is_evening]).OnlyEnforceIf(is_ot)
         model.AddBoolAnd([is_weekend.Not(), is_evening.Not()]).OnlyEnforceIf(is_ot.Not())
         task_is_overtime[tid] = is_ot
 
-    # -------------------- CORRECTED INSTRUCTOR TOTALS (STRICT LIMITS) --------------------
+
     # Instructor Totals
     all_instructor_total_mins = []
     
@@ -576,10 +579,13 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
         model.Add(task_vars[tid]["day"] < 5).OnlyEnforceIf(is_we.Not())
         objective_terms.append(is_we * t["dur"] * -WEEKEND_TIME_PENALTY_PER_MINUTE)
         
-        start_mod = model.NewIntVar(0, 1440, f"pen_st_{tid}")
-        model.AddModuloEquality(start_mod, task_vars[tid]["start"], 1440)
+        # --- Check End Time for Penalty ---
+        end_mod = model.NewIntVar(0, 1440, f"pen_end_{tid}")
+        model.AddModuloEquality(end_mod, task_vars[tid]["end"], 1440)
+        
         is_eve = model.NewBoolVar(f"pen_eve_{tid}")
-        model.Add(start_mod >= 1020).OnlyEnforceIf(is_eve)
+        # Penalty triggers if class ends after 17:00 (1020)
+        model.Add(end_mod > 1020).OnlyEnforceIf(is_eve)
         
         is_wd = model.NewBoolVar(f"pen_wd_{tid}")
         model.Add(task_vars[tid]["day"] <= 4).OnlyEnforceIf(is_wd)
@@ -664,8 +670,13 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
             instructor = instructor_objs.get(instructors[i_idx])
             room = None if r_idx == TBA_ROOM_IDX else room_objs.get(rooms[r_idx])
             
+            end_min_val = end_dt.hour * 60 + end_dt.minute
+            cutoff_min = 17 * 60 
+
             is_weekend_bool = (day_idx >= 5)
-            is_evening_bool = (min_day >= 1020)
+            
+            is_evening_bool = (end_min_val > cutoff_min)
+            
             final_is_overtime = is_weekend_bool or is_evening_bool
 
             schedules_to_create.append(Schedule(

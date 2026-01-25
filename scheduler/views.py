@@ -1702,21 +1702,38 @@ def instructorLoad(request):
                     })
             top_matches.sort(key=lambda x: x['score'], reverse=True)
 
-            emp_type = current_instructor.employmentType 
+            emp_type = (current_instructor.employmentType or "").lower().strip()
 
             if emp_type == 'permanent':
-                if current_instructor.designation:
+                has_designation = (
+                    current_instructor.designation and 
+                    current_instructor.designation.name.strip().upper() != 'N/A'
+                )
+
+                if has_designation:
                     reg_limit = float(current_instructor.designation.instructionHours)
                     overload_cap = config.overload_limit_with_designation if config else 9.0
                 else:
-                    reg_limit = float(current_instructor.rank.instructionHours) if current_instructor.rank else 18.0
+                    has_rank = (
+                        current_instructor.rank and 
+                        current_instructor.rank.name.strip().upper() != 'N/A'
+                    )
+                    
+                    if has_rank:
+                        reg_limit = float(current_instructor.rank.instructionHours)
+                    else:
+                        reg_limit = 18.0
+
                     overload_cap = config.overload_limit_no_designation if config else 12.0
+            
             elif emp_type == 'part-time':
                 reg_limit = config.part_time_normal_limit if config else 15.0
                 overload_cap = config.part_time_overload_limit if config else 0.0
+            
             elif emp_type == 'overload':
                 reg_limit = config.pure_overload_normal_limit if config else 0.0
                 overload_cap = config.pure_overload_max_limit if config else 12.0
+            
             else:
                 reg_limit = 0.0
                 overload_cap = 0.0
@@ -1728,8 +1745,6 @@ def instructorLoad(request):
                 instructor=current_instructor,
                 semester=current_semester
             ).select_related('subject', 'section', 'room')
-
-            processed_load_keys = set()
             
             evening_cutoff = time(17, 0)
 
@@ -1740,26 +1755,23 @@ def instructorLoad(request):
                 
                 if sched.scheduleType == 'lab':
                     sched.type = "Laboratory"
-                    units = float(sched.subject.labHours) 
                 else:
                     sched.type = "Lecture"
-                    units = float(sched.subject.lectureHours)
                 
-                load_key = (sched.section.sectionId, sched.scheduleType)
-                if load_key not in processed_load_keys:
-                    # RULE: Overtime if (>= 5PM) OR (Weekend)
-                    is_evening = False
-                    if sched.startTime and sched.startTime >= evening_cutoff:
-                        is_evening = True
-                    
-                    is_weekend = sched.dayOfWeek in ['Saturday', 'Sunday']
-                    
-                    if is_evening or is_weekend:
-                        current_overload_load += units
-                    else:
-                        current_normal_load += units
-                    
-                    processed_load_keys.add(load_key)
+                start_min = sched.startTime.hour * 60 + sched.startTime.minute
+                end_min = sched.endTime.hour * 60 + sched.endTime.minute
+                duration_minutes = end_min - start_min
+                
+                slot_units = duration_minutes / 60.0
+                
+                is_weekend = sched.dayOfWeek in ['Saturday', 'Sunday']
+                
+                cutoff_min = 17 * 60
+
+                if is_weekend or end_min > cutoff_min:
+                    current_overload_load += slot_units
+                else:
+                    current_normal_load += slot_units
 
                 sched.match_score = match_scores.get(sched.subject.subjectId, 0)
                 schedules.append(sched)
