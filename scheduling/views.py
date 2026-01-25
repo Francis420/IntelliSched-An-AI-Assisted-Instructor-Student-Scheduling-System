@@ -793,7 +793,7 @@ def subjectOfferingListLive(request):
         year_offerings = [o for o in offerings if o.subject.yearLevel == year]
         grouped_offerings.append((year, year_offerings))
 
-    paginator = Paginator(offerings, 10)
+    paginator = Paginator(offerings, 20)
     page_obj = paginator.get_page(page)
 
     html = render_to_string("scheduling/offerings/_table.html", {
@@ -857,7 +857,6 @@ def generateSections(request, semesterId, curriculumId):
         subject__curriculum=curriculum
     ).select_related('subject')
     
-    DEFAULT_STUDENT_COUNT = 40
     added, removed, updated_units = 0, 0, 0
     letters = list(string.ascii_uppercase)
 
@@ -867,6 +866,7 @@ def generateSections(request, semesterId, curriculumId):
             Section.objects.filter(subject=offering.subject, semester=semester).order_by("sectionId")
         )
         
+        current_default_students = offering.defaultStudentsPerSection or 40
         if len(existing_sections) < required_sections:
             for i in range(len(existing_sections), required_sections):
                 suffix = letters[i] if i < len(letters) else str(i)
@@ -876,7 +876,7 @@ def generateSections(request, semesterId, curriculumId):
                     subject=offering.subject,
                     semester=semester,
                     sectionCode=section_code,
-                    numberOfStudents=DEFAULT_STUDENT_COUNT,
+                    numberOfStudents=current_default_students,
                     status="active",
                     lectureMinutes=offering.subject.durationMinutes or 0,
                     labMinutes=offering.subject.labDurationMinutes or 0,
@@ -893,14 +893,22 @@ def generateSections(request, semesterId, curriculumId):
         for section in existing_sections[:required_sections]:
             should_save = False
             
-            if section.lectureMinutes != offering.subject.durationMinutes:
-                section.lectureMinutes = offering.subject.durationMinutes
+            new_lecture = offering.subject.durationMinutes or 0
+            if section.lectureMinutes != new_lecture:
+                section.lectureMinutes = new_lecture
+                should_save = True  
+            new_lab = offering.subject.labDurationMinutes or 0
+            if section.labMinutes != new_lab:
+                section.labMinutes = new_lab
                 should_save = True
             if section.hasLab != offering.subject.hasLab:
                 section.hasLab = offering.subject.hasLab
                 should_save = True
             if section.units != offering.subject.units:
                 section.units = offering.subject.units
+                should_save = True
+            if section.numberOfStudents != current_default_students:
+                section.numberOfStudents = current_default_students
                 should_save = True
             
             if should_save:
