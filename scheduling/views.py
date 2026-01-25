@@ -747,7 +747,9 @@ def subjectOfferingList(request):
             SubjectOffering.objects.get_or_create(
                 subject=subj,
                 semester=selected_semester,
-                defaults={"numberOfSections": 6, "defaultStudentsPerSection": 40} 
+                defaults={"numberOfSections": 6, 
+                          "defaultStudentsPerSection": 40, 
+                          "status": "active"}
             )
         offerings = SubjectOffering.objects.filter(
             semester=selected_semester,
@@ -852,8 +854,7 @@ def generateSections(request, semesterId, curriculumId):
 
     offerings = SubjectOffering.objects.filter(
         semester=semester,
-        subject__curriculum=curriculum,
-        status="active"
+        subject__curriculum=curriculum
     ).select_related('subject')
     
     DEFAULT_STUDENT_COUNT = 40
@@ -893,10 +894,13 @@ def generateSections(request, semesterId, curriculumId):
             should_save = False
             
             if section.lectureMinutes != offering.subject.durationMinutes:
+                section.lectureMinutes = offering.subject.durationMinutes
                 should_save = True
             if section.hasLab != offering.subject.hasLab:
+                section.hasLab = offering.subject.hasLab
                 should_save = True
             if section.units != offering.subject.units:
+                section.units = offering.subject.units
                 should_save = True
             
             if should_save:
@@ -904,7 +908,7 @@ def generateSections(request, semesterId, curriculumId):
                 updated_units += 1
 
     messages.success(request, f"Generated/Synced Sections: {added} added, {removed} removed, {updated_units} fixed/synced.")
-    return redirect("subjectOfferingList")
+    return redirect(f"{reverse('subjectOfferingList')}?semester={semesterId}&curriculum={curriculumId}")
 
 
 from django.db import transaction
