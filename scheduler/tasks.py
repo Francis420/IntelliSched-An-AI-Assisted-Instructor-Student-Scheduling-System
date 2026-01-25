@@ -56,7 +56,7 @@ def run_scheduler_task(self, batch_id=None):
         )
         return  # STOP HERE
 
-    cache.set(lock_id, "running", timeout=3600)
+    cache.set(lock_id, "running", timeout=3900)
     print(f"[Task] Lock ACQUIRED for semester {semester.semesterId}")
 
     try:

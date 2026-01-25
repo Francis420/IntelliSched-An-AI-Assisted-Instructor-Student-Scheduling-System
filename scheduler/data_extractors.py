@@ -31,22 +31,15 @@ def get_solver_data(semester):
     section_num_students = {s.sectionId: (s.numberOfStudents or 0) for s in sections_qs}
 
     def get_block_name(section):
-        # 1. Get the authoritative Year Level from the Subject model
-        # The choices are integers: 1, 2, 3, 4
-        year = section.subject.yearLevel 
-        
-        # 2. Get the Section Letter from the code (e.g. "IT 323-A" -> "A")
-        # We look for a hyphen followed by a single letter at the end
-        match = re.search(r'-([A-Z])$', section.sectionCode)
-        
+        year = section.subject.yearLevel
+
+        code = (section.sectionCode or "").strip()
+        match = re.search(r'-\s*([A-Z])$', code)
         if match:
             letter = match.group(1)
-            return f"{year}{letter}" # Result: "3A", "1C", "2B"
-        
-        # Fallback: If code format is weird (e.g. "Practicum"), return code as-is
-        return section.sectionCode
+            return f"{year}{letter}"
+        return f"UNKNOWN_{code}"
 
-    # Create the map
     section_to_group = {
         s.sectionId: get_block_name(s) 
         for s in sections_qs
@@ -85,40 +78,30 @@ def get_solver_data(semester):
         over_hrs = 0
         
         if emp_type == 'permanent':
-            # --- PERMANENT FACULTY LOGIC ---
-            
-            # Step 1: Detect Designation
-            # It is "Designated" only if it is NOT None AND NOT "N/A"
             is_designated = False
             if i.designation:
                 designation_name = (i.designation.name or "").strip().upper()
                 if designation_name != "N/A" and designation_name != "":
                     is_designated = True
             
-            # Step 2: Determine Normal Load
             if is_designated:
-                # Case A: Designated (e.g., Dean, Chair) -> Use Designation Hours
                 norm_hrs = i.designation.instructionHours
             else:
-                # Case B: Regular (Blank or N/A) -> Use Rank Hours
                 if i.rank:
                     norm_hrs = i.rank.instructionHours
                 else:
                     norm_hrs = 18
             
-            # Step 3: Determine Overload Limit
             if is_designated:
                 over_hrs = overload_has_designation
             else:
                 over_hrs = overload_has_no_designation
 
         elif emp_type == 'part-time':
-            # Part-Timers get fixed hours
             norm_hrs = PART_TIME_NORMAL_HRS
             over_hrs = PART_TIME_OVERLOAD_HRS
             
         elif emp_type == 'overload': 
-            # "Overload only" instructors
             norm_hrs = PURE_OVERLOAD_NORMAL_HRS
             over_hrs = PURE_OVERLOAD_LIMIT_HRS
 
