@@ -963,7 +963,7 @@ def sectionConfigList(request, offeringId):
                     })
         
             messages.success(request, f"Section capacities for {offering.subject.code} updated successfully.")
-            return redirect(f"{reverse('subjectOfferingList')}?semester={offering.semester.id}&curriculum={offering.subject.curriculum.id}#offering-{offering.id}")
+            return redirect(f"{reverse('subjectOfferingList')}?semester={offering.semester.semesterId}&curriculum={offering.subject.curriculum.curriculumId}#offering-{offering.pk}")
 
     return render(request, "scheduling/sections/config_list.html", {
         "offering": offering,
