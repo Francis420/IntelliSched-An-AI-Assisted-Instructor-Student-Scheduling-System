@@ -437,6 +437,19 @@ def solve_schedule_for_semester(semester=None, time_limit_seconds=600):
         # This forces extra classes to be moved to Overload Hours.
         model.Add(sum_norm_time <= n_lim)
 
+        if n_lim > 0:
+             # Calculate how many minutes they are "short" of their limit
+             underload = model.NewIntVar(0, WEEK_MINUTES, f"underload_{i_idx}")
+             model.Add(underload == n_lim - sum_norm_time)
+             
+             # Square the underload to make large gaps (like 3 hours) UNACCEPTABLE.
+             sq_underload = model.NewIntVar(0, WEEK_MINUTES * WEEK_MINUTES, f"sq_underload_{i_idx}")
+             model.AddMultiplicationEquality(sq_underload, [underload, underload])
+             
+             # WEIGHT: High enough to beat "convenience" factors.
+             FILL_PRIORITY_WEIGHT = 20  
+             objective_terms.append(sq_underload * -FILL_PRIORITY_WEIGHT)
+
         # 2. Sum up Overload Time (Weekends/Eve)
         sum_ot_time = model.NewIntVar(0, WEEK_MINUTES, f"sum_ot_time_{i_idx}")
         model.Add(sum_ot_time == sum(overload_time_contribs))
