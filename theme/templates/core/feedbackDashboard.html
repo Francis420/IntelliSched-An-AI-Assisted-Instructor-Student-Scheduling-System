@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block title %}User Feedbacks Dashboard{% endblock %}
-{% block header%}User Feedbacks Dashboard{% endblock %}
+{% block header %}User Feedbacks Dashboard{% endblock %}
 
 {% block content %}
 <div class="min-h-screen bg-gray-50 p-6 md:p-8">
@@ -33,40 +33,41 @@
                         <option value="">All Types</option>
                         <option value="bug" {% if filters.type == 'bug' %}selected{% endif %}>Bug Report</option>
                         <option value="feature" {% if filters.type == 'feature' %}selected{% endif %}>Feature Request</option>
-                        <option value="general" {% if filters.type == 'general' %}selected{% endif %}>General Feedback</option>
+                        <option value="general" {% if filters.type == 'general' %}selected{% endif %}>General</option>
                     </select>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide">From Date</label>
-                    <input type="date" name="date_from" value="{{ filters.date_from|default:'' }}" 
-                           class="w-full rounded-lg border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm">
+                    <label class="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide">Status</label>
+                    <select name="status" class="w-full rounded-lg border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm">
+                        <option value="">All Statuses</option>
+                        <option value="new" {% if filters.status == 'new' %}selected{% endif %}>New</option>
+                        <option value="in_progress" {% if filters.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                        <option value="resolved" {% if filters.status == 'resolved' %}selected{% endif %}>Resolved</option>
+                        <option value="closed" {% if filters.status == 'closed' %}selected{% endif %}>Closed</option>
+                    </select>
                 </div>
 
                 <div class="flex gap-2">
                     <button type="submit" class="flex-1 bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors">
                         Filter
                     </button>
-                    <a href="{% url 'feedbackDashboard' %}" class="px-3 py-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors">
+                    <a href="{% url 'feedbackDashboard' %}" class="px-3 py-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors flex items-center justify-center">
                         ✕
                     </a>
                 </div>
             </form>
         </div>
 
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-100">
                     <thead class="bg-gray-50/50">
                         <tr>
                             <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Type</th>
-                            
                             <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">User</th>
-                            
                             <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Date</th>
-
                             <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
-                            
                             <th class="relative px-6 py-4"><span class="sr-only">View</span></th>
                         </tr>
                     </thead>
@@ -86,9 +87,7 @@
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex flex-col">
                                     <span class="text-sm font-semibold text-gray-900">{{ item.name|default:"Anonymous" }}</span>
-                                    <span class="text-xs text-gray-400">
-                                        {% if item.user %}Registered{% else %}Guest{% endif %}
-                                    </span>
+                                    <span class="text-xs text-gray-400">{% if item.user %}Registered{% else %}Guest{% endif %}</span>
                                 </div>
                             </td>
 
@@ -103,13 +102,11 @@
                                     {% elif item.status == 'resolved' %} bg-gray-100 text-gray-500 border border-gray-200
                                     {% elif item.status == 'in_progress' %} bg-blue-50 text-blue-700 border border-blue-100
                                     {% else %} bg-gray-50 text-gray-600 {% endif %}">
-                                    
                                     <span class="w-1.5 h-1.5 rounded-full 
                                         {% if item.status == 'new' %} bg-green-500
                                         {% elif item.status == 'resolved' %} bg-gray-400
                                         {% elif item.status == 'in_progress' %} bg-blue-500
                                         {% else %} bg-gray-400 {% endif %}"></span>
-                                    
                                     {{ item.get_status_display }}
                                 </span>
                             </td>
@@ -119,18 +116,67 @@
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                                 </span>
                             </td>
-
                         </tr>
                         {% empty %}
-                        <tr>
-                            <td colspan="5" class="px-6 py-12 text-center text-gray-400">
-                                No feedback found.
-                            </td>
-                        </tr>
+                        <tr><td colspan="5" class="px-6 py-12 text-center text-gray-400">No feedback found.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
+
+            {% if feedbacks.has_other_pages %}
+            <div class="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
+                
+                <div class="flex flex-1 justify-between sm:hidden">
+                    {% if feedbacks.has_previous %}
+                        <a href="?page={{ feedbacks.previous_page_number }}&type={{ filters.type|default:'' }}&search={{ filters.search|default:'' }}&status={{ filters.status|default:'' }}" class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Previous</a>
+                    {% else %}
+                        <span class="opacity-50 relative inline-flex items-center rounded-md border border-gray-300 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-700 cursor-not-allowed">Previous</span>
+                    {% endif %}
+
+                    {% if feedbacks.has_next %}
+                        <a href="?page={{ feedbacks.next_page_number }}&type={{ filters.type|default:'' }}&search={{ filters.search|default:'' }}&status={{ filters.status|default:'' }}" class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Next</a>
+                    {% else %}
+                        <span class="opacity-50 relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-700 cursor-not-allowed">Next</span>
+                    {% endif %}
+                </div>
+
+                <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm text-gray-700">
+                            Showing <span class="font-medium">{{ feedbacks.start_index }}</span> to <span class="font-medium">{{ feedbacks.end_index }}</span> of <span class="font-medium">{{ feedbacks.paginator.count }}</span> results
+                        </p>
+                    </div>
+                    <div>
+                        <nav class="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                            
+                            {% if feedbacks.has_previous %}
+                            <a href="?page={{ feedbacks.previous_page_number }}&type={{ filters.type|default:'' }}&search={{ filters.search|default:'' }}&status={{ filters.status|default:'' }}" class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0">
+                                <span class="sr-only">Previous</span>
+                                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clip-rule="evenodd" /></svg>
+                            </a>
+                            {% endif %}
+
+                            {% for i in feedbacks.paginator.page_range %}
+                                {% if feedbacks.number == i %}
+                                    <span class="relative z-10 inline-flex items-center bg-indigo-600 px-4 py-2 text-sm font-semibold text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">{{ i }}</span>
+                                {% elif i > feedbacks.number|add:'-3' and i < feedbacks.number|add:'3' %}
+                                    <a href="?page={{ i }}&type={{ filters.type|default:'' }}&search={{ filters.search|default:'' }}&status={{ filters.status|default:'' }}" class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0">{{ i }}</a>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if feedbacks.has_next %}
+                            <a href="?page={{ feedbacks.next_page_number }}&type={{ filters.type|default:'' }}&search={{ filters.search|default:'' }}&status={{ filters.status|default:'' }}" class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0">
+                                <span class="sr-only">Next</span>
+                                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" /></svg>
+                            </a>
+                            {% endif %}
+                        </nav>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
         </div>
     </div>
 </div>

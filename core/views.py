@@ -773,32 +773,33 @@ def submitFeedback(request):
 
 
 @login_required
-@has_role('deptHead') # <-- Uncomment to restrict access
+@has_role('deptHead')
 def feedbackDashboard(request):
     
-    feedbacks = Feedback.objects.all().order_by('-created_at')
+    feedbacks_list = Feedback.objects.all().order_by('-created_at')
 
     if request.GET.get('type'):
-        feedbacks = feedbacks.filter(feedback_type=request.GET.get('type'))
+        feedbacks_list = feedbacks_list.filter(feedback_type=request.GET.get('type'))
     
     if request.GET.get('search'):
         q = request.GET.get('search')
-        feedbacks = feedbacks.filter(Q(name__icontains=q) | Q(message__icontains=q))
+        feedbacks_list = feedbacks_list.filter(Q(name__icontains=q) | Q(message__icontains=q))
 
-    if request.GET.get('date_from'):
-        feedbacks = feedbacks.filter(created_at__date__gte=parse_date(request.GET.get('date_from')))
-
-    if request.GET.get('date_to'):
-        feedbacks = feedbacks.filter(created_at__date__lte=parse_date(request.GET.get('date_to')))
+    if request.GET.get('status'):
+        feedbacks_list = feedbacks_list.filter(status=request.GET.get('status'))
 
     sort = request.GET.get('sort', '-created_at')
     if sort in ['created_at', '-created_at', 'feedback_type', 'status']:
-        feedbacks = feedbacks.order_by(sort)
+        feedbacks_list = feedbacks_list.order_by(sort)
+
+    paginator = Paginator(feedbacks_list, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
 
     form = FeedbackForm()
 
     return render(request, 'core/feedbackDashboard.html', {
-        'feedbacks': feedbacks,
+        'feedbacks': page_obj,
         'form': form,
         'filters': request.GET
     })
