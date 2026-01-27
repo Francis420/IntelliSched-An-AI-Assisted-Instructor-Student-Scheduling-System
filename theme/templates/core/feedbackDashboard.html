@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+
+{% block title %}User Feedbacks Dashboard{% endblock %}
+{% block header%}User Feedbacks Dashboard{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 p-6 md:p-8">
+    <div class="max-w-7xl mx-auto space-y-8">
+        
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <p class="text-gray-500 mt-1">Manage user feedbacks and feature requests.</p>
+            </div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+            <form method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                
+                <div class="lg:col-span-2">
+                    <label class="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide">Search</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        </div>
+                        <input type="text" name="search" value="{{ filters.search|default:'' }}" placeholder="Name or content..." 
+                               class="pl-10 w-full rounded-lg border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm transition-all">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide">Type</label>
+                    <select name="type" class="w-full rounded-lg border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm">
+                        <option value="">All Types</option>
+                        <option value="bug" {% if filters.type == 'bug' %}selected{% endif %}>Bug Report</option>
+                        <option value="feature" {% if filters.type == 'feature' %}selected{% endif %}>Feature Request</option>
+                        <option value="general" {% if filters.type == 'general' %}selected{% endif %}>General Feedback</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wide">From Date</label>
+                    <input type="date" name="date_from" value="{{ filters.date_from|default:'' }}" 
+                           class="w-full rounded-lg border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm">
+                </div>
+
+                <div class="flex gap-2">
+                    <button type="submit" class="flex-1 bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors">
+                        Filter
+                    </button>
+                    <a href="{% url 'feedbackDashboard' %}" class="px-3 py-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors">
+                        ✕
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-100">
+                    <thead class="bg-gray-50/50">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Type</th>
+                            
+                            <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">User</th>
+                            
+                            <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Date</th>
+
+                            <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                            
+                            <th class="relative px-6 py-4"><span class="sr-only">View</span></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 bg-white">
+                        {% for item in feedbacks %}
+                        <tr class="hover:bg-slate-50 transition-colors group cursor-pointer" onclick="window.location='{% url 'feedbackDetail' item.id %}'">
+                            
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-3 py-1 inline-flex text-xs font-semibold rounded-full border 
+                                    {% if item.feedback_type == 'bug' %} bg-red-50 text-red-700 border-red-100
+                                    {% elif item.feedback_type == 'feature' %} bg-amber-50 text-amber-700 border-amber-100
+                                    {% else %} bg-indigo-50 text-indigo-700 border-indigo-100 {% endif %}">
+                                    {{ item.get_feedback_type_display }}
+                                </span>
+                            </td>
+
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex flex-col">
+                                    <span class="text-sm font-semibold text-gray-900">{{ item.name|default:"Anonymous" }}</span>
+                                    <span class="text-xs text-gray-400">
+                                        {% if item.user %}Registered{% else %}Guest{% endif %}
+                                    </span>
+                                </div>
+                            </td>
+
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-600">{{ item.created_at|date:"M d, Y" }}</div>
+                                <div class="text-xs text-gray-400">{{ item.created_at|date:"h:i A" }}</div>
+                            </td>
+
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium
+                                    {% if item.status == 'new' %} bg-green-50 text-green-700 border border-green-100
+                                    {% elif item.status == 'resolved' %} bg-gray-100 text-gray-500 border border-gray-200
+                                    {% elif item.status == 'in_progress' %} bg-blue-50 text-blue-700 border border-blue-100
+                                    {% else %} bg-gray-50 text-gray-600 {% endif %}">
+                                    
+                                    <span class="w-1.5 h-1.5 rounded-full 
+                                        {% if item.status == 'new' %} bg-green-500
+                                        {% elif item.status == 'resolved' %} bg-gray-400
+                                        {% elif item.status == 'in_progress' %} bg-blue-500
+                                        {% else %} bg-gray-400 {% endif %}"></span>
+                                    
+                                    {{ item.get_status_display }}
+                                </span>
+                            </td>
+
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <span class="text-gray-300 group-hover:text-indigo-600 transition-colors">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                                </span>
+                            </td>
+
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="px-6 py-12 text-center text-gray-400">
+                                No feedback found.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

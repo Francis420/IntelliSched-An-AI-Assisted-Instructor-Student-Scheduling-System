@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block title %}Feedback Details{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 p-6 md:p-10">
+    <div class="max-w-5xl mx-auto">
+        
+        <div class="mb-6 flex items-center justify-between">
+            <span class="px-4 py-1.5 rounded-full text-sm font-bold border shadow-sm
+                {% if feedback.status == 'new' %} bg-green-50 text-green-700 border-green-200
+                {% elif feedback.status == 'resolved' %} bg-gray-100 text-gray-500 border-gray-200
+                {% else %} bg-blue-50 text-blue-700 border-blue-200 {% endif %}">
+                {{ feedback.get_status_display }}
+            </span>
+
+            <a href="{% url 'feedbackDashboard' %}" class="flex items-center text-gray-500 hover:text-gray-700 transition-colors">
+                <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                Back to Feedback Dashboard
+            </a>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <div class="lg:col-span-1 space-y-6">
+                
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Reporter Details</h3>
+                    
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold">
+                            {{ feedback.name|slice:":1" }}
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold text-gray-900">{{ feedback.name }}</p>
+                            <p class="text-xs text-gray-500">
+                                {% if feedback.user %}Registered User{% else %}Guest{% endif %}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 text-sm">
+                        <div>
+                            <span class="block text-xs text-gray-400">Submitted</span>
+                            <span class="text-gray-700 font-medium">{{ feedback.created_at|date:"F j, Y, g:i a" }}</span>
+                        </div>
+                        <div>
+                            <span class="block text-xs text-gray-400">Browser / OS</span>
+                            <span class="text-gray-700 break-words">{{ feedback.user_agent|default:"Unknown" }}</span>
+                        </div>
+                        <div>
+                            <span class="block text-xs text-gray-400">Page Origin</span>
+                            <a href="{{ feedback.url_origin }}" class="text-indigo-600 hover:underline truncate block">
+                                {{ feedback.url_origin|default:"Unknown" }}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Update Status</h3>
+                    <form method="POST">
+                        {% csrf_token %}
+                        <select name="status" onchange="this.form.submit()" class="w-full rounded-lg border-gray-300 text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            {% for code, label in feedback.STATUS_CHOICES %}
+                                <option value="{{ code }}" {% if feedback.status == code %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                </div>
+            </div>
+
+            <div class="lg:col-span-2 space-y-6">
+                
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 min-h-[200px]">
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="text-xl">
+                            {% if feedback.feedback_type == 'bug' %}🐞
+                            {% elif feedback.feedback_type == 'feature' %}💡
+                            {% else %}💭{% endif %}
+                        </span>
+                        <h1 class="text-2xl font-bold text-gray-900">{{ feedback.get_feedback_type_display }}</h1>
+                    </div>
+                    
+                    <div class="prose prose-slate max-w-none text-gray-700 leading-relaxed">
+                        {{ feedback.message|linebreaks }}
+                    </div>
+                </div>
+
+                {% if feedback.screenshot %}
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <h3 class="text-sm font-bold text-gray-900 mb-4">Attached Screenshot</h3>
+                    <div class="rounded-lg overflow-hidden border border-gray-100 bg-gray-50">
+                        <a href="{{ feedback.screenshot.url }}" target="_blank">
+                            <img src="{{ feedback.screenshot.url }}" alt="Feedback Screenshot" class="w-full h-auto hover:opacity-95 transition-opacity">
+                        </a>
+                    </div>
+                    <p class="text-xs text-center text-gray-400 mt-2">Click image to view full size</p>
+                </div>
+                {% endif %}
+                
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

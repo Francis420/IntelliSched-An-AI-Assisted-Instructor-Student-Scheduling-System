@@ -40,5 +40,10 @@ urlpatterns = [
 
     # IntelliSched About
     path('intellischedAbout/', views.intellischedAbout, name='intellischedAbout'),
+
+    # Feedback
+    path('feedback/send/', views.submitFeedback, name='submitFeedback'),
+    path('feedback/dashboard/', views.feedbackDashboard, name='feedbackDashboard'),
+    path('feedback/<int:pk>/', views.feedbackDetail, name='feedbackDetail'),
 ]
 

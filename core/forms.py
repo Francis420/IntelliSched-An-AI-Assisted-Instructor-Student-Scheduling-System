@@ -1,5 +1,5 @@
 from django import forms
-from .models import User, Instructor
+from .models import User, Instructor, Feedback
 from django.contrib.auth.forms import PasswordResetForm
 from django.contrib.auth import get_user_model
 
@@ -60,3 +60,17 @@ class CustomPasswordResetForm(PasswordResetForm):
         })
         
         return (u for u in active_users if u.has_usable_password())
+    
+class FeedbackForm(forms.ModelForm):
+    # This remains, but we removed 'name' from the visible fields
+    is_anonymous = forms.BooleanField(required=False, label="Submit Anonymously")
+
+    class Meta:
+        model = Feedback
+        # REMOVED 'name' from this list
+        fields = ['feedback_type', 'message', 'screenshot']
+        widgets = {
+            'feedback_type': forms.Select(attrs={'class': 'w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm'}),
+            'message': forms.Textarea(attrs={'rows': 3, 'class': 'w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm', 'placeholder': 'Describe your issue or idea...'}),
+            'screenshot': forms.FileInput(attrs={'class': 'block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100'}),
+        }

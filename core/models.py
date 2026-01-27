@@ -1,6 +1,7 @@
 #core\models.py
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.conf import settings
 
 # ---------- Custom User Manager ---------- 50 need to update templates to handle dynamic checks for username/instructorId
 # This manager handles user creation and superuser creation with custom fields.
@@ -158,3 +159,31 @@ class UserLogin(models.Model):
 
     def __str__(self):
         return f"{self.user.username} login @ {self.createdAt}"
+    
+class Feedback(models.Model):
+    TYPE_CHOICES = [
+        ('bug', 'Bug Report'),
+        ('feature', 'Feature Request'),
+        ('general', 'General Feedback'),
+    ]
+
+    STATUS_CHOICES = [
+        ('new', 'New'),
+        ('in_progress', 'In Progress'),
+        ('resolved', 'Resolved'),
+        ('closed', 'Closed'),
+    ]
+
+    feedback_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='general')
+    name = models.CharField(max_length=100, blank=True, null=True, help_text="Left blank if anonymous")
+    message = models.TextField()
+    screenshot = models.ImageField(upload_to='feedback_screenshots/', blank=True, null=True)
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    url_origin = models.CharField(max_length=255, blank=True, null=True)
+    user_agent = models.CharField(max_length=255, blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new')
+
+    def __str__(self):
+        return f"{self.get_feedback_type_display()} - {self.created_at.strftime('%Y-%m-%d')}"

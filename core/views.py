@@ -13,6 +13,7 @@ from core.models import (
     Role, 
     Instructor, 
     UserLogin,
+    Feedback,
 )
 from instructors.models import ( 
     InstructorExperience, 
@@ -37,8 +38,13 @@ from django.db.models import Q, Count, F, Value, Case, When, IntegerField
 from django.utils import timezone
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
-from .forms import InstructorProfileForm, DepartmentHeadAssignmentForm
+from .forms import (
+    InstructorProfileForm, 
+    DepartmentHeadAssignmentForm, 
+    FeedbackForm
+)
 from django.core.exceptions import PermissionDenied
+from django.utils.dateparse import parse_date
 
 
 
@@ -736,3 +742,79 @@ def intellischedDocumentation(request):
 
 def intellischedAbout(request):
     return render(request, 'core/intellischedAbout.html')
+
+def submitFeedback(request):
+    if request.method == "POST":
+        form = FeedbackForm(request.POST, request.FILES)
+        if form.is_valid():
+            feedback = form.save(commit=False)
+            
+            feedback.url_origin = request.META.get('HTTP_REFERER', 'Unknown')
+            feedback.user_agent = request.META.get('HTTP_USER_AGENT', '')[:255]
+
+            wants_anonymity = form.cleaned_data.get('is_anonymous')
+
+            if not request.user.is_authenticated:
+                feedback.user = None
+                feedback.name = "Guest (Public User)"
+            elif wants_anonymity:
+                feedback.user = None
+                feedback.name = "Anonymous (Registered User)"
+            else:
+                feedback.user = request.user
+                feedback.name = f"{request.user.firstName} {request.user.lastName}"
+
+            feedback.save()
+            messages.success(request, "✅ Feedback sent successfully!")
+        else:
+            messages.error(request, "❌ Error sending feedback.")
+    
+    return redirect(request.META.get('HTTP_REFERER', '/'))
+
+
+@login_required
+@has_role('deptHead') # <-- Uncomment to restrict access
+def feedbackDashboard(request):
+    
+    feedbacks = Feedback.objects.all().order_by('-created_at')
+
+    if request.GET.get('type'):
+        feedbacks = feedbacks.filter(feedback_type=request.GET.get('type'))
+    
+    if request.GET.get('search'):
+        q = request.GET.get('search')
+        feedbacks = feedbacks.filter(Q(name__icontains=q) | Q(message__icontains=q))
+
+    if request.GET.get('date_from'):
+        feedbacks = feedbacks.filter(created_at__date__gte=parse_date(request.GET.get('date_from')))
+
+    if request.GET.get('date_to'):
+        feedbacks = feedbacks.filter(created_at__date__lte=parse_date(request.GET.get('date_to')))
+
+    sort = request.GET.get('sort', '-created_at')
+    if sort in ['created_at', '-created_at', 'feedback_type', 'status']:
+        feedbacks = feedbacks.order_by(sort)
+
+    form = FeedbackForm()
+
+    return render(request, 'core/feedbackDashboard.html', {
+        'feedbacks': feedbacks,
+        'form': form,
+        'filters': request.GET
+    })
+
+@login_required
+@has_role('deptHead') 
+def feedbackDetail(request, pk):
+    feedback = get_object_or_404(Feedback, pk=pk)
+
+    # Handle Status Update (POST)
+    if request.method == "POST":
+        new_status = request.POST.get('status')
+        if new_status in dict(Feedback.STATUS_CHOICES):
+            feedback.status = new_status
+            feedback.save()
+            messages.success(request, f"Status updated to {feedback.get_status_display()}")
+            return redirect('feedbackDashboard')
+
+    return render(request, 'core/feedbackDetail.html', {'feedback': feedback})
