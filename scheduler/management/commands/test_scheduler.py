@@ -9,17 +9,25 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("semester_id", type=int, help="ID of semester to test")
+        
+        parser.add_argument(
+            "--time", 
+            type=int, 
+            default=3600, 
+            help="Time limit in seconds (default 3600)"
+        )
 
     def handle(self, *args, **options):
         semester_id = options["semester_id"]
+        time_limit = options["time"]
+        
         semester = Semester.objects.get(pk=semester_id)
 
         print(f"Running scheduler test for semester: {semester}")
+        print(f"Time limit set to: {time_limit} seconds")
 
-        # Run solver (this already saves to DB)
-        solve_schedule_for_semester(semester, time_limit_seconds=3600)
+        solve_schedule_for_semester(semester, time_limit_seconds=time_limit)
 
-        # Print saved schedules
         schedules = Schedule.objects.filter(semester=semester).order_by("dayOfWeek", "startTime")
         print(f"\n[Output] {schedules.count()} schedules found for {semester}:\n")
 

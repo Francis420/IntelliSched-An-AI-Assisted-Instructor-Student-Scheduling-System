@@ -1,3 +1,4 @@
+# core\urls.py
 from django.urls import path
 from . import views
 
@@ -33,5 +34,11 @@ urlpatterns = [
 
     # User Manual
     path('userManual/', views.userManual, name='userManual'),
+
+    # IntelliSched Documentation
+    path('intellischedDocumentation/', views.intellischedDocumentation, name='intellischedDocumentation'),
+
+    # IntelliSched About
+    path('intellischedAbout/', views.intellischedAbout, name='intellischedAbout'),
 ]
 

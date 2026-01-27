@@ -8,10 +8,10 @@ urlpatterns = [
     path('finalize/<str:semester_id>/revert/', views.revertFinalizedSchedule, name='revertFinalizedSchedule'),
     path('revertSchedule/', views.revertSchedule, name='revertSchedule'),
     path("mySchedule/", views.instructorScheduleView, name="instructorScheduleView"),
-    path("dashboard/", views.scheduler_dashboard, name="schedulerDashboard"),
-    path("start/", views.start_scheduler, name="startScheduler"),
-    path("stop/", views.stop_scheduler, name="stopScheduler"),
-    path("status/", views.scheduler_status, name="schedulerStatus"),
+    path("schedulerDashboard/", views.schedulerDashboard, name="schedulerDashboard"),
+    path("start/", views.startScheduler, name="startScheduler"),
+    path("stop/", views.stopScheduler, name="stopScheduler"),
+    path("status/", views.schedulerStatus, name="schedulerStatus"),
 
     # Instructor Workload Export(excel and preview)
     path('instructor/workload/preview/', views.previewWorkload, name='previewWorkload'),

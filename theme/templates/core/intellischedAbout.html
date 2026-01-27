@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}About IntelliSched{% endblock %}
+{% block header %}About the Project{% endblock %}
+
+{% block content %}
+<div class="bg-white font-sans text-slate-600">
+    
+    <div class="relative overflow-hidden bg-slate-900 py-24 sm:py-32">
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full z-0 pointer-events-none">
+            <div class="absolute top-10 left-10 w-72 h-72 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+            <div class="absolute bottom-10 right-10 w-72 h-72 bg-emerald-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+        </div>
+
+        <div class="relative z-10 mx-auto max-w-7xl px-6 lg:px-8 text-center">
+            <h1 class="text-4xl font-extrabold tracking-tight text-white sm:text-6xl mb-6">
+                An AI Assisted Instructor <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-emerald-400">Scheduling System</span>.
+            </h1>
+            <p class="mt-6 text-lg leading-8 text-slate-300 max-w-2xl mx-auto">
+                IntelliSched replaces the chaotic days of manual university scheduling with a smart, automated pipeline that creates conflict-free schedules in minutes.
+            </p>
+        </div>
+    </div>
+
+    <div class="py-24 sm:py-32 bg-slate-50">
+        <div class="mx-auto max-w-7xl px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
+                
+                <div>
+                    <h2 class="text-base font-semibold leading-7 text-indigo-600 uppercase tracking-wide">The Challenge</h2>
+                    <p class="mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">The Manual Nightmare</p>
+                    <p class="mt-6 text-lg leading-8 text-slate-600">
+                        For decades, department heads have used spreadsheets, sticky notes, and whiteboards to schedule hundreds of classes. It’s a process prone to human error, double-bookings, and unfair instructor loads—often taking days to finalize.
+                    </p>
+                    <ul class="mt-8 space-y-4 text-slate-600">
+                        <li class="flex gap-3">
+                            <span class="text-red-500 text-xl">✕</span> High risk of conflicts & overlaps
+                        </li>
+                        <li class="flex gap-3">
+                            <span class="text-red-500 text-xl">✕</span> Impossible to manually check instructor expertise
+                        </li>
+                        <li class="flex gap-3">
+                            <span class="text-red-500 text-xl">✕</span> Inefficient room utilization
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="relative bg-white p-8 rounded-2xl shadow-xl border border-slate-100">
+                    <div class="absolute -top-4 -right-4 bg-emerald-500 text-white w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold shadow-lg">✓</div>
+                    <h2 class="text-base font-semibold leading-7 text-emerald-600 uppercase tracking-wide">The Solution</h2>
+                    <p class="mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Automated Precision</p>
+                    <p class="mt-6 text-lg leading-8 text-slate-600">
+                        IntelliSched fuses <strong>Natural Language Processing (NLP)</strong> to understand instructor skills with <strong>Constraint Programming</strong> to solve the logic puzzle.
+                    </p>
+                    <div class="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-100">
+                            <div class="font-bold text-indigo-900">Semantic Matching</div>
+                            <div class="text-sm text-indigo-700">Reads resumes to find the best instructor for every subject.</div>
+                        </div>
+                        <div class="bg-emerald-50 p-4 rounded-lg border border-emerald-100">
+                            <div class="font-bold text-emerald-900">Logic Solver</div>
+                            <div class="text-sm text-emerald-700">Processes millions of possibilities to ensure zero overlaps.</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="py-24 sm:py-32">
+        <div class="mx-auto max-w-7xl px-6 lg:px-8">
+            <h2 class="text-center text-lg font-semibold leading-8 text-slate-900 uppercase tracking-widest mb-12">
+                Built with Modern Technologies
+            </h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                
+                <div class="group p-6 bg-white rounded-xl shadow-sm border border-slate-200 hover:border-indigo-300 transition-all">
+                    <div class="text-4xl mb-4">🐍</div>
+                    <h3 class="font-bold text-slate-800">Python & Django</h3>
+                    <p class="text-xs text-slate-500 mt-2">Robust Backend Framework</p>
+                </div>
+
+                <div class="group p-6 bg-white rounded-xl shadow-sm border border-slate-200 hover:border-indigo-300 transition-all">
+                    <div class="text-4xl mb-4">🧠</div>
+                    <h3 class="font-bold text-slate-800">Google OR-Tools</h3>
+                    <p class="text-xs text-slate-500 mt-2">CP-SAT Optimization Engine</p>
+                </div>
+
+                <div class="group p-6 bg-white rounded-xl shadow-sm border border-slate-200 hover:border-indigo-300 transition-all">
+                    <div class="text-4xl mb-4">🤖</div>
+                    <h3 class="font-bold text-slate-800">HuggingFace</h3>
+                    <p class="text-xs text-slate-500 mt-2">Transformer NLP Models</p>
+                </div>
+
+                <div class="group p-6 bg-white rounded-xl shadow-sm border border-slate-200 hover:border-indigo-300 transition-all">
+                    <div class="text-4xl mb-4">🎨</div>
+                    <h3 class="font-bold text-slate-800">Tailwind CSS</h3>
+                    <p class="text-xs text-slate-500 mt-2">Responsive User Interface</p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

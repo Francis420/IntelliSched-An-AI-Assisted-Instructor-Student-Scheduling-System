@@ -3,7 +3,7 @@ from celery import shared_task
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from scheduling.models import Semester
-from scheduler.models import SchedulerProgress
+from scheduler.models import SchedulerProgress, SchedulerSettings 
 from django.core.cache import cache
 import subprocess, sys
 
@@ -26,6 +26,17 @@ def run_scheduler_task(self, batch_id=None):
         {"type": "progress.update", "data": {"status": "running", "message": "Scheduler started", "progress": 0}},
     )
 
+    try:
+        settings_obj = SchedulerSettings.objects.first()
+        mins = settings_obj.time_limit_minutes if settings_obj else 60
+    except:
+        mins = 60
+
+    secs = mins * 60
+    
+    lock_id = f"scheduler_lock_{batch_id}"
+    cache.set(lock_id, "running", timeout=secs + 300)
+
     semester = Semester.objects.filter(isActive=True).first()
     if not semester:
         msg = "❌ No active semester found."
@@ -39,60 +50,50 @@ def run_scheduler_task(self, batch_id=None):
         )
         return
 
-    lock_id = f"scheduler_lock_{semester.semesterId}"
-    
-    if cache.get(lock_id):
-        msg = "⚠️ Scheduler is ALREADY running for this semester! Duplicate run is blocked."
-        print(f"[Task] {msg}")
-        
-        progress.status = "error"
-        progress.message = msg
-        progress.add_log(msg)
-        progress.save()
-        
-        async_to_sync(channel_layer.group_send)(
-            f"scheduler_{batch_id}",
-            {"type": "progress.update", "data": {"status": "error", "message": msg}},
-        )
-        return  # STOP HERE
-
-    cache.set(lock_id, "running", timeout=3900)
-    print(f"[Task] Lock ACQUIRED for semester {semester.semesterId}")
-
     try:
-        cmd = [sys.executable, "manage.py", "test_scheduler", str(semester.semesterId)]
-        
         process = subprocess.Popen(
-            cmd,
+            [
+                sys.executable, "manage.py", "test_scheduler", 
+                str(semester.id), 
+                "--time", str(secs)
+            ],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            universal_newlines=True,
+            text=True,
             bufsize=1,
+            universal_newlines=True
         )
 
-        progress.process_pid = process.pid
-        progress.save()
+        while True:
+            line = process.stdout.readline()
+            if not line and process.poll() is not None:
+                break
+            
+            if line:
+                line = line.strip()
+                # Check cancellation
+                if cache.get(lock_id) != "running":
+                    process.terminate()
+                    progress.status = "stopped"
+                    progress.message = "Scheduler stopped by user."
+                    progress.add_log("🛑 STOP signal received. Terminating process...")
+                    progress.save()
+                    async_to_sync(channel_layer.group_send)(
+                        f"scheduler_{batch_id}",
+                        {"type": "progress.update", "data": {"status": "stopped", "message": "Scheduler stopped by user."}},
+                    )
+                    return
 
-        for line in iter(process.stdout.readline, ''):
-            line = line.strip()
-            if not line:
-                continue
-
-            refreshed = SchedulerProgress.objects.get(batch_id=batch_id)
-            if refreshed.status == "stopped":
-                process.terminate()
-                refreshed.add_log("⏹ Scheduler stopped by user.")
+                try:
+                    refreshed = SchedulerProgress.objects.get(batch_id=batch_id)
+                except SchedulerProgress.DoesNotExist:
+                    break
+                    
+                refreshed.add_log(line)
                 async_to_sync(channel_layer.group_send)(
                     f"scheduler_{batch_id}",
-                    {"type": "progress.update", "data": {"status": "stopped", "message": "Scheduler stopped by user."}},
+                    {"type": "progress.update", "data": {"status": "running", "message": line}},
                 )
-                return
-
-            refreshed.add_log(line)
-            async_to_sync(channel_layer.group_send)(
-                f"scheduler_{batch_id}",
-                {"type": "progress.update", "data": {"status": "running", "message": line}},
-            )
 
         process.wait()
         
@@ -118,7 +119,3 @@ def run_scheduler_task(self, batch_id=None):
             f"scheduler_{batch_id}",
             {"type": "progress.update", "data": {"status": "error", "message": str(e)}},
         )
-    
-    finally:
-        cache.delete(lock_id)
-        print(f"[Task] Lock RELEASED for semester {semester.semesterId}")

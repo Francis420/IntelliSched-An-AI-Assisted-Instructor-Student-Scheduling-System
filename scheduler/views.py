@@ -9,7 +9,7 @@ from django.contrib.auth.decorators import login_required
 from collections import defaultdict
 from django.http import JsonResponse
 from scheduler.tasks import run_scheduler_task
-from scheduler.models import SchedulerProgress
+from scheduler.models import SchedulerProgress, SchedulerSettings
 from celery import current_app
 import uuid
 import os, signal
@@ -506,13 +506,33 @@ def instructorScheduleView(request):
 # Scheduler Dashboard View
 @login_required
 @has_role('deptHead')
-def scheduler_dashboard(request):
+def schedulerDashboard(request):
+    settings, created = SchedulerSettings.objects.get_or_create(id=1)
+    
+    if request.method == "POST":
+        minutes = request.POST.get('time_limit')
+        if minutes:
+            old_minutes = settings.time_limit_minutes
+            
+            settings.time_limit_minutes = int(minutes)
+            settings.save()
+
+            messages.success(
+                request, 
+                f"✅ Time limit updated from {old_minutes} mins to {settings.time_limit_minutes} mins."
+            )
+
+            return redirect('schedulerDashboard')
+
     batch_id = str(uuid.uuid4())
-    return render(request, "scheduler/schedulerDashboard.html", {"batch_id": batch_id})
+    return render(request, "scheduler/schedulerDashboard.html", {
+        "batch_id": batch_id,
+        "settings": settings
+    })
 
 @login_required
 @has_role('deptHead')
-def start_scheduler(request):
+def startScheduler(request):
     batch_id = request.GET.get("batch_id")
     
     semester = Semester.objects.filter(isActive=True).first()
@@ -542,7 +562,7 @@ def start_scheduler(request):
 
 @login_required
 @has_role('deptHead')
-def stop_scheduler(request):
+def stopScheduler(request):
     batch_id = request.GET.get("batch_id")
     try:
         progress = SchedulerProgress.objects.get(batch_id=batch_id)
@@ -567,7 +587,7 @@ def stop_scheduler(request):
 
 @login_required
 @has_role('deptHead')
-def scheduler_status(request):
+def schedulerStatus(request):
     batch_id = request.GET.get("batch_id")
     if not batch_id:
         return JsonResponse({"error": "Missing batch_id"}, status=400)

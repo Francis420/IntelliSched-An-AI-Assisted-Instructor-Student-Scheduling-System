@@ -1,3 +1,4 @@
+# scheduling\urls.py
 from django.urls import path
 from . import views
 
@@ -41,5 +42,6 @@ urlpatterns = [
     # Instructor Scheduling Configuration
     path('instructorSchedulingConfiguartion/', views.instructorSchedulingConfig, name='instructorSchedulingConfig'),
 
-    path('scheduling/analysis/', views.preSchedulingDetailedAnalysis, name='preSchedulingDetailedAnalysis'),
+    # Pre-Scheduling Detailed Analysis
+    path('detailedAnalysis/', views.preSchedulingDetailedAnalysis, name='preSchedulingDetailedAnalysis'),
 ]

@@ -232,13 +232,34 @@
       
       <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0 z-[60]">
         <div class="flex items-center gap-4">
-          {% if request.user.is_authenticated and 'deptHead' in request.user.get_roles %}
-          <button id="mobileMenuBtn" class="md:hidden text-gray-600 hover:text-primary">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-          </button>
-          {% endif %}
-          <h2 class="text-lg font-bold text-gray-800">{% block header %}{% endblock %}</h2>
+            {% if request.user.is_authenticated and 'deptHead' in request.user.get_roles %}
+            <button id="mobileMenuBtn" class="md:hidden text-gray-600 hover:text-primary">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+            </button>
+            {% endif %}
+            <h2 class="text-lg font-bold text-gray-800">{% block header %}{% endblock %}</h2>
         </div>
+
+        <nav class="hidden lg:flex items-center gap-1">
+            <a href="{% url 'home' %}" 
+            class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if request.resolver_match.url_name == 'home' %}bg-primary/10 text-primary{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                Home
+            </a>
+            <a href="{% url 'userManual' %}" 
+            class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if request.resolver_match.url_name == 'userManual' %}bg-primary/10 text-primary{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                User Manual
+            </a>
+            <a href="{% url 'intellischedDocumentation' %}" 
+            class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if request.resolver_match.url_name == 'intellischedDocumentation' %}bg-primary/10 text-primary{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                Documentation
+            </a>
+            <a href="{% url 'intellischedAbout' %}" 
+            class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if request.resolver_match.url_name == 'intellischedAbout' %}bg-primary/10 text-primary{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+                About
+            </a>
+        </nav>
 
         {% if request.user.is_authenticated %}
         <div class="relative group h-full flex items-center">
@@ -273,7 +294,6 @@
             
             <div class="absolute right-0 top-12 pt-4 w-48 hidden group-hover:block hover:block z-50">
                 <div class="bg-white rounded-lg shadow-xl border border-gray-100 py-2">
-
                     {% if 'instructor' in request.user.get_roles %}
                     <a href="{% url 'instructorDashboard' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary">Dashboard</a>
                     <a href="{% url 'instructorPortfolio' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary">Portfolio</a>
@@ -289,7 +309,7 @@
             </div>
         </div>
         {% endif %}
-      </header>
+    </header>
 
       <main class="flex-1 overflow-y-auto overflow-x-hidden p-6 relative flex flex-col">
         <div class="flex-1">

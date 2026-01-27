@@ -1,0 +1,501 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}IntelliSched Documentation{% endblock %}
+{% block header %}Documentation{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-slate-50 font-sans text-slate-800 selection:bg-blue-100 selection:text-blue-900">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div class="lg:grid lg:grid-cols-12 lg:gap-16">
+
+            <div class="hidden lg:block lg:col-span-3">
+                <nav class="sticky top-28 space-y-10" id="doc-nav">
+                    
+                    <div class="group">
+                        <h5 class="mb-4 font-bold text-slate-900 uppercase tracking-widest text-xs flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span> Engine 1: NLP
+                        </h5>
+                        <ul class="space-y-1 border-l-2 border-slate-200 ml-1">
+                            <li><a href="#engine-1-overview" class="doc-link block pl-4 py-1.5 border-l-2 border-transparent text-sm text-slate-500 hover:text-indigo-600 hover:border-indigo-500 transition-all">Model Architecture</a></li>
+                            <li><a href="#pipeline-step-a" class="doc-link block pl-4 py-1.5 border-l-2 border-transparent text-sm text-slate-500 hover:text-indigo-600 hover:border-indigo-500 transition-all">A. Data Extraction</a></li>
+                            <li><a href="#pipeline-step-b" class="doc-link block pl-4 py-1.5 border-l-2 border-transparent text-sm text-slate-500 hover:text-indigo-600 hover:border-indigo-500 transition-all">B. Cross-Attention</a></li>
+                            <li><a href="#pipeline-step-c" class="doc-link block pl-4 py-1.5 border-l-2 border-transparent text-sm text-slate-500 hover:text-indigo-600 hover:border-indigo-500 transition-all">C. Scoring Logic</a></li>
+                        </ul>
+                    </div>
+
+                    <div class="group">
+                        <h5 class="mb-4 font-bold text-slate-900 uppercase tracking-widest text-xs flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Engine 2: Scheduler
+                        </h5>
+                        <ul class="space-y-1 border-l-2 border-slate-200 ml-1">
+                            <li><a href="#engine-2-overview" class="doc-link block pl-4 py-1.5 border-l-2 border-transparent text-sm text-slate-500 hover:text-emerald-600 hover:border-emerald-500 transition-all">CP-SAT Explained</a></li>
+                            <li><a href="#search-space" class="doc-link block pl-4 py-1.5 border-l-2 border-transparent text-sm text-slate-500 hover:text-emerald-600 hover:border-emerald-500 transition-all">The Variables ($X$)</a></li>
+                            <li><a href="#constraints" class="doc-link block pl-4 py-1.5 border-l-2 border-transparent text-sm text-slate-500 hover:text-emerald-600 hover:border-emerald-500 transition-all">Hard Constraints</a></li>
+                            <li><a href="#objective-function" class="doc-link block pl-4 py-1.5 border-l-2 border-transparent text-sm text-slate-500 hover:text-emerald-600 hover:border-emerald-500 transition-all">AI Integration & Objectives</a></li>
+                            <li><a href="#parallel-search" class="doc-link block pl-4 py-1.5 border-l-2 border-transparent text-sm text-slate-500 hover:text-emerald-600 hover:border-emerald-500 transition-all">Parallel Search</a></li>
+                            <li><a href="#solver-outcomes" class="doc-link block pl-4 py-1.5 border-l-2 border-transparent text-sm text-slate-500 hover:text-emerald-600 hover:border-emerald-500 transition-all">Solver Outcomes</a></li>
+                        </ul>
+                    </div>
+
+                    <div class="group">
+                         <h5 class="mb-4 font-bold text-slate-900 uppercase tracking-widest text-xs flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span> Overview
+                        </h5>
+                         <ul class="space-y-1 border-l-2 border-slate-200 ml-1">
+                            <li><a href="#summary-matrix" class="doc-link block pl-4 py-1.5 border-l-2 border-transparent text-sm text-slate-500 hover:text-slate-900 hover:border-slate-800 transition-all">Comparison Matrix</a></li>
+                         </ul>
+                    </div>
+
+                </nav>
+            </div>
+
+            <main class="lg:col-span-9 space-y-20">
+
+                <div class="relative bg-slate-900 rounded-3xl p-10 shadow-2xl overflow-hidden text-white">
+                    <div class="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-indigo-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+                    <div class="absolute bottom-0 left-0 -mb-10 -ml-10 w-64 h-64 bg-emerald-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+
+                    <div class="relative z-10">
+                        <h1 class="text-5xl font-extrabold tracking-tight mb-6">System Architecture</h1>
+                        <p class="text-lg text-slate-300 max-w-2xl leading-relaxed">
+                            A comprehensive breakdown of the two primary engines powering IntelliSched: The <strong>Semantic Matcher</strong> (Qualitative) and <strong>GoogleOR Tools CP-SAT Scheduler</strong> (Quantitative).
+                        </p>
+                    </div>
+                </div>
+
+                <section id="engine-1-overview" class="scroll-mt-32">
+                    <div class="flex items-center gap-4 mb-6">
+                        <span class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded text-xs font-bold uppercase tracking-wide">Engine 1: The "Who"</span>
+                        <h2 class="text-3xl font-bold text-slate-900">The Semantic Matcher</h2>
+                    </div>
+
+                    <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-8">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <h3 class="text-lg font-semibold text-slate-800">Model Architecture</h3>
+                                <code class="mt-1 block text-sm font-mono text-indigo-600 bg-indigo-50 px-2 py-1 rounded w-fit">cross-encoder/nli-deberta-v3-large</code>
+                            </div>
+                            <div class="text-right hidden sm:block">
+                                <span class="text-xs text-slate-400 uppercase tracking-wide">Task</span>
+                                <div class="font-medium text-slate-700">Natural Language Inference (NLI)</div>
+                            </div>
+                        </div>
+                        <hr class="my-4 border-slate-100">
+                        <div class="grid md:grid-cols-2 gap-8">
+                            <div>
+                                <h4 class="font-bold text-slate-700 mb-2 text-sm">Why not Keyword Matching?</h4>
+                                <p class="text-sm text-slate-600 leading-relaxed">
+                                    Standard keyword matching fails on semantic nuance. If an instructor lists <em>"Frontend Dev"</em> but the subject requires <em>"Web Design"</em>, keyword matching returns 0.
+                                </p>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-indigo-700 mb-2 text-sm">The "Entailment" Approach</h4>
+                                <p class="text-sm text-slate-600 leading-relaxed">
+                                    Our model determines <strong>Entailment</strong>. It asks: <em>"Does the instructor's profile IMPLY they have the knowledge required?"</em> This allows it to understand that "ReactJS" implies "Web Systems".
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="pipeline-step-a" class="pl-4 border-l-4 border-indigo-200 mb-10">
+                        <h3 class="text-xl font-bold text-slate-800 mb-3">Step A: Data Extraction & Chunking</h3>
+                        <p class="text-slate-600 mb-4">
+                            Transformer models have a token limit. We cannot feed an entire Resume at once. We extract three specific fields and split them into "Chunks" (max 150 words).
+                        </p>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div class="bg-slate-100 p-4 rounded-lg text-center border border-slate-200">
+                                <div class="text-2xl mb-1">📜</div>
+                                <div class="font-bold text-slate-700 text-sm">Teaching History</div>
+                                <div class="text-xs text-slate-500 italic">"Taught Java for 3 years..."</div>
+                            </div>
+                            <div class="bg-slate-100 p-4 rounded-lg text-center border border-slate-200">
+                                <div class="text-2xl mb-1">💼</div>
+                                <div class="font-bold text-slate-700 text-sm">Prof. Experience</div>
+                                <div class="text-xs text-slate-500 italic">"Network Admin at Cisco..."</div>
+                            </div>
+                            <div class="bg-slate-100 p-4 rounded-lg text-center border border-slate-200">
+                                <div class="text-2xl mb-1">🎓</div>
+                                <div class="font-bold text-slate-700 text-sm">Credentials</div>
+                                <div class="text-xs text-slate-500 italic">"Masters in Data Science..."</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="pipeline-step-b" class="pl-4 border-l-4 border-indigo-200 mb-10">
+                         <h3 class="text-xl font-bold text-slate-800 mb-3">Step B: Cross-Attention Processing</h3>
+                         <p class="text-slate-600 mb-4">
+                            Unlike Bi-Encoders (which process texts separately), a <strong>Cross-Encoder</strong> feeds both the Subject and Instructor Profile into the neural network <em>together</em>.
+                         </p>
+                         
+                         <div class="bg-slate-800 rounded-lg p-6 font-mono text-sm overflow-x-auto shadow-inner">
+                            <div class="text-slate-400 mb-2 text-xs uppercase tracking-wider">Input Sequence (Tokens)</div>
+                            <div class="flex items-center gap-2 whitespace-nowrap">
+                                <span class="bg-purple-600 text-white px-3 py-1 rounded">[CLS]</span>
+                                <span class="bg-slate-700 text-indigo-300 px-3 py-1 rounded">Subject Description</span>
+                                <span class="bg-purple-600 text-white px-3 py-1 rounded">[SEP]</span>
+                                <span class="bg-slate-700 text-emerald-300 px-3 py-1 rounded">Instructor Experience</span>
+                                <span class="bg-purple-600 text-white px-3 py-1 rounded">[SEP]</span>
+                            </div>
+                            <div class="mt-4 text-slate-300 text-xs leading-relaxed">
+                                <strong class="text-white">Mechanism:</strong> The "Self-Attention" layers allow every word in the Instructor's profile to "look at" every word in the Subject description simultaneously. This captures deep contextual relationships.
+                            </div>
+                         </div>
+                    </div>
+
+                    <div id="pipeline-step-c" class="pl-4 border-l-4 border-indigo-200">
+                        <h3 class="text-xl font-bold text-slate-800 mb-3">Step C: Scoring & Aggregation</h3>
+                        <p class="text-slate-600 mb-4">
+                           The model outputs a probability score (0.0 to 1.0) for each chunk. The system calculates the final <strong>Match Confidence Score</strong> using weighted aggregation set by the Dept Head.
+                        </p>
+                        <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-lg flex flex-col md:flex-row items-center gap-4 justify-center font-mono text-sm md:text-base text-indigo-900">
+                            <div>(History × 40%)</div>
+                            <div class="text-slate-400">+</div>
+                            <div>(Experience × 30%)</div>
+                            <div class="text-slate-400">+</div>
+                            <div>(Credentials × 30%)</div>
+                            <div class="text-slate-400">=</div>
+                            <div class="bg-white px-3 py-1 rounded shadow-sm font-bold border border-indigo-200">Final Score</div>
+                        </div>
+                    </div>
+                </section>
+
+                <hr class="border-slate-200">
+
+                <section id="engine-2-overview" class="scroll-mt-32">
+                    <div class="flex items-center gap-4 mb-6">
+                        <span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded text-xs font-bold uppercase tracking-wide">Engine 2: The "When & Where"</span>
+                        <h2 class="text-3xl font-bold text-slate-900">The Scheduler (CP-SAT)</h2>
+                    </div>
+
+                    <div class="mb-8">
+                        <h3 class="text-lg font-bold text-slate-800 mb-2">What is CP-SAT?</h3>
+                        <p class="text-slate-600 leading-relaxed">
+                            We utilize <strong>Google OR-Tools</strong>. Instead of a brute-force algorithm (which would take years), we use <strong>Constraint Programming with SATisfiability</strong>. Think of it as a massive logic puzzle: we define the "Rules of the Universe" (Constraints) and ask the solver to find a solution that satisfies them while maximizing "Happiness" (Objective Function).
+                        </p>
+                    </div>
+
+                    <div id="search-space" class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-10">
+                        <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">The Search Space (Variables)</h3>
+                        <div class="grid md:grid-cols-2 gap-8 items-center">
+                            <div>
+                                <p class="text-slate-600 text-sm mb-4">
+                                    The system creates a <strong>Boolean Variable</strong> for every possible combination of resources:
+                                </p>
+                                <div class="bg-slate-900 text-white p-4 rounded-lg font-mono text-center shadow-md mb-2">
+                                    $$ X_{s, i, r, d, t} $$
+                                </div>
+                                <div class="text-center text-xs text-slate-500 mb-4">
+                                    1 = Class Happens | 0 = Class Does Not Happen
+                                </div>
+                            </div>
+                            <div class="bg-slate-50 rounded-lg p-4 text-sm">
+                                <ul class="space-y-2 font-mono text-slate-700">
+                                    <li><strong class="text-emerald-600">s</strong> = Section <span class="text-slate-400">(e.g., IT-1A)</span></li>
+                                    <li><strong class="text-emerald-600">i</strong> = Instructor <span class="text-slate-400">(e.g., Mr. Smith)</span></li>
+                                    <li><strong class="text-emerald-600">r</strong> = Room <span class="text-slate-400">(e.g., Lab 1)</span></li>
+                                    <li><strong class="text-emerald-600">d</strong> = Day <span class="text-slate-400">(e.g., Monday)</span></li>
+                                    <li><strong class="text-emerald-600">t</strong> = Time <span class="text-slate-400">(e.g., 9:00 AM)</span></li>
+                                </ul>
+                                <div class="mt-3 pt-3 border-t border-slate-200 text-xs text-slate-500">
+                                    *For 500 sections, this creates millions of variables.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="constraints" class="mb-10">
+                        <h3 class="text-lg font-bold text-slate-800 mb-4">Hard Constraints (The "Rulebook")</h3>
+                        <p class="text-slate-600 mb-6">
+                            Before optimization begins, the solver enforces non-negotiable rules. Any schedule violating these is immediately discarded via <strong>Propagation</strong>.
+                        </p>
+                        
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <div class="bg-red-50 border border-red-100 rounded-lg p-4">
+                                <h4 class="font-bold text-red-800 text-sm mb-2">🚫 Overlap Prevention</h4>
+                                <ul class="text-sm text-red-900/80 space-y-1 list-disc pl-4">
+                                    <li>An Instructor cannot teach 2 classes at once.</li>
+                                    <li>A Section (e.g., IT-1A) cannot have 2 classes at once.</li>
+                                    <li>A Room cannot host 2 classes at once.</li>
+                                </ul>
+                            </div>
+                            <div class="bg-amber-50 border border-amber-100 rounded-lg p-4">
+                                <h4 class="font-bold text-amber-800 text-sm mb-2">🔒 Resource Validity</h4>
+                                <ul class="text-sm text-amber-900/80 space-y-1 list-disc pl-4">
+                                    <li>Instructor must be available (Time Preferences).</li>
+                                    <li>Room must match subject Type (Lab vs Lecture).</li>
+                                    <li>Room capacity must fit Student Count.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="objective-function" class="mb-10">
+                        <h3 class="text-lg font-bold text-slate-800 mb-4">The Objective Function & AI Integration</h3>
+                        <p class="text-slate-600 mb-6">
+                            This is where the qualitative insights from Engine 1 meet the quantitative logic of Engine 2. Since there are millions of "valid" schedules, we define a Cost Function to find the <em>best</em> one.
+                        </p>
+                        
+                        <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-6 mb-6">
+                            <h4 class="font-bold text-indigo-900 mb-3 flex items-center gap-2">
+                                <span class="text-xl">🔗</span> How AI Scores Affect the Schedule
+                            </h4>
+                            <p class="text-indigo-800 text-sm mb-4 leading-relaxed">
+                                The <strong>Confidence Score</strong> (0.0 to 1.0) generated by the Semantic Matcher is transformed into a mathematical <strong>Reward</strong>. The solver is programmed to "hunt" for these rewards.
+                            </p>
+                            <div class="bg-white rounded border border-indigo-200 p-4 font-mono text-xs sm:text-sm text-slate-600 shadow-sm">
+                                <div class="mb-2">
+                                    <span class="text-purple-600">def</span> <span class="text-yellow-600">integrate_ai_score</span>(match_score):
+                                </div>
+                                <div class="pl-4 mb-2">
+                                    <span class="text-slate-400"># 1. Scale score to integer (e.g., 0.95 -> 95 points)</span><br>
+                                    weight = <span class="text-indigo-600">int</span>(match_score * MATCH_WEIGHT_SCALE)
+                                </div>
+                                <div class="pl-4 mb-2">
+                                    <span class="text-slate-400"># 2. Add to global objective function</span><br>
+                                    <span class="text-purple-600">if</span> instructor_is_assigned_to_class:<br>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;total_happiness += weight
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white border border-slate-200 rounded-lg overflow-hidden">
+                            <div class="bg-slate-50 px-6 py-3 border-b border-slate-200 font-mono text-sm text-slate-500">
+                                Maximize: Σ (Assignment × Weight)
+                            </div>
+                            <div class="divide-y divide-slate-100">
+                                <div class="p-4 flex justify-between items-center bg-indigo-50/50 hover:bg-indigo-50 transition-colors">
+                                    <div>
+                                        <span class="font-bold text-indigo-700 block">AI Semantic Match Quality</span>
+                                        <span class="text-xs text-indigo-600">Prioritizes instructors with high domain relevance.</span>
+                                    </div>
+                                    <span class="font-mono text-emerald-600 bg-emerald-50 px-2 py-1 rounded text-xs border border-emerald-100">+Reward (Scaled)</span>
+                                </div>
+                                <div class="p-4 flex justify-between items-center hover:bg-slate-50">
+                                    <span class="font-medium text-slate-700">Minimize TBA Rooms</span>
+                                    <span class="font-mono text-red-600 bg-red-50 px-2 py-1 rounded text-xs">-5,000 pts</span>
+                                </div>
+                                <div class="p-4 flex justify-between items-center hover:bg-slate-50">
+                                    <span class="font-medium text-slate-700">Load Balancing (Overload)</span>
+                                    <span class="font-mono text-red-600 bg-red-50 px-2 py-1 rounded text-xs">-50,000 pts</span>
+                                </div>
+                                <div class="p-4 flex justify-between items-center hover:bg-slate-50">
+                                    <span class="font-medium text-slate-700">Gap Minimization (>4 hours)</span>
+                                    <span class="font-mono text-orange-600 bg-orange-50 px-2 py-1 rounded text-xs">Variable Penalty</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="parallel-search">
+                        <h3 class="text-lg font-bold text-slate-800 mb-4">Parallel Search Strategy</h3>
+                        <p class="text-slate-600 mb-6">
+                            The configuration uses <code>num_search_workers = 8</code>. This means the system launches 8 different mathematical strategies simultaneously. They communicate findings; if one finds a good solution, the others stop looking for anything worse.
+                        </p>
+                        
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div class="bg-white p-4 rounded border border-slate-200 text-center">
+                                <div class="text-2xl mb-1">🔍</div>
+                                <div class="text-xs font-bold text-slate-700">Worker 1</div>
+                                <div class="text-[10px] text-slate-400">Random Search</div>
+                            </div>
+                            <div class="bg-white p-4 rounded border border-slate-200 text-center">
+                                <div class="text-2xl mb-1">🏗️</div>
+                                <div class="text-xs font-bold text-slate-700">Worker 2</div>
+                                <div class="text-[10px] text-slate-400">Fill Big Rooms</div>
+                            </div>
+                            <div class="bg-white p-4 rounded border border-slate-200 text-center">
+                                <div class="text-2xl mb-1">👨‍🏫</div>
+                                <div class="text-xs font-bold text-slate-700">Worker 3</div>
+                                <div class="text-[10px] text-slate-400">Hard Instructors</div>
+                            </div>
+                            <div class="bg-slate-100 p-4 rounded border border-dashed border-slate-300 text-center flex flex-col justify-center items-center">
+                                <span class="text-xs text-slate-400 font-bold">+ 5 Others</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="solver-outcomes" class="scroll-mt-32 mb-20">
+                    <div class="flex items-center gap-4 mb-6">
+                        <span class="bg-amber-100 text-amber-700 px-3 py-1 rounded text-xs font-bold uppercase tracking-wide">System Behavior</span>
+                        <h2 class="text-3xl font-bold text-slate-900">Solver Outcomes</h2>
+                    </div>
+
+                    <p class="text-slate-600 mb-6">
+                        The scheduler is an "Anytime Algorithm"—it tries to improve the result until time runs out. Based on our stress tests (45min - 1hr runtimes), here is what the status codes mean in practice:
+                    </p>
+
+                    <div class="grid grid-cols-1 gap-6">
+
+                        <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-6 relative overflow-hidden transition hover:shadow-md opacity-75">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="text-emerald-800 font-bold mb-1 flex items-center gap-2">
+                                        OPTIMAL <span class="text-[10px] border border-emerald-200 px-1 rounded bg-white">Best Result</span>
+                                    </h3>
+                                    <p class="text-sm text-emerald-700/80">
+                                        The solver proved that this is the best schedule that exists in the universe. In a large-scale and complex scheduling (NP-Hard), attaining this state is extremely rare and usually unnecessary.
+                                    </p>
+                                </div>
+                                <div class="text-4xl opacity-20 grayscale">🏆</div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-blue-50 border border-blue-100 rounded-xl p-6 relative overflow-hidden transition hover:shadow-md">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="text-blue-800 font-bold mb-1 flex items-center gap-2">
+                                        FEASIBLE <span class="text-[10px] border border-blue-200 px-1 rounded bg-white">Most Common</span>
+                                    </h3>
+                                    <p class="text-sm text-blue-700/80 mb-3">
+                                        <strong>Success.</strong> The system generated a valid schedule. It respected all hard rules (no double bookings). It might not be mathematically perfect, but it is ready for use.
+                                    </p>
+                                    <ul class="text-xs text-blue-800/70 space-y-1 list-disc pl-4">
+                                        <li><strong>Rooms:</strong> If a physical room wasn't available, it successfully fell back to "TBA".</li>
+                                        <li><strong>Instructors:</strong> All classes have an assigned instructor.</li>
+                                    </ul>
+                                </div>
+                                <div class="text-4xl opacity-20 grayscale">✅</div>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-100 border border-slate-200 rounded-xl p-6 relative overflow-hidden transition hover:shadow-md">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="text-slate-700 font-bold mb-1 flex items-center gap-2">
+                                        UNKNOWN <span class="text-[10px] border border-slate-300 px-1 rounded bg-white">Time Limit Reached</span>
+                                    </h3>
+                                    <p class="text-sm text-slate-600 mb-2">
+                                        The solver ran out of time (e.g., was set to 30 mins) before it could find even a single valid schedule.
+                                    </p>
+                                    <div class="bg-white p-2 rounded text-xs border border-slate-200 text-slate-500">
+                                        <strong>Fix:</strong> Increase the runtime duration or reduce the complexity (e.g., add more instructors or sections).
+                                    </div>
+                                </div>
+                                <div class="text-4xl opacity-20 grayscale">⏳</div>
+                            </div>
+                        </div>
+
+                        <div class="bg-red-50 border border-red-100 rounded-xl p-6 relative overflow-hidden transition hover:shadow-md">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="text-red-800 font-bold mb-1 flex items-center gap-2">
+                                        INFEASIBLE <span class="text-[10px] border border-red-200 px-1 rounded bg-white">Critical Conflict</span>
+                                    </h3>
+                                    <p class="text-sm text-red-700/80 mb-3">
+                                        Mathematically impossible. Note that <strong>Room shortages do NOT cause this</strong> (they just become TBA). This is almost always caused by <strong>Instructor constraints</strong>.
+                                    </p>
+                                    <div class="bg-red-100/50 p-2 rounded text-xs text-red-900 border border-red-200">
+                                        <strong>Common Cause:</strong> Supply vs Demand mismatch. You have too many sections and not enough qualified instructors to cover the total required hours.
+                                    </div>
+                                </div>
+                                <div class="text-4xl opacity-20 grayscale">🚫</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <hr class="border-slate-200">
+
+                <section id="summary-matrix" class="scroll-mt-32 pb-20">
+                    <h2 class="text-2xl font-bold text-slate-900 mb-6">Summary for Context</h2>
+                    <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
+                        <table class="min-w-full divide-y divide-gray-300">
+                            <thead class="bg-slate-50">
+                                <tr>
+                                    <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-slate-900 sm:pl-6">Feature</th>
+                                    <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-slate-900">AI Semantic Matcher</th>
+                                    <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-slate-900">Google OR-Tools Scheduler</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 bg-white">
+                                <tr>
+                                    <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-slate-900 sm:pl-6">Role</td>
+                                    <td class="whitespace-nowrap px-3 py-4 text-sm text-slate-600">The Recruiter (Qualitative)</td>
+                                    <td class="whitespace-nowrap px-3 py-4 text-sm text-slate-600">The Architect (Quantitative)</td>
+                                </tr>
+                                <tr class="bg-slate-50">
+                                    <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-slate-900 sm:pl-6">Input</td>
+                                    <td class="whitespace-nowrap px-3 py-4 text-sm text-slate-600">Unstructured Text (Profiles)</td>
+                                    <td class="whitespace-nowrap px-3 py-4 text-sm text-slate-600">Structured Data (Times, Rooms)</td>
+                                </tr>
+                                <tr>
+                                    <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-slate-900 sm:pl-6">Method</td>
+                                    <td class="whitespace-nowrap px-3 py-4 text-sm text-slate-600">Deep Learning (Transformers)</td>
+                                    <td class="whitespace-nowrap px-3 py-4 text-sm text-slate-600">Integer Programming (SAT)</td>
+                                </tr>
+                                <tr class="bg-slate-50">
+                                    <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-slate-900 sm:pl-6">Output</td>
+                                    <td class="whitespace-nowrap px-3 py-4 text-sm text-indigo-600 font-mono">"Mr. Smith is a 95% match"</td>
+                                    <td class="whitespace-nowrap px-3 py-4 text-sm text-emerald-600 font-mono">"Mr. Smith: Mon 9AM, Room 101"</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+    </div>
+</div>
+
+<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const navLinks = document.querySelectorAll('.doc-link');
+        
+        // 1. Get all trackable sections in order
+        const sections = Array.from(navLinks).map(link => {
+            const id = link.getAttribute('href').substring(1);
+            return document.getElementById(id);
+        }).filter(el => el);
+
+        // Helper to update the UI
+        function setActiveLink(id) {
+            // Reset all
+            navLinks.forEach(link => {
+                link.classList.remove('text-indigo-600', 'border-indigo-500', 'text-emerald-600', 'border-emerald-500', 'text-slate-900', 'border-slate-800');
+                link.classList.add('border-transparent', 'text-slate-500');
+            });
+            
+            // Activate current
+            const activeLink = document.querySelector(`.doc-link[href="#${id}"]`);
+            if (activeLink) {
+                const href = activeLink.getAttribute('href');
+                activeLink.classList.remove('border-transparent', 'text-slate-500');
+
+                if(href.includes('engine-1') || href.includes('pipeline')) {
+                    activeLink.classList.add('text-indigo-600', 'border-indigo-500');
+                } else if (href.includes('engine-2') || href.includes('search') || href.includes('objective') || href.includes('constraints') || href.includes('solver-outcomes')) {
+                    activeLink.classList.add('text-emerald-600', 'border-emerald-500');
+                } else {
+                    activeLink.classList.add('text-slate-900', 'border-slate-800');
+                }
+            }
+        }
+
+        // 2. The Intersection Observer
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    setActiveLink(entry.target.id);
+                }
+            });
+        }, { rootMargin: "-15% 0px -60% 0px", threshold: 0 });
+
+        sections.forEach(section => observer.observe(section));
+
+        // 3. Explicit "End of Page" Check
+        window.addEventListener('scroll', () => {
+            const scrolledToBottom = (window.innerHeight + window.scrollY) >= document.body.offsetHeight - 50;
+            if (scrolledToBottom && sections.length > 0) {
+                const lastSection = sections[sections.length - 1];
+                setActiveLink(lastSection.id);
+            }
+        });
+    });
+</script>
+{% endblock %}

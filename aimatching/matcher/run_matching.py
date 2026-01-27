@@ -210,14 +210,3 @@ def run_matching(semester_id, batch_id, generated_by=None):
     progress.save()
     
     return True
-
-
-# # Generate explanation using Mistral
-            # explanation = generate_mistral_explanation(
-            #     subject,
-            #     instructor,
-            #     instructor.full_name,
-            #     primary_factor,
-            #     factors[primary_factor],
-            #     primary_evidence
-            # )

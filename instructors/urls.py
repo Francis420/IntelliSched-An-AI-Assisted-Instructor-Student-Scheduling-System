@@ -1,8 +1,9 @@
+# instructors\urls.py
 from django.urls import path
 from . import views
 
 urlpatterns = [
-    # Instructor Dashboard
+    # Instructor Portfolio(experience, credentials and teaching history / legacy experience)
     path('instructorPortfolio/', views.instructorPortfolio, name='instructorPortfolio'),
 
     # Instructor Experience

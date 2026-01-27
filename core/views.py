@@ -730,3 +730,9 @@ def instructorProfile(request):
 
 def userManual(request):
     return render(request, 'core/userManual.html')
+
+def intellischedDocumentation(request):
+    return render(request, 'core/intellischedDocumentation.html')
+
+def intellischedAbout(request):
+    return render(request, 'core/intellischedAbout.html')
