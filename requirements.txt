@@ -153,7 +153,7 @@ pyHanko==0.32.0
 pyhanko-certvalidator==0.29.0
 PyJWT==2.9.0
 pyOpenSSL==25.1.0
-pypdf==6.4.1
+pypdf==6.6.2
 pyphen==0.17.2
 python-bidi==0.6.7
 python-dateutil==2.9.0.post0
