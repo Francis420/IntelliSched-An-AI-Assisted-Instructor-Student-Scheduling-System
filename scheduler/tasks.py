@@ -54,7 +54,7 @@ def run_scheduler_task(self, batch_id=None):
         process = subprocess.Popen(
             [
                 sys.executable, "manage.py", "test_scheduler", 
-                str(semester.id), 
+                str(semester.pk), 
                 "--time", str(secs)
             ],
             stdout=subprocess.PIPE,

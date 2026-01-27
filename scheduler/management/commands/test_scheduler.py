@@ -21,7 +21,11 @@ class Command(BaseCommand):
         semester_id = options["semester_id"]
         time_limit = options["time"]
         
-        semester = Semester.objects.get(pk=semester_id)
+        try:
+            semester = Semester.objects.get(pk=semester_id)
+        except Semester.DoesNotExist:
+            self.stdout.write(self.style.ERROR(f"Semester with ID {semester_id} not found."))
+            return
 
         print(f"Running scheduler test for semester: {semester}")
         print(f"Time limit set to: {time_limit} seconds")
