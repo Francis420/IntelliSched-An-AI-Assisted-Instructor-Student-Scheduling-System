@@ -809,7 +809,6 @@ def feedbackDashboard(request):
 def feedbackDetail(request, pk):
     feedback = get_object_or_404(Feedback, pk=pk)
 
-    # Handle Status Update (POST)
     if request.method == "POST":
         new_status = request.POST.get('status')
         if new_status in dict(Feedback.STATUS_CHOICES):
